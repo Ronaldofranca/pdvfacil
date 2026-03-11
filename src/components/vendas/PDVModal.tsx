@@ -47,6 +47,7 @@ export function PDVModal({ open, onOpenChange }: Props) {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
 
+  const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
