@@ -96,7 +96,7 @@ function QuickSection({ title, items, allProducts, onAdd, fmt }: {
 }
 
 
-export function PDVMobile({ open, onOpenChange }: Props) {
+export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const { profile, user } = useAuth();
   const { data: onlineProdutos } = useProdutos();
   const { data: onlineClientes } = useClientes();
