@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UserCog, Pencil, Shield } from "lucide-react";
+import { UserCog, Pencil, Shield, UserPlus, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search } from "lucide-react";
 import { useUsuarios, useUpdateUsuario, useUpdateUserRole } from "@/hooks/useUsuarios";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const ROLE_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
   admin: { label: "Admin", variant: "default" },
@@ -22,12 +23,19 @@ const ROLE_LABELS: Record<string, { label: string; variant: "default" | "seconda
 export default function UsuariosPage() {
   const { isAdmin, canManageVendedores } = usePermissions();
   const { profile } = useAuth();
-  const { data: usuarios, isLoading } = useUsuarios();
+  const { data: usuarios, isLoading, refetch } = useUsuarios();
   const updateUser = useUpdateUsuario();
   const updateRole = useUpdateUserRole();
+  const { toast } = useToast();
 
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<any>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteNome, setInviteNome] = useState("");
+  const [inviteCargo, setInviteCargo] = useState("");
+  const [inviteRole, setInviteRole] = useState("vendedor");
+  const [inviting, setInviting] = useState(false);
 
   const filtered = usuarios?.filter(
     (u) => u.nome.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
@@ -46,16 +54,52 @@ export default function UsuariosPage() {
     updateRole.mutate({ user_id: userId, empresa_id: empresaId, role: newRole, old_role: oldRole });
   };
 
+  const handleInvite = async () => {
+    if (!inviteEmail) {
+      toast({ title: "Email é obrigatório", variant: "destructive" });
+      return;
+    }
+    setInviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-user", {
+        body: { email: inviteEmail, nome: inviteNome, cargo: inviteCargo, role: inviteRole },
+      });
+      if (error) {
+        toast({ title: "Erro ao convidar", description: error.message, variant: "destructive" });
+      } else if (data?.error) {
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
+      } else {
+        toast({ title: "Convite enviado!", description: `Email enviado para ${inviteEmail}` });
+        setInviteOpen(false);
+        setInviteEmail("");
+        setInviteNome("");
+        setInviteCargo("");
+        setInviteRole("vendedor");
+        refetch();
+      }
+    } catch {
+      toast({ title: "Erro inesperado", variant: "destructive" });
+    }
+    setInviting(false);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-          <UserCog className="w-5 h-5 text-primary" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+            <UserCog className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Usuários</h1>
+            <p className="text-sm text-muted-foreground">Gerenciar usuários e permissões</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Usuários</h1>
-          <p className="text-sm text-muted-foreground">Gerenciar usuários e permissões</p>
-        </div>
+        {isAdmin && (
+          <Button size="sm" onClick={() => setInviteOpen(true)}>
+            <UserPlus className="w-4 h-4 mr-1" /> Convidar
+          </Button>
+        )}
       </div>
 
       <div className="relative">
@@ -114,6 +158,47 @@ export default function UsuariosPage() {
           })}
         </div>
       )}
+
+      {/* Invite Dialog */}
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Convidar Usuário</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Email *</Label>
+              <Input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="usuario@email.com" type="email" />
+            </div>
+            <div className="space-y-1">
+              <Label>Nome</Label>
+              <Input value={inviteNome} onChange={(e) => setInviteNome(e.target.value)} placeholder="Nome do usuário" />
+            </div>
+            <div className="space-y-1">
+              <Label>Cargo</Label>
+              <Input value={inviteCargo} onChange={(e) => setInviteCargo(e.target.value)} placeholder="Ex: Vendedor Externo" />
+            </div>
+            <div className="space-y-1">
+              <Label>Função</Label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vendedor">Vendedor</SelectItem>
+                  <SelectItem value="gerente">Gerente</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setInviteOpen(false)}>Cancelar</Button>
+              <Button className="flex-1" onClick={handleInvite} disabled={inviting}>
+                {inviting ? "Enviando..." : "Enviar Convite"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              O usuário receberá um email para definir a senha no primeiro acesso.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
