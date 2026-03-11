@@ -1,40 +1,28 @@
 import {
-  LayoutDashboard,
   ShoppingCart,
-  Users,
-  Package,
-  Warehouse,
-  BookOpen,
-  Truck,
   DollarSign,
-  BarChart3,
-  UserCog,
-  Building2,
-  Bell,
-  RefreshCw,
-  HardDrive,
-  Shield,
+  AlertTriangle,
+  CreditCard,
+  PackageX,
   TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-
-const stats = [
-  { label: "Vendas Hoje", value: "R$ 12.450", change: "+12%", up: true, icon: ShoppingCart },
-  { label: "Clientes Ativos", value: "384", change: "+5", up: true, icon: Users },
-  { label: "Produtos", value: "1.240", change: "0", up: true, icon: Package },
-  { label: "Ticket Médio", value: "R$ 287", change: "-3%", up: false, icon: TrendingUp },
-];
-
-const recentSales = [
-  { cliente: "João Silva", valor: "R$ 1.250,00", status: "aprovada" },
-  { cliente: "Maria Santos", valor: "R$ 890,00", status: "pendente" },
-  { cliente: "Carlos Oliveira", valor: "R$ 2.100,00", status: "aprovada" },
-  { cliente: "Ana Costa", valor: "R$ 450,00", status: "faturada" },
-];
+import { Badge } from "@/components/ui/badge";
+import { useDashboardData } from "@/hooks/useDashboard";
 
 export default function DashboardPage() {
+  const { data, isLoading } = useDashboardData();
+
+  const fmt = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
+  const kpis = [
+    { label: "Vendas do Dia", value: data ? `${data.qtdVendasDia} vendas` : "—", sub: data ? fmt(data.totalVendasDia) : "", icon: ShoppingCart, color: "text-primary" },
+    { label: "Lucro do Dia", value: data ? fmt(data.lucroDia) : "—", icon: TrendingUp, color: "text-primary" },
+    { label: "Parcelas Vencidas", value: data ? `${data.qtdVencidas}` : "—", sub: data ? fmt(data.totalVencido) : "", icon: AlertTriangle, color: "text-destructive" },
+    { label: "Contas a Receber", value: data ? fmt(data.totalAReceber) : "—", icon: CreditCard, color: "text-foreground" },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -42,46 +30,73 @@ export default function DashboardPage() {
         <p className="text-sm text-muted-foreground">Visão geral do negócio</p>
       </div>
 
-      {/* Stats Grid */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="bg-card border-border">
+        {kpis.map((kpi) => (
+          <Card key={kpi.label}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <stat.icon className="w-4 h-4 text-muted-foreground" />
-                <span
-                  className={`flex items-center gap-0.5 text-xs font-medium ${
-                    stat.up ? "text-primary" : "text-destructive"
-                  }`}
-                >
-                  {stat.up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {stat.change}
-                </span>
+                <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
               </div>
-              <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+              <p className={`text-2xl font-bold ${kpi.color}`}>{isLoading ? "..." : kpi.value}</p>
+              {kpi.sub && <p className="text-sm font-semibold text-muted-foreground">{kpi.sub}</p>}
+              <p className="text-xs text-muted-foreground mt-0.5">{kpi.label}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Recent Sales */}
-      <Card className="bg-card border-border">
-        <CardContent className="p-4">
-          <h2 className="text-sm font-semibold text-foreground mb-3">Vendas Recentes</h2>
-          <div className="space-y-3">
-            {recentSales.map((sale, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{sale.cliente}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{sale.status}</p>
-                </div>
-                <p className="text-sm font-mono font-semibold text-foreground">{sale.valor}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Vendas Recentes */}
+        <Card>
+          <CardContent className="p-4">
+            <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4 text-primary" /> Vendas Recentes
+            </h2>
+            <div className="space-y-3">
+              {isLoading ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Carregando...</p>
+              ) : !data?.vendasRecentes.length ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma venda hoje</p>
+              ) : (
+                data.vendasRecentes.map((v: any) => (
+                  <div key={v.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{v.clientes?.nome ?? "Cliente avulso"}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-primary">{fmt(Number(v.total))}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Estoque Baixo */}
+        <Card>
+          <CardContent className="p-4">
+            <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <PackageX className="w-4 h-4 text-destructive" /> Estoque Baixo
+            </h2>
+            <div className="space-y-3">
+              {isLoading ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Carregando...</p>
+              ) : !data?.estoqueBaixo.length ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Nenhum produto com estoque baixo 🎉</p>
+              ) : (
+                data.estoqueBaixo.slice(0, 8).map((e: any) => (
+                  <div key={e.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <p className="text-sm font-medium text-foreground">{e.produtos?.nome}</p>
+                    <Badge variant={Number(e.quantidade) <= 0 ? "destructive" : "secondary"}>
+                      {Number(e.quantidade)} {e.produtos?.unidade ?? "un"}
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
