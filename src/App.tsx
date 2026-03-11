@@ -27,6 +27,8 @@ import BackupPage from "./pages/Backup";
 import AuditPage from "./pages/Audit";
 import MaisPage from "./pages/Mais";
 import LoginPage from "./pages/Login";
+import SetupPage from "./pages/Setup";
+import AceitarConvitePage from "./pages/AceitarConvite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
