@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import type { AppRole, Permission } from "@/integrations/supabase/types";
+import type { AppRole, Permission } from "@/types/auth";
 
 export function usePermissions() {
   const { roles, permissions, hasRole, hasPermission, isAdmin, isGerente, isVendedor } = useAuth();

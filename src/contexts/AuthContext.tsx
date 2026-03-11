@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import type { AppRole, Permission } from "@/integrations/supabase/types";
+import type { AppRole, Permission } from "@/types/auth";
 
 interface Profile {
   id: string;
@@ -41,10 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch profile and roles for user
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch profile
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
@@ -54,17 +52,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileData) {
         setProfile(profileData as Profile);
 
-        // Fetch roles
         const { data: rolesData } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", userId)
           .eq("empresa_id", profileData.empresa_id);
 
-        const userRoles = (rolesData?.map((r) => r.role) ?? []) as AppRole[];
+        const userRoles = (rolesData?.map((r: any) => r.role) ?? []) as AppRole[];
         setRoles(userRoles);
 
-        // Fetch permissions for these roles
         if (userRoles.length > 0) {
           const { data: permData } = await supabase
             .from("role_permissoes")
@@ -81,14 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      async (_event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          // Use setTimeout to avoid Supabase client deadlock
           setTimeout(() => fetchUserData(newSession.user.id), 0);
         } else {
           setProfile(null);
@@ -99,7 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // THEN check existing session
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
