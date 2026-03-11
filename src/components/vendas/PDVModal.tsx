@@ -13,6 +13,8 @@ import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PDVMobile } from "./PDVMobile";
 import { toast } from "sonner";
 
 const FORMAS_PAGAMENTO = [
