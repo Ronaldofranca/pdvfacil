@@ -11,7 +11,10 @@ import VendasPage from "./pages/Vendas";
 import ClientesPage from "./pages/Clientes";
 import ProdutosPage from "./pages/Produtos";
 import EstoquePage from "./pages/Estoque";
-import CatalogoPage from "./pages/Catalogo";
+import CatalogoInternalPage from "./pages/Catalogo";
+import CatalogoPublicoPage from "./pages/catalogo/CatalogoPublico";
+import CatalogoProdutoPage from "./pages/catalogo/CatalogoProduto";
+import CatalogoTestemunhosPage from "./pages/catalogo/CatalogoTestemunhos";
 import RomaneioPage from "./pages/Romaneio";
 import FinanceiroPage from "./pages/Financeiro";
 import RelatoriosPage from "./pages/Relatorios";
@@ -36,13 +39,17 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            {/* Public catalog routes */}
+            <Route path="/catalogo" element={<CatalogoPublicoPage />} />
+            <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
+            <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/vendas" element={<VendasPage />} />
               <Route path="/clientes" element={<ClientesPage />} />
               <Route path="/produtos" element={<ProdutosPage />} />
               <Route path="/estoque" element={<EstoquePage />} />
-              <Route path="/catalogo" element={<CatalogoPage />} />
+              <Route path="/catalogo-interno" element={<CatalogoInternalPage />} />
               <Route path="/romaneio" element={<RomaneioPage />} />
               <Route path="/financeiro" element={<FinanceiroPage />} />
               <Route path="/relatorios" element={<RelatoriosPage />} />
