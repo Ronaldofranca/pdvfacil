@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Search, Pencil, Trash2, MapPin, Phone, History } from "lucide-react";
+import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,10 @@ import { useClientes, useDeleteCliente } from "@/hooks/useClientes";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
 import { HistoricoCompras } from "@/components/clientes/HistoricoCompras";
+import { PDVModal } from "@/components/vendas/PDVModal";
+import { useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
+import type { CartItem } from "@/hooks/useVendas";
+import { toast } from "sonner";
 
 export default function ClientesPage() {
   const { isAdmin } = usePermissions();
@@ -19,6 +23,7 @@ export default function ClientesPage() {
   const [search, setSearch] = useState("");
   const [formState, setFormState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [historicoState, setHistoricoState] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [pdvState, setPdvState] = useState<{ open: boolean; clienteId?: string; cart?: CartItem[] }>({ open: false });
 
   const filtered = clientes?.filter((c) =>
     c.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -98,6 +103,9 @@ export default function ClientesPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" title="Repetir última venda" onClick={() => setPdvState({ open: true, clienteId: c.id })}>
+                        <RotateCcw className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" title="Histórico" onClick={() => setHistoricoState({ open: true, data: c })}>
                         <History className="w-4 h-4" />
                       </Button>
@@ -120,6 +128,11 @@ export default function ClientesPage() {
 
       <ClienteForm open={formState.open} onOpenChange={(v) => setFormState({ open: v })} cliente={formState.data} />
       <HistoricoCompras open={historicoState.open} onOpenChange={(v) => setHistoricoState({ open: v })} cliente={historicoState.data} />
+      <PDVModal
+        open={pdvState.open}
+        onOpenChange={(v) => setPdvState({ open: v })}
+        initialClienteId={pdvState.clienteId}
+      />
     </div>
   );
 }

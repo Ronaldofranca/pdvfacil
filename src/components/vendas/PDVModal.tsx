@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
-import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente } from "@/hooks/useProdutosRapidos";
+import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PDVMobile } from "./PDVMobile";
@@ -30,6 +30,8 @@ const FORMAS_PAGAMENTO = [
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialCart?: CartItem[];
+  initialClienteId?: string;
 }
 
 function DesktopProductButton({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
@@ -78,7 +80,7 @@ function DesktopQuickSection({ title, items, allProducts, onAdd, fmt }: {
   );
 }
 
-export function PDVModal({ open, onOpenChange }: Props) {
+export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const isMobile = useIsMobile();
   const { profile, user } = useAuth();
   const { data: produtos } = useProdutos();
@@ -87,13 +89,22 @@ export function PDVModal({ open, onOpenChange }: Props) {
   const { data: maisVendidos } = useProdutosMaisVendidos();
   const { data: recentes } = useProdutosRecentes();
 
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [clienteId, setClienteId] = useState("");
+  const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
+  const [clienteId, setClienteId] = useState(initialClienteId ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
 
+  // Reset when opening with initial data
+  useEffect(() => {
+    if (open) {
+      if (initialCart?.length) setCart(initialCart);
+      if (initialClienteId) setClienteId(initialClienteId);
+    }
+  }, [open, initialCart, initialClienteId]);
+
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
+  const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -200,7 +211,7 @@ export function PDVModal({ open, onOpenChange }: Props) {
 
   // Mobile: use full-screen PDV
   if (isMobile) {
-    return <PDVMobile open={open} onOpenChange={onOpenChange} />;
+    return <PDVMobile open={open} onOpenChange={onOpenChange} initialCart={initialCart} initialClienteId={initialClienteId} />;
   }
 
   return (
@@ -248,7 +259,7 @@ export function PDVModal({ open, onOpenChange }: Props) {
             </div>
 
             {/* Cliente */}
-            <div>
+            <div className="space-y-2">
               <Label className="text-xs">Cliente (opcional)</Label>
               <Select value={clienteId} onValueChange={setClienteId}>
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
@@ -258,6 +269,20 @@ export function PDVModal({ open, onOpenChange }: Props) {
                   ))}
                 </SelectContent>
               </Select>
+              {clienteId && ultimaVendaItens && ultimaVendaItens.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1.5 text-xs"
+                  onClick={() => {
+                    setCart(ultimaVendaItens);
+                    toast.success("Itens da última venda carregados!");
+                  }}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Repetir última venda
+                </Button>
+              )}
             </div>
           </div>
 

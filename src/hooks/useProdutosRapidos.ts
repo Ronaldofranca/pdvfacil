@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { CartItem } from "@/hooks/useVendas";
 
 // Most sold products (by quantity in itens_venda)
 export function useProdutosMaisVendidos(limit = 10) {
@@ -103,6 +104,43 @@ export function useProdutosDoCliente(clienteId: string | null, limit = 10) {
       return Array.from(map.values())
         .sort((a, b) => b.total - a.total)
         .slice(0, limit);
+    },
+  });
+}
+
+// Fetch last sale items for a client, ready to load into cart
+export function useUltimaVendaCliente(clienteId: string | null) {
+  return useQuery({
+    queryKey: ["ultima_venda_cliente", clienteId],
+    enabled: !!clienteId,
+    queryFn: async () => {
+      // Get most recent finalized sale for this client
+      const { data: vendas, error: vErr } = await supabase
+        .from("vendas")
+        .select("id")
+        .eq("cliente_id", clienteId!)
+        .eq("status", "finalizada")
+        .order("data_venda", { ascending: false })
+        .limit(1);
+      if (vErr) throw vErr;
+      if (!vendas?.length) return null;
+
+      const { data: itens, error: iErr } = await supabase
+        .from("itens_venda")
+        .select("produto_id, nome_produto, quantidade, preco_original, preco_vendido, desconto, bonus, subtotal")
+        .eq("venda_id", vendas[0].id);
+      if (iErr) throw iErr;
+
+      return itens.map((i) => ({
+        produto_id: i.produto_id,
+        nome: i.nome_produto,
+        quantidade: Number(i.quantidade),
+        preco_original: Number(i.preco_original),
+        preco_vendido: Number(i.preco_vendido),
+        desconto: Number(i.desconto),
+        bonus: i.bonus,
+        subtotal: Number(i.subtotal),
+      } as CartItem));
     },
   });
 }

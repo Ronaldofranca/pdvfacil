@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
-  DollarSign, X, Package, CreditCard, Check, WifiOff, Wifi
+  DollarSign, X, Package, CreditCard, Check, WifiOff, Wifi, RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
-import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente } from "@/hooks/useProdutosRapidos";
+import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/useOfflinePDV";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +35,8 @@ type Step = "produtos" | "carrinho" | "pagamento";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialCart?: CartItem[];
+  initialClienteId?: string;
 }
 
 // ─── Helper components ───
@@ -94,7 +96,7 @@ function QuickSection({ title, items, allProducts, onAdd, fmt }: {
 }
 
 
-export function PDVMobile({ open, onOpenChange }: Props) {
+export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const { profile, user } = useAuth();
   const { data: onlineProdutos } = useProdutos();
   const { data: onlineClientes } = useClientes();
@@ -105,8 +107,8 @@ export function PDVMobile({ open, onOpenChange }: Props) {
   const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
 
   const [step, setStep] = useState<Step>("produtos");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [clienteId, setClienteId] = useState("");
+  const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
+  const [clienteId, setClienteId] = useState(initialClienteId ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
@@ -114,6 +116,7 @@ export function PDVMobile({ open, onOpenChange }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
+  const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
 
   // Offline-cached data
   const [cachedProdutos, setCachedProdutos] = useState<CachedProduto[]>([]);
@@ -124,6 +127,17 @@ export function PDVMobile({ open, onOpenChange }: Props) {
     getCachedProdutos().then(setCachedProdutos);
     getCachedClientes().then(setCachedClientes);
   }, [getCachedProdutos, getCachedClientes]);
+
+  // Reset when opening with initial data
+  useEffect(() => {
+    if (open) {
+      if (initialCart?.length) {
+        setCart(initialCart);
+        setStep("carrinho");
+      }
+      if (initialClienteId) setClienteId(initialClienteId);
+    }
+  }, [open, initialCart, initialClienteId]);
 
   // Use online data when available, fall back to cache
   const produtos = isOnline && onlineProdutos ? onlineProdutos : cachedProdutos;
@@ -537,7 +551,7 @@ export function PDVMobile({ open, onOpenChange }: Props) {
 
               {/* Cliente */}
               {cart.length > 0 && (
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
                   <Label className="text-xs text-muted-foreground">Cliente (opcional)</Label>
                   <Select value={clienteId} onValueChange={setClienteId}>
                     <SelectTrigger className="h-11 mt-1">
@@ -551,6 +565,19 @@ export function PDVMobile({ open, onOpenChange }: Props) {
                       ))}
                     </SelectContent>
                   </Select>
+                  {clienteId && ultimaVendaItens && ultimaVendaItens.length > 0 && (
+                    <Button
+                      variant="outline"
+                      className="w-full h-11 gap-2 text-sm"
+                      onClick={() => {
+                        setCart(ultimaVendaItens);
+                        toast.success("Itens da última venda carregados!");
+                      }}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Repetir última venda
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
