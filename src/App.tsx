@@ -70,6 +70,10 @@ const App = () => (
                 <Route path="/sync" element={<SyncPage />} />
                 <Route path="/backup" element={<BackupPage />} />
                 <Route path="/audit" element={<AuditPage />} />
+                <Route path="/mapa-clientes" element={<MapaClientesPage />} />
+                <Route path="/metas" element={<MetasComissoesPage />} />
+                <Route path="/previsao-estoque" element={<PrevisaoEstoquePage />} />
+                <Route path="/alertas" element={<AlertasPage />} />
                 <Route path="/mais" element={<MaisPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
