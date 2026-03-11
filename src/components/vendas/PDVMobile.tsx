@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
+import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente } from "@/hooks/useProdutosRapidos";
 import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/useOfflinePDV";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,11 +37,70 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+// ─── Helper components ───
+function ProductQuickButton({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onAdd(product)}
+      className="w-full flex items-center justify-between p-3.5 rounded-xl border bg-card active:bg-accent transition-colors"
+    >
+      <div className="text-left">
+        <p className="font-medium text-foreground">{product.nome}</p>
+        {product.codigo && <p className="text-xs text-muted-foreground mt-0.5">{product.codigo}</p>}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="font-bold text-primary">{fmt(Number(product.preco))}</span>
+        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+          <Plus className="w-5 h-5 text-primary" />
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function QuickSection({ title, items, allProducts, onAdd, fmt }: {
+  title: string;
+  items: { produto_id: string; nome: string }[];
+  allProducts: any[];
+  onAdd: (p: any) => void;
+  fmt: (v: number) => string;
+}) {
+  if (!allProducts?.length) return null;
+  const productMap = new Map(allProducts.map((p) => [p.id, p]));
+  const resolved = items
+    .map((i) => productMap.get(i.produto_id))
+    .filter((p): p is any => !!p && p.ativo !== false);
+  if (!resolved.length) return null;
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{title}</p>
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3">
+        {resolved.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onAdd(p)}
+            className="shrink-0 w-32 p-3 rounded-xl border bg-card active:bg-accent transition-colors text-left"
+          >
+            <p className="font-medium text-foreground text-sm truncate">{p.nome}</p>
+            <p className="font-bold text-primary text-sm mt-1">{fmt(Number(p.preco))}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
 export function PDVMobile({ open, onOpenChange }: Props) {
   const { profile, user } = useAuth();
   const { data: onlineProdutos } = useProdutos();
   const { data: onlineClientes } = useClientes();
   const finalizar = useFinalizarVenda();
+  const { data: maisVendidos } = useProdutosMaisVendidos();
+  const { data: recentes } = useProdutosRecentes();
   const { isOnline, pendingCount } = useOffline();
   const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
 
@@ -52,6 +112,8 @@ export function PDVMobile({ open, onOpenChange }: Props) {
   const [searchProd, setSearchProd] = useState("");
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
 
   // Offline-cached data
   const [cachedProdutos, setCachedProdutos] = useState<CachedProduto[]>([]);
@@ -288,28 +350,62 @@ export function PDVMobile({ open, onOpenChange }: Props) {
                 />
               </div>
             </div>
-            <div className="flex-1 p-3 space-y-1.5">
-              {filteredProdutos?.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => addToCart(p)}
-                  className="w-full flex items-center justify-between p-3.5 rounded-xl border bg-card active:bg-accent transition-colors"
-                >
-                  <div className="text-left">
-                    <p className="font-medium text-foreground">{p.nome}</p>
-                    {p.codigo && <p className="text-xs text-muted-foreground mt-0.5">{p.codigo}</p>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-primary">{fmt(Number(p.preco))}</span>
-                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Plus className="w-5 h-5 text-primary" />
+            <div className="flex-1 p-3 space-y-4">
+              {/* Search results or quick-add sections */}
+              {searchProd.trim() ? (
+                <div className="space-y-1.5">
+                  {filteredProdutos?.map((p) => (
+                    <ProductQuickButton key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                  ))}
+                  {!filteredProdutos?.length && (
+                    <p className="text-muted-foreground text-center py-12">Nenhum produto encontrado</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Products of current client */}
+                  {clienteId && produtosCliente && produtosCliente.length > 0 && (
+                    <QuickSection
+                      title="Produtos deste cliente"
+                      items={produtosCliente}
+                      allProducts={produtos as any[]}
+                      onAdd={addToCart}
+                      fmt={fmt}
+                    />
+                  )}
+
+                  {/* Most sold */}
+                  {maisVendidos && maisVendidos.length > 0 && (
+                    <QuickSection
+                      title="Mais vendidos"
+                      items={maisVendidos}
+                      allProducts={produtos as any[]}
+                      onAdd={addToCart}
+                      fmt={fmt}
+                    />
+                  )}
+
+                  {/* Recently sold */}
+                  {recentes && recentes.length > 0 && (
+                    <QuickSection
+                      title="Vendidos recentemente"
+                      items={recentes}
+                      allProducts={produtos as any[]}
+                      onAdd={addToCart}
+                      fmt={fmt}
+                    />
+                  )}
+
+                  {/* All products */}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Todos os produtos</p>
+                    <div className="space-y-1.5">
+                      {(produtos as any[])?.filter((p: any) => p.ativo !== false).map((p: any) => (
+                        <ProductQuickButton key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                      ))}
                     </div>
                   </div>
-                </button>
-              ))}
-              {!filteredProdutos?.length && (
-                <p className="text-muted-foreground text-center py-12">Nenhum produto encontrado</p>
+                </>
               )}
             </div>
           </div>

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
+import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente } from "@/hooks/useProdutosRapidos";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PDVMobile } from "./PDVMobile";
@@ -31,12 +32,60 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+function DesktopProductButton({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onAdd(product)}
+      className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent text-left transition-colors"
+    >
+      <div>
+        <p className="text-sm font-medium text-foreground">{product.nome}</p>
+        {product.codigo && <p className="text-xs text-muted-foreground">{product.codigo}</p>}
+      </div>
+      <span className="text-sm font-semibold text-primary">{fmt(Number(product.preco))}</span>
+    </button>
+  );
+}
+
+function DesktopQuickSection({ title, items, allProducts, onAdd, fmt }: {
+  title: string;
+  items: { produto_id: string; nome: string }[];
+  allProducts: any[];
+  onAdd: (p: any) => void;
+  fmt: (v: number) => string;
+}) {
+  const productMap = new Map(allProducts.map((p) => [p.id, p]));
+  const resolved = items.map((i) => productMap.get(i.produto_id)).filter((p): p is any => !!p && p.ativo);
+  if (!resolved.length) return null;
+  return (
+    <div className="mb-2">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">{title}</p>
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {resolved.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onAdd(p)}
+            className="shrink-0 px-3 py-1.5 rounded-lg border bg-card hover:bg-accent transition-colors text-left"
+          >
+            <p className="text-xs font-medium text-foreground truncate max-w-[100px]">{p.nome}</p>
+            <p className="text-xs font-bold text-primary">{fmt(Number(p.preco))}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function PDVModal({ open, onOpenChange }: Props) {
   const isMobile = useIsMobile();
   const { profile, user } = useAuth();
   const { data: produtos } = useProdutos();
   const { data: clientes } = useClientes();
   const finalizar = useFinalizarVenda();
+  const { data: maisVendidos } = useProdutosMaisVendidos();
+  const { data: recentes } = useProdutosRecentes();
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [clienteId, setClienteId] = useState("");
@@ -44,6 +93,7 @@ export function PDVModal({ open, onOpenChange }: Props) {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
 
+  const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -166,23 +216,34 @@ export function PDVModal({ open, onOpenChange }: Props) {
           {/* ─── LEFT: Produtos ─── */}
           <div className="lg:col-span-2 space-y-3">
             <Input placeholder="Buscar produto..." value={searchProd} onChange={(e) => setSearchProd(e.target.value)} />
-            <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
-              {filteredProdutos?.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => addToCart(p)}
-                  className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent text-left transition-colors"
-                >
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+              {searchProd.trim() ? (
+                <div className="space-y-1">
+                  {filteredProdutos?.map((p) => (
+                    <DesktopProductButton key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                  ))}
+                  {!filteredProdutos?.length && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {clienteId && produtosCliente && produtosCliente.length > 0 && (
+                    <DesktopQuickSection title="Produtos deste cliente" items={produtosCliente} allProducts={produtos ?? []} onAdd={addToCart} fmt={fmt} />
+                  )}
+                  {maisVendidos && maisVendidos.length > 0 && (
+                    <DesktopQuickSection title="Mais vendidos" items={maisVendidos} allProducts={produtos ?? []} onAdd={addToCart} fmt={fmt} />
+                  )}
+                  {recentes && recentes.length > 0 && (
+                    <DesktopQuickSection title="Recentes" items={recentes} allProducts={produtos ?? []} onAdd={addToCart} fmt={fmt} />
+                  )}
                   <div>
-                    <p className="text-sm font-medium text-foreground">{p.nome}</p>
-                    {p.codigo && <p className="text-xs text-muted-foreground">{p.codigo}</p>}
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Todos</p>
+                    {produtos?.filter((p) => p.ativo).map((p) => (
+                      <DesktopProductButton key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                    ))}
                   </div>
-                  <span className="text-sm font-semibold text-primary">{fmt(Number(p.preco))}</span>
-                </button>
-              ))}
-              {!filteredProdutos?.length && (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto</p>
+                </>
               )}
             </div>
 
