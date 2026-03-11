@@ -18,25 +18,22 @@ export interface SyncResult {
 
 async function processItem(item: QueueItem): Promise<void> {
   const { table, operation, payload } = item;
+  const client = supabase as any;
 
   switch (operation) {
     case "insert": {
-      const { error } = await (supabase.from(table) as any).insert(payload);
+      const { error } = await client.from(table).insert(payload);
       if (error) throw error;
       break;
     }
     case "update": {
       const { id, ...rest } = payload;
-      const { error } = await (supabase.from(table) as any)
-        .update(rest)
-        .eq("id", id as string);
+      const { error } = await client.from(table).update(rest).eq("id", id);
       if (error) throw error;
       break;
     }
     case "delete": {
-      const { error } = await (supabase.from(table) as any)
-        .delete()
-        .eq("id", payload.id as string);
+      const { error } = await client.from(table).delete().eq("id", payload.id);
       if (error) throw error;
       break;
     }
