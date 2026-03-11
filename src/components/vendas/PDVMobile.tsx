@@ -42,6 +42,8 @@ export function PDVMobile({ open, onOpenChange }: Props) {
   const { data: onlineProdutos } = useProdutos();
   const { data: onlineClientes } = useClientes();
   const finalizar = useFinalizarVenda();
+  const { data: maisVendidos } = useProdutosMaisVendidos();
+  const { data: recentes } = useProdutosRecentes();
   const { isOnline, pendingCount } = useOffline();
   const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
 
