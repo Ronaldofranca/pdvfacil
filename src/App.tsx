@@ -27,6 +27,8 @@ import BackupPage from "./pages/Backup";
 import AuditPage from "./pages/Audit";
 import MaisPage from "./pages/Mais";
 import LoginPage from "./pages/Login";
+import SetupPage from "./pages/Setup";
+import AceitarConvitePage from "./pages/AceitarConvite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +43,8 @@ const App = () => (
           <OfflineProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/setup" element={<SetupPage />} />
+              <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
               {/* Public catalog routes */}
               <Route path="/catalogo" element={<CatalogoPublicoPage />} />
               <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
