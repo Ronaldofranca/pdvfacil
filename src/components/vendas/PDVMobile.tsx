@@ -580,13 +580,20 @@ export function PDVMobile({ open, onOpenChange }: Props) {
 
             {/* Finalizar footer */}
             <div className="border-t p-3 bg-background shrink-0 safe-area-bottom">
+              {!isOnline && (
+                <p className="text-xs text-center text-muted-foreground mb-2 flex items-center justify-center gap-1">
+                  <WifiOff className="w-3 h-3" /> Venda será salva localmente e sincronizada depois
+                </p>
+              )}
               <Button
                 className="w-full h-14 text-lg gap-2 font-bold"
-                disabled={finalizar.isPending || cart.length === 0 || totalPago < total}
+                disabled={isSubmitting || finalizar.isPending || cart.length === 0 || totalPago < total}
                 onClick={handleFinalizar}
               >
                 <Check className="w-6 h-6" />
-                {finalizar.isPending ? "Finalizando..." : `Finalizar ${fmt(total)}`}
+                {isSubmitting || finalizar.isPending
+                  ? "Finalizando..."
+                  : `Finalizar ${fmt(total)}`}
               </Button>
             </div>
           </div>
