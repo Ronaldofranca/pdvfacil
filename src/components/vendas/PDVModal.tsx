@@ -13,6 +13,8 @@ import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PDVMobile } from "./PDVMobile";
 import { toast } from "sonner";
 
 const FORMAS_PAGAMENTO = [
@@ -30,6 +32,7 @@ interface Props {
 }
 
 export function PDVModal({ open, onOpenChange }: Props) {
+  const isMobile = useIsMobile();
   const { profile, user } = useAuth();
   const { data: produtos } = useProdutos();
   const { data: clientes } = useClientes();
@@ -144,6 +147,11 @@ export function PDVModal({ open, onOpenChange }: Props) {
   const filteredProdutos = produtos
     ?.filter((p) => p.ativo)
     .filter((p) => p.nome.toLowerCase().includes(searchProd.toLowerCase()) || p.codigo?.toLowerCase().includes(searchProd.toLowerCase()));
+
+  // Mobile: use full-screen PDV
+  if (isMobile) {
+    return <PDVMobile open={open} onOpenChange={onOpenChange} />;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
