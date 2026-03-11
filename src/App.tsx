@@ -29,6 +29,10 @@ import MaisPage from "./pages/Mais";
 import LoginPage from "./pages/Login";
 import SetupPage from "./pages/Setup";
 import AceitarConvitePage from "./pages/AceitarConvite";
+import MapaClientesPage from "./pages/MapaClientes";
+import MetasComissoesPage from "./pages/MetasComissoes";
+import PrevisaoEstoquePage from "./pages/PrevisaoEstoque";
+import AlertasPage from "./pages/Alertas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
