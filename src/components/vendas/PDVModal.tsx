@@ -210,7 +210,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
 
   // Mobile: use full-screen PDV
   if (isMobile) {
-    return <PDVMobile open={open} onOpenChange={onOpenChange} />;
+    return <PDVMobile open={open} onOpenChange={onOpenChange} initialCart={initialCart} initialClienteId={initialClienteId} />;
   }
 
   return (

@@ -107,8 +107,8 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
 
   const [step, setStep] = useState<Step>("produtos");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [clienteId, setClienteId] = useState("");
+  const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
+  const [clienteId, setClienteId] = useState(initialClienteId ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
