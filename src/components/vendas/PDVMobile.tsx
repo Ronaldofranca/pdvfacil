@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
-  DollarSign, X, Package, CreditCard, Check, WifiOff, Wifi
+  DollarSign, X, Package, CreditCard, Check, WifiOff, Wifi, RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
