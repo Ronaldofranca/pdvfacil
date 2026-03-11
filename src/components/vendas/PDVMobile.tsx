@@ -38,9 +38,11 @@ interface Props {
 
 export function PDVMobile({ open, onOpenChange }: Props) {
   const { profile, user } = useAuth();
-  const { data: produtos } = useProdutos();
-  const { data: clientes } = useClientes();
+  const { data: onlineProdutos } = useProdutos();
+  const { data: onlineClientes } = useClientes();
   const finalizar = useFinalizarVenda();
+  const { isOnline, pendingCount } = useOffline();
+  const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
 
   const [step, setStep] = useState<Step>("produtos");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -49,6 +51,21 @@ export function PDVMobile({ open, onOpenChange }: Props) {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
   const [editingItem, setEditingItem] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Offline-cached data
+  const [cachedProdutos, setCachedProdutos] = useState<CachedProduto[]>([]);
+  const [cachedClientes, setCachedClientes] = useState<CachedCliente[]>([]);
+
+  // Load cached data on mount (for offline fallback)
+  useEffect(() => {
+    getCachedProdutos().then(setCachedProdutos);
+    getCachedClientes().then(setCachedClientes);
+  }, [getCachedProdutos, getCachedClientes]);
+
+  // Use online data when available, fall back to cache
+  const produtos = isOnline && onlineProdutos ? onlineProdutos : cachedProdutos;
+  const clientes = isOnline && onlineClientes ? onlineClientes : cachedClientes;
 
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
