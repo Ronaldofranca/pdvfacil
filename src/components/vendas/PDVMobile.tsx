@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
-  ShoppingCart, Search, Plus, Minus, Trash2, Gift, Percent,
-  DollarSign, X, ChevronLeft, ChevronRight, Package, CreditCard, Check
+  ShoppingCart, Search, Plus, Minus, Trash2, Gift,
+  DollarSign, X, Package, CreditCard, Check, WifiOff, Wifi
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
+import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/useOfflinePDV";
+import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
