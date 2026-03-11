@@ -32,6 +32,7 @@ interface Props {
 }
 
 export function PDVModal({ open, onOpenChange }: Props) {
+  const isMobile = useIsMobile();
   const { profile, user } = useAuth();
   const { data: produtos } = useProdutos();
   const { data: clientes } = useClientes();
