@@ -59,6 +59,7 @@ export const modules: ModuleConfig[] = [
 
 export const moduleGroups = {
   operacional: { label: "Operacional", modules: modules.filter((m) => m.group === "operacional") },
+  inteligencia: { label: "Inteligência", modules: modules.filter((m) => m.group === "inteligencia") },
   gestao: { label: "Gestão", modules: modules.filter((m) => m.group === "gestao") },
   sistema: { label: "Sistema", modules: modules.filter((m) => m.group === "sistema") },
 };
