@@ -449,6 +449,57 @@ export type Database = {
           },
         ]
       }
+      pagamentos: {
+        Row: {
+          created_at: string
+          data_pagamento: string
+          empresa_id: string
+          forma_pagamento: string
+          id: string
+          observacoes: string
+          parcela_id: string
+          usuario_id: string
+          valor_pago: number
+        }
+        Insert: {
+          created_at?: string
+          data_pagamento?: string
+          empresa_id: string
+          forma_pagamento?: string
+          id?: string
+          observacoes?: string
+          parcela_id: string
+          usuario_id: string
+          valor_pago: number
+        }
+        Update: {
+          created_at?: string
+          data_pagamento?: string
+          empresa_id?: string
+          forma_pagamento?: string
+          id?: string
+          observacoes?: string
+          parcela_id?: string
+          usuario_id?: string
+          valor_pago?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_parcela_id_fkey"
+            columns: ["parcela_id"]
+            isOneToOne: false
+            referencedRelation: "parcelas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parcelas: {
         Row: {
           cliente_id: string | null

@@ -68,29 +68,55 @@ export function useGerarParcelas() {
   });
 }
 
+export interface PagamentoInput {
+  empresa_id: string;
+  parcela_id: string;
+  valor_pago: number;
+  forma_pagamento: string;
+  usuario_id: string;
+  observacoes?: string;
+}
+
 export function useRegistrarPagamento() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, valor }: { id: string; valor: number }) => {
-      // Fetch current
-      const { data: parcela, error: fetchErr } = await supabase
-        .from("parcelas")
-        .select("valor_pago")
-        .eq("id", id)
+    mutationFn: async (input: PagamentoInput) => {
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .insert({
+          empresa_id: input.empresa_id,
+          parcela_id: input.parcela_id,
+          valor_pago: input.valor_pago,
+          forma_pagamento: input.forma_pagamento,
+          usuario_id: input.usuario_id,
+          observacoes: input.observacoes ?? "",
+        })
+        .select()
         .single();
-      if (fetchErr) throw fetchErr;
-
-      const novoValorPago = Number(parcela.valor_pago) + valor;
-      const { error } = await supabase
-        .from("parcelas")
-        .update({ valor_pago: novoValorPago })
-        .eq("id", id);
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["parcelas"] });
+      qc.invalidateQueries({ queryKey: ["pagamentos"] });
       toast.success("Pagamento registrado!");
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function usePagamentosDaParcela(parcelaId: string | null) {
+  return useQuery({
+    queryKey: ["pagamentos", parcelaId],
+    enabled: !!parcelaId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select("*")
+        .eq("parcela_id", parcelaId!)
+        .order("data_pagamento", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
   });
 }
