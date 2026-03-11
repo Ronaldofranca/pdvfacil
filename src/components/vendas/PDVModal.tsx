@@ -104,6 +104,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   }, [open, initialCart, initialClienteId]);
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
+  const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
