@@ -30,6 +30,8 @@ const FORMAS_PAGAMENTO = [
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialCart?: CartItem[];
+  initialClienteId?: string;
 }
 
 function DesktopProductButton({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
