@@ -23,6 +23,7 @@ export default function ClientesPage() {
   const [search, setSearch] = useState("");
   const [formState, setFormState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [historicoState, setHistoricoState] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [pdvState, setPdvState] = useState<{ open: boolean; clienteId?: string; cart?: CartItem[] }>({ open: false });
 
   const filtered = clientes?.filter((c) =>
     c.nome.toLowerCase().includes(search.toLowerCase()) ||
