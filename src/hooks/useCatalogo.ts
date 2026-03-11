@@ -54,10 +54,10 @@ export function useCatalogoProdutos(options?: { destaque?: boolean; promocao?: b
   return useQuery({
     queryKey: ["catalogo_produtos", options],
     queryFn: async () => {
-      let query = supabase
-        .from("produtos")
+      // Use the secure view that excludes custo column
+      let query = (supabase as any)
+        .from("produtos_catalogo")
         .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
-        .eq("ativo", true)
         .order("nome");
 
       if (options?.destaque) query = query.eq("destaque", true);
