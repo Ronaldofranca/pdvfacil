@@ -14,6 +14,10 @@ import {
   RefreshCw,
   HardDrive,
   Shield,
+  MapPin,
+  Target,
+  PackageSearch,
+  BellRing,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/types/modules";
@@ -23,7 +27,7 @@ export interface ModuleConfig {
   label: string;
   icon: LucideIcon;
   path: string;
-  group: "operacional" | "gestao" | "sistema";
+  group: "operacional" | "gestao" | "inteligencia" | "sistema";
   description: string;
 }
 
@@ -36,6 +40,11 @@ export const modules: ModuleConfig[] = [
   { key: "estoque", label: "Estoque", icon: Warehouse, path: "/estoque", group: "operacional", description: "Controle de estoque" },
   { key: "catalogo", label: "Catálogo", icon: BookOpen, path: "/catalogo", group: "operacional", description: "Catálogo para vendedores" },
   { key: "romaneio", label: "Romaneio", icon: Truck, path: "/romaneio", group: "operacional", description: "Controle de carregamento" },
+  // Inteligência de Vendas
+  { key: "mapa", label: "Mapa", icon: MapPin, path: "/mapa-clientes", group: "inteligencia", description: "Mapa inteligente de clientes" },
+  { key: "metas", label: "Metas", icon: Target, path: "/metas", group: "inteligencia", description: "Metas e comissões" },
+  { key: "previsao", label: "Previsão", icon: PackageSearch, path: "/previsao-estoque", group: "inteligencia", description: "Previsão inteligente de estoque" },
+  { key: "alertas", label: "Alertas", icon: BellRing, path: "/alertas", group: "inteligencia", description: "Alertas automáticos" },
   // Gestão
   { key: "financeiro", label: "Financeiro", icon: DollarSign, path: "/financeiro", group: "gestao", description: "Contas e movimentações" },
   { key: "relatorios", label: "Relatórios", icon: BarChart3, path: "/relatorios", group: "gestao", description: "Relatórios gerenciais" },
@@ -50,6 +59,7 @@ export const modules: ModuleConfig[] = [
 
 export const moduleGroups = {
   operacional: { label: "Operacional", modules: modules.filter((m) => m.group === "operacional") },
+  inteligencia: { label: "Inteligência", modules: modules.filter((m) => m.group === "inteligencia") },
   gestao: { label: "Gestão", modules: modules.filter((m) => m.group === "gestao") },
   sistema: { label: "Sistema", modules: modules.filter((m) => m.group === "sistema") },
 };

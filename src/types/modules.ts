@@ -123,4 +123,8 @@ export type ModuleKey =
   | "notificacoes"
   | "sync"
   | "backup"
-  | "audit";
+  | "audit"
+  | "mapa"
+  | "metas"
+  | "previsao"
+  | "alertas";

@@ -650,6 +650,50 @@ export type Database = {
           },
         ]
       }
+      metas_vendedor: {
+        Row: {
+          ano: number
+          created_at: string
+          empresa_id: string
+          id: string
+          mes: number
+          meta_valor: number
+          percentual_comissao: number
+          updated_at: string
+          vendedor_id: string
+        }
+        Insert: {
+          ano: number
+          created_at?: string
+          empresa_id: string
+          id?: string
+          mes: number
+          meta_valor?: number
+          percentual_comissao?: number
+          updated_at?: string
+          vendedor_id: string
+        }
+        Update: {
+          ano?: number
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          mes?: number
+          meta_valor?: number
+          percentual_comissao?: number
+          updated_at?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metas_vendedor_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimentos_estoque: {
         Row: {
           created_at: string
