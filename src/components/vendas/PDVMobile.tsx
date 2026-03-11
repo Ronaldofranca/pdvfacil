@@ -223,7 +223,15 @@ export function PDVMobile({ open, onOpenChange }: Props) {
         <Button variant="ghost" size="sm" className="gap-1 -ml-2" onClick={handleClose}>
           <X className="w-5 h-5" /> Fechar
         </Button>
-        <h2 className="font-bold text-foreground">PDV</h2>
+        <div className="flex items-center gap-2">
+          {!isOnline && (
+            <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0.5">
+              <WifiOff className="w-3 h-3" /> Offline
+              {pendingCount > 0 && ` (${pendingCount})`}
+            </Badge>
+          )}
+          <h2 className="font-bold text-foreground">PDV</h2>
+        </div>
         {cart.length > 0 && (
           <Button
             variant="ghost"
