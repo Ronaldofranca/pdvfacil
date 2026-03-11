@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Search, Pencil, Trash2, MapPin, Phone, History } from "lucide-react";
+import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,10 @@ import { useClientes, useDeleteCliente } from "@/hooks/useClientes";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
 import { HistoricoCompras } from "@/components/clientes/HistoricoCompras";
+import { PDVModal } from "@/components/vendas/PDVModal";
+import { useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
+import type { CartItem } from "@/hooks/useVendas";
+import { toast } from "sonner";
 
 export default function ClientesPage() {
   const { isAdmin } = usePermissions();
