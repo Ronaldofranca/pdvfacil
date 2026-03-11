@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
-  DollarSign, X, Package, CreditCard, Check, WifiOff, Wifi, RotateCcw
+  DollarSign, X, Package, CreditCard, Check, WifiOff,
+  RotateCcw, Users, ChevronRight, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,6 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
@@ -22,15 +22,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const FORMAS_PAGAMENTO = [
-  { value: "dinheiro", label: "Dinheiro" },
-  { value: "pix", label: "PIX" },
-  { value: "cartao_credito", label: "Cartão Crédito" },
-  { value: "cartao_debito", label: "Cartão Débito" },
-  { value: "boleto", label: "Boleto" },
-  { value: "transferencia", label: "Transferência" },
+  { value: "dinheiro", label: "💵 Dinheiro" },
+  { value: "pix", label: "📱 PIX" },
+  { value: "cartao_credito", label: "💳 Crédito" },
+  { value: "cartao_debito", label: "💳 Débito" },
+  { value: "boleto", label: "📄 Boleto" },
+  { value: "transferencia", label: "🏦 Transferência" },
 ];
 
-type Step = "produtos" | "carrinho" | "pagamento";
+type Step = "cliente" | "produtos" | "carrinho" | "pagamento";
 
 interface Props {
   open: boolean;
@@ -38,63 +38,6 @@ interface Props {
   initialCart?: CartItem[];
   initialClienteId?: string;
 }
-
-// ─── Helper components ───
-function ProductQuickButton({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onAdd(product)}
-      className="w-full flex items-center justify-between p-3.5 rounded-xl border bg-card active:bg-accent transition-colors"
-    >
-      <div className="text-left">
-        <p className="font-medium text-foreground">{product.nome}</p>
-        {product.codigo && <p className="text-xs text-muted-foreground mt-0.5">{product.codigo}</p>}
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="font-bold text-primary">{fmt(Number(product.preco))}</span>
-        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-          <Plus className="w-5 h-5 text-primary" />
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function QuickSection({ title, items, allProducts, onAdd, fmt }: {
-  title: string;
-  items: { produto_id: string; nome: string }[];
-  allProducts: any[];
-  onAdd: (p: any) => void;
-  fmt: (v: number) => string;
-}) {
-  if (!allProducts?.length) return null;
-  const productMap = new Map(allProducts.map((p) => [p.id, p]));
-  const resolved = items
-    .map((i) => productMap.get(i.produto_id))
-    .filter((p): p is any => !!p && p.ativo !== false);
-  if (!resolved.length) return null;
-
-  return (
-    <div>
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{title}</p>
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3">
-        {resolved.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onAdd(p)}
-            className="shrink-0 w-32 p-3 rounded-xl border bg-card active:bg-accent transition-colors text-left"
-          >
-            <p className="font-medium text-foreground text-sm truncate">{p.nome}</p>
-            <p className="font-bold text-primary text-sm mt-1">{fmt(Number(p.preco))}</p>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 
 export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const { profile, user } = useAuth();
@@ -106,42 +49,44 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const { isOnline, pendingCount } = useOffline();
   const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
 
-  const [step, setStep] = useState<Step>("produtos");
+  const [step, setStep] = useState<Step>("cliente");
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
   const [clienteId, setClienteId] = useState(initialClienteId ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
+  const [searchCliente, setSearchCliente] = useState("");
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
 
-  // Offline-cached data
   const [cachedProdutos, setCachedProdutos] = useState<CachedProduto[]>([]);
   const [cachedClientes, setCachedClientes] = useState<CachedCliente[]>([]);
 
-  // Load cached data on mount (for offline fallback)
   useEffect(() => {
     getCachedProdutos().then(setCachedProdutos);
     getCachedClientes().then(setCachedClientes);
   }, [getCachedProdutos, getCachedClientes]);
 
-  // Reset when opening with initial data
   useEffect(() => {
     if (open) {
       if (initialCart?.length) {
         setCart(initialCart);
         setStep("carrinho");
       }
-      if (initialClienteId) setClienteId(initialClienteId);
+      if (initialClienteId) {
+        setClienteId(initialClienteId);
+        if (!initialCart?.length) setStep("produtos");
+      }
     }
   }, [open, initialCart, initialClienteId]);
 
-  // Use online data when available, fall back to cache
   const produtos = isOnline && onlineProdutos ? onlineProdutos : cachedProdutos;
   const clientes = isOnline && onlineClientes ? onlineClientes : cachedClientes;
+
+  const clienteSelecionado = clientes?.find((c) => c.id === clienteId);
 
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -228,7 +173,6 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     setIsSubmitting(true);
 
     if (isOnline) {
-      // Online: use normal mutation
       finalizar.mutate(
         {
           empresa_id: profile.empresa_id,
@@ -249,7 +193,6 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
         }
       );
     } else {
-      // Offline: queue to IndexedDB
       const success = await finalizarVendaOffline({
         itens: cart,
         pagamentos: pagamentos.filter((p) => p.valor > 0),
@@ -270,7 +213,10 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     setClienteId("");
     setObservacoes("");
     setPagamentos([{ forma: "dinheiro", valor: 0 }]);
-    setStep("produtos");
+    setSearchProd("");
+    setSearchCliente("");
+    setStep("cliente");
+    setEditingItem(null);
   };
 
   const filteredProdutos = useMemo(
@@ -285,19 +231,39 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     [produtos, searchProd]
   );
 
+  const filteredClientes = useMemo(
+    () =>
+      (clientes as any[])?.filter(
+        (c: any) =>
+          c.nome?.toLowerCase().includes(searchCliente.toLowerCase()) ||
+          c.telefone?.includes(searchCliente) ||
+          c.cidade?.toLowerCase().includes(searchCliente.toLowerCase())
+      ),
+    [clientes, searchCliente]
+  );
+
   const handleClose = () => {
     onOpenChange(false);
-    setStep("produtos");
+    resetForm();
   };
 
   if (!open) return null;
 
+  const STEPS: { key: Step; label: string; num: number }[] = [
+    { key: "cliente", label: "Cliente", num: 1 },
+    { key: "produtos", label: "Produtos", num: 2 },
+    { key: "carrinho", label: "Revisão", num: 3 },
+    { key: "pagamento", label: "Pagar", num: 4 },
+  ];
+
+  const currentStepIdx = STEPS.findIndex((s) => s.key === step);
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* ─── Top Bar ─── */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b bg-background shrink-0 safe-area-top">
-        <Button variant="ghost" size="sm" className="gap-1 -ml-2" onClick={handleClose}>
-          <X className="w-5 h-5" /> Fechar
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-background shrink-0 safe-area-top">
+        <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 h-10" onClick={handleClose}>
+          <X className="w-5 h-5" />
         </Button>
         <div className="flex items-center gap-2">
           {!isOnline && (
@@ -306,57 +272,162 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
               {pendingCount > 0 && ` (${pendingCount})`}
             </Badge>
           )}
-          <h2 className="font-bold text-foreground">PDV</h2>
+          <div className="flex items-center gap-1.5">
+            <Zap className="w-4 h-4 text-primary" />
+            <h2 className="font-bold text-foreground">Venda Rápida</h2>
+          </div>
         </div>
-        {cart.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1 -mr-2 relative"
-            onClick={() => setStep("carrinho")}
-          >
+        {cart.length > 0 ? (
+          <Button variant="ghost" size="sm" className="gap-1 -mr-2 relative h-10" onClick={() => setStep("carrinho")}>
             <ShoppingCart className="w-5 h-5" />
             <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
               {cart.length}
             </Badge>
           </Button>
+        ) : (
+          <div className="w-10" />
         )}
-        {cart.length === 0 && <div className="w-16" />}
       </div>
 
-      {/* ─── Step Tabs ─── */}
-      <div className="flex border-b shrink-0">
-        {[
-          { key: "produtos" as Step, icon: Package, label: "Produtos" },
-          { key: "carrinho" as Step, icon: ShoppingCart, label: `Carrinho (${cart.length})` },
-          { key: "pagamento" as Step, icon: CreditCard, label: "Pagamento" },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setStep(tab.key)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors
-              ${step === tab.key
-                ? "border-b-2 border-primary text-primary"
-                : "text-muted-foreground"
-              }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-          </button>
+      {/* ─── Step Progress ─── */}
+      <div className="flex items-center px-4 py-2 border-b shrink-0 gap-1">
+        {STEPS.map((s, i) => (
+          <div key={s.key} className="flex items-center flex-1">
+            <button
+              type="button"
+              onClick={() => setStep(s.key)}
+              className={`flex items-center gap-1.5 text-xs font-medium transition-colors w-full justify-center py-1.5 rounded-lg
+                ${i === currentStepIdx
+                  ? "bg-primary text-primary-foreground"
+                  : i < currentStepIdx
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                }`}
+            >
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold
+                ${i === currentStepIdx
+                  ? "bg-primary-foreground text-primary"
+                  : i < currentStepIdx
+                    ? "bg-primary/20 text-primary"
+                    : "bg-muted text-muted-foreground"
+                }`}>
+                {i < currentStepIdx ? "✓" : s.num}
+              </span>
+              <span className="hidden min-[360px]:inline">{s.label}</span>
+            </button>
+          </div>
         ))}
       </div>
 
       {/* ─── Content ─── */}
       <div className="flex-1 overflow-y-auto">
-        {/* STEP: Produtos */}
+
+        {/* ═══ STEP 1: Cliente ═══ */}
+        {step === "cliente" && (
+          <div className="flex flex-col h-full">
+            <div className="p-4 sticky top-0 bg-background z-10 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  className="pl-11 h-14 text-lg rounded-2xl"
+                  placeholder="Buscar cliente..."
+                  value={searchCliente}
+                  onChange={(e) => setSearchCliente(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 p-4 space-y-2">
+              {/* Skip client */}
+              <button
+                type="button"
+                onClick={() => {
+                  setClienteId("");
+                  setStep("produtos");
+                }}
+                className="w-full flex items-center justify-between p-4 rounded-2xl border-2 border-dashed border-muted-foreground/30 active:bg-accent transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                    <Users className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-foreground">Sem cliente</p>
+                    <p className="text-xs text-muted-foreground">Venda sem identificação</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+
+              {/* Client list */}
+              {filteredClientes?.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setClienteId(c.id);
+                    setStep("produtos");
+                  }}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 active:bg-accent transition-colors
+                    ${clienteId === c.id ? "border-primary bg-primary/5" : "border-border"}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-lg font-bold text-primary">{c.nome?.charAt(0)?.toUpperCase()}</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-foreground">{c.nome}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {c.telefone || c.cidade || c.email || ""}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </button>
+              ))}
+              {searchCliente && !filteredClientes?.length && (
+                <p className="text-muted-foreground text-center py-8">Nenhum cliente encontrado</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 2: Produtos ═══ */}
         {step === "produtos" && (
           <div className="flex flex-col h-full">
-            <div className="p-3 sticky top-0 bg-background z-10 border-b">
+            {/* Client banner */}
+            {clienteSelecionado && (
+              <div className="px-4 py-2 bg-primary/5 border-b flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-sm font-bold text-primary">{clienteSelecionado.nome?.charAt(0)?.toUpperCase()}</span>
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{clienteSelecionado.nome}</span>
+                </div>
+                {ultimaVendaItens && ultimaVendaItens.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5 text-xs rounded-xl"
+                    onClick={() => {
+                      setCart(ultimaVendaItens);
+                      setStep("carrinho");
+                      toast.success("Última venda carregada!");
+                    }}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Repetir
+                  </Button>
+                )}
+              </div>
+            )}
+
+            <div className="p-4 sticky top-0 bg-background z-10 border-b">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  className="pl-9 h-12 text-base"
+                  className="pl-11 h-14 text-lg rounded-2xl"
                   placeholder="Buscar produto..."
                   value={searchProd}
                   onChange={(e) => setSearchProd(e.target.value)}
@@ -364,12 +435,12 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                 />
               </div>
             </div>
-            <div className="flex-1 p-3 space-y-4">
-              {/* Search results or quick-add sections */}
+
+            <div className="flex-1 p-4 space-y-4">
               {searchProd.trim() ? (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {filteredProdutos?.map((p) => (
-                    <ProductQuickButton key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                    <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
                   ))}
                   {!filteredProdutos?.length && (
                     <p className="text-muted-foreground text-center py-12">Nenhum produto encontrado</p>
@@ -377,10 +448,10 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                 </div>
               ) : (
                 <>
-                  {/* Products of current client */}
+                  {/* Client products */}
                   {clienteId && produtosCliente && produtosCliente.length > 0 && (
-                    <QuickSection
-                      title="Produtos deste cliente"
+                    <QuickScrollSection
+                      title="Comprados por este cliente"
                       items={produtosCliente}
                       allProducts={produtos as any[]}
                       onAdd={addToCart}
@@ -388,9 +459,8 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     />
                   )}
 
-                  {/* Most sold */}
                   {maisVendidos && maisVendidos.length > 0 && (
-                    <QuickSection
+                    <QuickScrollSection
                       title="Mais vendidos"
                       items={maisVendidos}
                       allProducts={produtos as any[]}
@@ -399,9 +469,8 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     />
                   )}
 
-                  {/* Recently sold */}
                   {recentes && recentes.length > 0 && (
-                    <QuickSection
+                    <QuickScrollSection
                       title="Vendidos recentemente"
                       items={recentes}
                       allProducts={produtos as any[]}
@@ -410,12 +479,11 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     />
                   )}
 
-                  {/* All products */}
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Todos os produtos</p>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       {(produtos as any[])?.filter((p: any) => p.ativo !== false).map((p: any) => (
-                        <ProductQuickButton key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                        <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
                       ))}
                     </div>
                   </div>
@@ -425,92 +493,94 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
           </div>
         )}
 
-        {/* STEP: Carrinho */}
+        {/* ═══ STEP 3: Carrinho / Revisão ═══ */}
         {step === "carrinho" && (
           <div className="flex flex-col h-full">
-            <div className="flex-1 p-3 space-y-2">
+            <div className="flex-1 p-4 space-y-3">
               {cart.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3">
-                  <ShoppingCart className="w-12 h-12 text-muted-foreground/50" />
-                  <p className="text-muted-foreground">Carrinho vazio</p>
-                  <Button variant="outline" onClick={() => setStep("produtos")}>
-                    Adicionar produtos
+                <div className="flex flex-col items-center justify-center py-16 gap-4">
+                  <ShoppingCart className="w-16 h-16 text-muted-foreground/30" />
+                  <p className="text-muted-foreground text-lg">Carrinho vazio</p>
+                  <Button size="lg" className="h-14 px-8 text-base rounded-2xl gap-2" onClick={() => setStep("produtos")}>
+                    <Plus className="w-5 h-5" /> Adicionar produtos
                   </Button>
                 </div>
               ) : (
                 cart.map((item, idx) => (
-                  <Card key={item.produto_id} className="p-3">
-                    {/* Item header */}
+                  <Card key={item.produto_id} className="p-4 rounded-2xl">
+                    {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm text-foreground">{item.nome}</span>
+                          <span className="font-bold text-base text-foreground">{item.nome}</span>
                           {item.bonus && (
                             <Badge variant="secondary" className="text-[10px] gap-0.5">
                               <Gift className="w-2.5 h-2.5" />Bônus
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="text-sm text-muted-foreground mt-0.5">
                           {item.quantidade}x {fmt(item.preco_vendido)}
                           {item.desconto > 0 && ` (desc: ${fmt(item.desconto)})`}
                         </p>
                       </div>
-                      <span className="font-bold text-primary text-base">
+                      <span className="font-bold text-primary text-lg">
                         {item.bonus ? "R$ 0,00" : fmt(item.subtotal)}
                       </span>
                     </div>
 
-                    {/* Quantity row */}
-                    <div className="flex items-center justify-between mt-3">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-10 w-10"
-                          onClick={() => changeQty(idx, -1)}
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                        <span className="w-10 text-center font-bold text-base">{item.quantidade}</span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-10 w-10"
-                          onClick={() => changeQty(idx, 1)}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
+                    {/* Actions row - big touch targets */}
+                    <div className="flex items-center justify-between mt-3 gap-2">
                       <div className="flex items-center gap-1.5">
                         <Button
                           type="button"
-                          variant={item.bonus ? "default" : "outline"}
-                          size="sm"
-                          className="h-9 text-xs gap-1"
-                          onClick={() => updateItem(idx, { bonus: !item.bonus })}
+                          variant="outline"
+                          size="icon"
+                          className="h-12 w-12 rounded-xl"
+                          onClick={() => changeQty(idx, -1)}
                         >
-                          <Gift className="w-3.5 h-3.5" />
+                          <Minus className="w-5 h-5" />
+                        </Button>
+                        <span className="w-12 text-center font-bold text-xl">{item.quantidade}</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-12 w-12 rounded-xl"
+                          onClick={() => changeQty(idx, 1)}
+                        >
+                          <Plus className="w-5 h-5" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant={item.bonus ? "default" : "outline"}
+                          size="icon"
+                          className="h-12 w-12 rounded-xl"
+                          onClick={() => updateItem(idx, { bonus: !item.bonus })}
+                          title="Bônus"
+                        >
+                          <Gift className="w-5 h-5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={editingItem === idx ? "default" : "outline"}
+                          size="icon"
+                          className="h-12 w-12 rounded-xl"
+                          onClick={() => setEditingItem(editingItem === idx ? null : idx)}
+                          title="Editar preço"
+                        >
+                          <DollarSign className="w-5 h-5" />
                         </Button>
                         <Button
                           type="button"
                           variant="outline"
-                          size="sm"
-                          className="h-9 text-xs"
-                          onClick={() => setEditingItem(editingItem === idx ? null : idx)}
-                        >
-                          <DollarSign className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-12 w-12 rounded-xl border-destructive/30"
                           onClick={() => removeItem(idx)}
                         >
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                          <Trash2 className="w-5 h-5 text-destructive" />
                         </Button>
                       </div>
                     </div>
@@ -519,11 +589,11 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     {editingItem === idx && (
                       <div className="mt-3 pt-3 border-t space-y-3">
                         <div>
-                          <Label className="text-xs text-muted-foreground">Preço unitário</Label>
+                          <Label className="text-sm text-muted-foreground">Preço unitário</Label>
                           <Input
                             type="number"
                             step="0.01"
-                            className="h-11 text-base mt-1"
+                            className="h-14 text-lg mt-1 rounded-xl"
                             value={item.preco_vendido}
                             onChange={(e) =>
                               updateItem(idx, { preco_vendido: parseFloat(e.target.value) || 0 })
@@ -531,11 +601,11 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                           />
                         </div>
                         <div>
-                          <Label className="text-xs text-muted-foreground">Desconto (R$)</Label>
+                          <Label className="text-sm text-muted-foreground">Desconto (R$)</Label>
                           <Input
                             type="number"
                             step="0.01"
-                            className="h-11 text-base mt-1"
+                            className="h-14 text-lg mt-1 rounded-xl"
                             value={item.desconto || ""}
                             placeholder="0,00"
                             onChange={(e) =>
@@ -549,42 +619,20 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                 ))
               )}
 
-              {/* Cliente */}
               {cart.length > 0 && (
-                <div className="pt-2 space-y-2">
-                  <Label className="text-xs text-muted-foreground">Cliente (opcional)</Label>
-                  <Select value={clienteId} onValueChange={setClienteId}>
-                    <SelectTrigger className="h-11 mt-1">
-                      <SelectValue placeholder="Selecione o cliente..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientes?.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {clienteId && ultimaVendaItens && ultimaVendaItens.length > 0 && (
-                    <Button
-                      variant="outline"
-                      className="w-full h-11 gap-2 text-sm"
-                      onClick={() => {
-                        setCart(ultimaVendaItens);
-                        toast.success("Itens da última venda carregados!");
-                      }}
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      Repetir última venda
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 gap-2 text-base rounded-2xl"
+                  onClick={() => setStep("produtos")}
+                >
+                  <Plus className="w-5 h-5" /> Adicionar mais produtos
+                </Button>
               )}
             </div>
 
-            {/* Cart footer summary */}
+            {/* Cart summary footer */}
             {cart.length > 0 && (
-              <div className="border-t p-3 bg-background space-y-2 shrink-0 safe-area-bottom">
+              <div className="border-t p-4 bg-background space-y-3 shrink-0 safe-area-bottom">
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
@@ -596,16 +644,19 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                       <span>-{fmt(totalDescontos)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-bold text-lg">
+                  <div className="flex justify-between font-bold text-xl">
                     <span>Total</span>
                     <span className="text-primary">{fmt(total)}</span>
                   </div>
                 </div>
                 <Button
-                  className="w-full h-12 text-base gap-2"
-                  onClick={() => setStep("pagamento")}
+                  className="w-full h-14 text-lg gap-2 rounded-2xl font-bold"
+                  onClick={() => {
+                    autoFillPagamento();
+                    setStep("pagamento");
+                  }}
                 >
-                  <CreditCard className="w-5 h-5" />
+                  <CreditCard className="w-6 h-6" />
                   Ir para Pagamento
                 </Button>
               </div>
@@ -613,13 +664,19 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
           </div>
         )}
 
-        {/* STEP: Pagamento */}
+        {/* ═══ STEP 4: Pagamento ═══ */}
         {step === "pagamento" && (
           <div className="flex flex-col h-full">
-            <div className="flex-1 p-3 space-y-4">
-              {/* Resumo */}
-              <Card className="p-3 space-y-1 text-sm">
-                <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">Resumo da Venda</p>
+            <div className="flex-1 p-4 space-y-4">
+              {/* Summary */}
+              <Card className="p-4 rounded-2xl space-y-1 text-sm">
+                <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">Resumo</p>
+                {clienteSelecionado && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Cliente</span>
+                    <span className="font-medium">{clienteSelecionado.nome}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{cart.length} {cart.length === 1 ? "item" : "itens"}</span>
                   <span>{fmt(subtotal)}</span>
@@ -631,24 +688,42 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                   </div>
                 )}
                 <Separator className="my-1" />
-                <div className="flex justify-between font-bold text-lg">
+                <div className="flex justify-between font-bold text-xl">
                   <span>Total</span>
                   <span className="text-primary">{fmt(total)}</span>
                 </div>
               </Card>
 
-              {/* Formas de pagamento */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="font-semibold">Pagamento</Label>
-                  <Button variant="ghost" size="sm" className="text-xs h-8" onClick={autoFillPagamento}>
-                    Auto-preencher
-                  </Button>
+              {/* Quick payment buttons */}
+              <div>
+                <Label className="font-semibold text-sm">Forma de pagamento</Label>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {FORMAS_PAGAMENTO.map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => {
+                        setPagamentos([{ forma: f.value, valor: total }]);
+                      }}
+                      className={`p-3 rounded-2xl border-2 text-center transition-colors active:scale-95
+                        ${pagamentos[0]?.forma === f.value && pagamentos.length === 1
+                          ? "border-primary bg-primary/5"
+                          : "border-border"
+                        }`}
+                    >
+                      <p className="text-lg">{f.label.split(" ")[0]}</p>
+                      <p className="text-[11px] font-medium text-foreground mt-0.5">{f.label.split(" ").slice(1).join(" ")}</p>
+                    </button>
+                  ))}
                 </div>
+              </div>
+
+              {/* Manual payment adjustment */}
+              <div className="space-y-2">
                 {pagamentos.map((pag, idx) => (
-                  <Card key={idx} className="p-3 space-y-2">
+                  <div key={idx} className="flex gap-2 items-center">
                     <Select value={pag.forma} onValueChange={(v) => updatePagamento(idx, "forma", v)}>
-                      <SelectTrigger className="h-11">
+                      <SelectTrigger className="h-12 rounded-xl flex-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -657,63 +732,60 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                         ))}
                       </SelectContent>
                     </Select>
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        className="h-11 text-base flex-1"
-                        value={pag.valor || ""}
-                        onChange={(e) => updatePagamento(idx, "valor", parseFloat(e.target.value) || 0)}
-                        placeholder="R$ 0,00"
-                      />
-                      {pagamentos.length > 1 && (
-                        <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => removePagamento(idx)}>
-                          <X className="w-5 h-5" />
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-12 text-lg flex-1 rounded-xl"
+                      value={pag.valor || ""}
+                      onChange={(e) => updatePagamento(idx, "valor", parseFloat(e.target.value) || 0)}
+                      placeholder="R$ 0,00"
+                    />
+                    {pagamentos.length > 1 && (
+                      <Button variant="ghost" size="icon" className="h-12 w-12 rounded-xl" onClick={() => removePagamento(idx)}>
+                        <X className="w-5 h-5" />
+                      </Button>
+                    )}
+                  </div>
                 ))}
-                <Button variant="outline" className="w-full h-11 gap-2" onClick={addPagamento}>
-                  <Plus className="w-4 h-4" /> Adicionar forma de pagamento
+                <Button variant="outline" className="w-full h-12 gap-2 rounded-2xl" onClick={addPagamento}>
+                  <Plus className="w-5 h-5" /> Dividir pagamento
                 </Button>
 
                 {troco > 0 && (
-                  <p className="text-sm font-semibold text-green-600 text-center">Troco: {fmt(troco)}</p>
+                  <Card className="p-3 rounded-2xl bg-accent/50">
+                    <p className="text-center font-bold text-lg text-foreground">Troco: {fmt(troco)}</p>
+                  </Card>
                 )}
                 {totalPago > 0 && totalPago < total && (
-                  <p className="text-sm font-semibold text-destructive text-center">
+                  <p className="text-base font-semibold text-destructive text-center">
                     Faltam: {fmt(total - totalPago)}
                   </p>
                 )}
               </div>
 
               {/* Obs */}
-              <div>
-                <Label className="text-xs text-muted-foreground">Observações</Label>
-                <Textarea
-                  placeholder="Observações da venda..."
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  className="mt-1"
-                  rows={2}
-                />
-              </div>
+              <Textarea
+                placeholder="Observações da venda..."
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                className="rounded-xl"
+                rows={2}
+              />
             </div>
 
             {/* Finalizar footer */}
-            <div className="border-t p-3 bg-background shrink-0 safe-area-bottom">
+            <div className="border-t p-4 bg-background shrink-0 safe-area-bottom">
               {!isOnline && (
                 <p className="text-xs text-center text-muted-foreground mb-2 flex items-center justify-center gap-1">
-                  <WifiOff className="w-3 h-3" /> Venda será salva localmente e sincronizada depois
+                  <WifiOff className="w-3 h-3" /> Venda será salva localmente
                 </p>
               )}
               <Button
-                className="w-full h-14 text-lg gap-2 font-bold"
+                className="w-full h-16 text-xl gap-3 rounded-2xl font-bold"
                 disabled={isSubmitting || finalizar.isPending || cart.length === 0 || totalPago < total}
                 onClick={handleFinalizar}
               >
-                <Check className="w-6 h-6" />
+                <Check className="w-7 h-7" />
                 {isSubmitting || finalizar.isPending
                   ? "Finalizando..."
                   : `Finalizar ${fmt(total)}`}
@@ -725,16 +797,76 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
 
       {/* ─── Bottom floating cart button (on produtos step) ─── */}
       {step === "produtos" && cart.length > 0 && (
-        <div className="border-t p-3 bg-background shrink-0 safe-area-bottom">
+        <div className="border-t p-4 bg-background shrink-0 safe-area-bottom">
           <Button
-            className="w-full h-12 text-base gap-2"
+            className="w-full h-14 text-lg gap-2 rounded-2xl font-bold"
             onClick={() => setStep("carrinho")}
           >
-            <ShoppingCart className="w-5 h-5" />
+            <ShoppingCart className="w-6 h-6" />
             Ver Carrinho ({cart.length}) — {fmt(total)}
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Helper Components ───
+
+function QuickProductCard({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onAdd(product)}
+      className="w-full flex items-center justify-between p-4 rounded-2xl border-2 border-border bg-card active:bg-accent active:scale-[0.98] transition-all"
+    >
+      <div className="text-left">
+        <p className="font-semibold text-foreground text-base">{product.nome}</p>
+        {product.codigo && <p className="text-xs text-muted-foreground mt-0.5">{product.codigo}</p>}
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="font-bold text-primary text-lg">{fmt(Number(product.preco))}</span>
+        <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+          <Plus className="w-6 h-6 text-primary-foreground" />
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function QuickScrollSection({ title, items, allProducts, onAdd, fmt }: {
+  title: string;
+  items: { produto_id: string; nome: string }[];
+  allProducts: any[];
+  onAdd: (p: any) => void;
+  fmt: (v: number) => string;
+}) {
+  if (!allProducts?.length) return null;
+  const productMap = new Map(allProducts.map((p) => [p.id, p]));
+  const resolved = items
+    .map((i) => productMap.get(i.produto_id))
+    .filter((p): p is any => !!p && p.ativo !== false);
+  if (!resolved.length) return null;
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{title}</p>
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x">
+        {resolved.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onAdd(p)}
+            className="shrink-0 w-36 p-4 rounded-2xl border-2 border-border bg-card active:bg-accent active:scale-95 transition-all text-left snap-start"
+          >
+            <p className="font-semibold text-foreground text-sm truncate">{p.nome}</p>
+            <p className="font-bold text-primary text-base mt-1">{fmt(Number(p.preco))}</p>
+            <div className="mt-2 w-full h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Plus className="w-4 h-4 text-primary" />
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
