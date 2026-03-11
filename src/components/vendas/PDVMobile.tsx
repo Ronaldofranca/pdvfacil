@@ -56,6 +56,8 @@ export function PDVMobile({ open, onOpenChange }: Props) {
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
+
   // Offline-cached data
   const [cachedProdutos, setCachedProdutos] = useState<CachedProduto[]>([]);
   const [cachedClientes, setCachedClientes] = useState<CachedCliente[]>([]);
