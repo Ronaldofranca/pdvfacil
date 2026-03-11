@@ -116,6 +116,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
+  const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
 
   // Offline-cached data
   const [cachedProdutos, setCachedProdutos] = useState<CachedProduto[]>([]);
