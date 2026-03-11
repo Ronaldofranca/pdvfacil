@@ -52,6 +52,74 @@ export type Database = {
           },
         ]
       }
+      clientes: {
+        Row: {
+          ativo: boolean
+          cep: string
+          cidade: string
+          cpf_cnpj: string
+          created_at: string
+          email: string
+          empresa_id: string
+          estado: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          nome: string
+          observacoes: string
+          rua: string
+          telefone: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cep?: string
+          cidade?: string
+          cpf_cnpj?: string
+          created_at?: string
+          email?: string
+          empresa_id: string
+          estado?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nome: string
+          observacoes?: string
+          rua?: string
+          telefone?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cep?: string
+          cidade?: string
+          cpf_cnpj?: string
+          created_at?: string
+          email?: string
+          empresa_id?: string
+          estado?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nome?: string
+          observacoes?: string
+          rua?: string
+          telefone?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           ativa: boolean
@@ -93,6 +161,60 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      historico_compras: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          data_compra: string
+          descricao: string
+          empresa_id: string
+          id: string
+          observacoes: string
+          produtos: Json
+          usuario_id: string
+          valor: number
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          data_compra?: string
+          descricao?: string
+          empresa_id: string
+          id?: string
+          observacoes?: string
+          produtos?: Json
+          usuario_id: string
+          valor?: number
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          data_compra?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          observacoes?: string
+          produtos?: Json
+          usuario_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_compras_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_compras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kit_itens: {
         Row: {
