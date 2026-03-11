@@ -35,6 +35,8 @@ type Step = "produtos" | "carrinho" | "pagamento";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialCart?: CartItem[];
+  initialClienteId?: string;
 }
 
 // ─── Helper components ───
