@@ -458,7 +458,7 @@ export type Database = {
             foreignKeyName: "estoque_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
-            referencedRelation: "produtos_publico"
+            referencedRelation: "produtos_catalogo"
             referencedColumns: ["id"]
           },
         ]
@@ -569,7 +569,7 @@ export type Database = {
             foreignKeyName: "itens_venda_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
-            referencedRelation: "produtos_publico"
+            referencedRelation: "produtos_catalogo"
             referencedColumns: ["id"]
           },
           {
@@ -622,7 +622,7 @@ export type Database = {
             foreignKeyName: "kit_itens_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
-            referencedRelation: "produtos_publico"
+            referencedRelation: "produtos_catalogo"
             referencedColumns: ["id"]
           },
         ]
@@ -768,7 +768,7 @@ export type Database = {
             foreignKeyName: "movimentos_estoque_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
-            referencedRelation: "produtos_publico"
+            referencedRelation: "produtos_catalogo"
             referencedColumns: ["id"]
           },
         ]
@@ -1012,7 +1012,7 @@ export type Database = {
             foreignKeyName: "produto_imagens_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
-            referencedRelation: "produtos_publico"
+            referencedRelation: "produtos_catalogo"
             referencedColumns: ["id"]
           },
         ]
@@ -1410,7 +1410,7 @@ export type Database = {
             foreignKeyName: "testemunhos_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
-            referencedRelation: "produtos_publico"
+            referencedRelation: "produtos_catalogo"
             referencedColumns: ["id"]
           },
         ]
@@ -1512,7 +1512,7 @@ export type Database = {
       }
     }
     Views: {
-      produtos_publico: {
+      produtos_catalogo: {
         Row: {
           ativo: boolean | null
           beneficios: Json | null
