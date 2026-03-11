@@ -80,7 +80,7 @@ function DesktopQuickSection({ title, items, allProducts, onAdd, fmt }: {
   );
 }
 
-export function PDVModal({ open, onOpenChange }: Props) {
+export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const isMobile = useIsMobile();
   const { profile, user } = useAuth();
   const { data: produtos } = useProdutos();
