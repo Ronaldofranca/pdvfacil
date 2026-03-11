@@ -259,7 +259,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
             </div>
 
             {/* Cliente */}
-            <div>
+            <div className="space-y-2">
               <Label className="text-xs">Cliente (opcional)</Label>
               <Select value={clienteId} onValueChange={setClienteId}>
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
@@ -269,6 +269,20 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                   ))}
                 </SelectContent>
               </Select>
+              {clienteId && ultimaVendaItens && ultimaVendaItens.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1.5 text-xs"
+                  onClick={() => {
+                    setCart(ultimaVendaItens);
+                    toast.success("Itens da última venda carregados!");
+                  }}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Repetir última venda
+                </Button>
+              )}
             </div>
           </div>
 
