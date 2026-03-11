@@ -144,40 +144,65 @@ export function PDVMobile({ open, onOpenChange }: Props) {
   };
 
   // ─── Finalizar ───
-  const handleFinalizar = () => {
+  const handleFinalizar = async () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
     if (totalPago < total) return toast.error("Valor pago insuficiente");
 
-    finalizar.mutate(
-      {
-        empresa_id: profile.empresa_id,
-        cliente_id: clienteId || null,
-        vendedor_id: user.id,
+    setIsSubmitting(true);
+
+    if (isOnline) {
+      // Online: use normal mutation
+      finalizar.mutate(
+        {
+          empresa_id: profile.empresa_id,
+          cliente_id: clienteId || null,
+          vendedor_id: user.id,
+          itens: cart,
+          pagamentos: pagamentos.filter((p) => p.valor > 0),
+          desconto_total: totalDescontos,
+          observacoes,
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+            onOpenChange(false);
+            setIsSubmitting(false);
+          },
+          onError: () => setIsSubmitting(false),
+        }
+      );
+    } else {
+      // Offline: queue to IndexedDB
+      const success = await finalizarVendaOffline({
         itens: cart,
         pagamentos: pagamentos.filter((p) => p.valor > 0),
         desconto_total: totalDescontos,
+        cliente_id: clienteId || null,
         observacoes,
-      },
-      {
-        onSuccess: () => {
-          setCart([]);
-          setClienteId("");
-          setObservacoes("");
-          setPagamentos([{ forma: "dinheiro", valor: 0 }]);
-          setStep("produtos");
-          onOpenChange(false);
-        },
+      });
+      if (success) {
+        resetForm();
+        onOpenChange(false);
       }
-    );
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setCart([]);
+    setClienteId("");
+    setObservacoes("");
+    setPagamentos([{ forma: "dinheiro", valor: 0 }]);
+    setStep("produtos");
   };
 
   const filteredProdutos = useMemo(
     () =>
-      produtos
-        ?.filter((p) => p.ativo)
+      (produtos as any[])
+        ?.filter((p: any) => p.ativo !== false)
         .filter(
-          (p) =>
+          (p: any) =>
             p.nome.toLowerCase().includes(searchProd.toLowerCase()) ||
             p.codigo?.toLowerCase().includes(searchProd.toLowerCase())
         ),
