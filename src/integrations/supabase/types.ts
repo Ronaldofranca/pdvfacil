@@ -14,16 +14,199 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      empresas: {
+        Row: {
+          ativa: boolean
+          cnpj: string
+          created_at: string
+          email: string
+          endereco: string
+          id: string
+          logo_url: string | null
+          nome: string
+          razao_social: string
+          telefone: string
+          updated_at: string
+        }
+        Insert: {
+          ativa?: boolean
+          cnpj: string
+          created_at?: string
+          email?: string
+          endereco?: string
+          id?: string
+          logo_url?: string | null
+          nome: string
+          razao_social?: string
+          telefone?: string
+          updated_at?: string
+        }
+        Update: {
+          ativa?: boolean
+          cnpj?: string
+          created_at?: string
+          email?: string
+          endereco?: string
+          id?: string
+          logo_url?: string | null
+          nome?: string
+          razao_social?: string
+          telefone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      permissoes: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          ativo: boolean
+          avatar_url: string | null
+          cargo: string
+          created_at: string
+          email: string
+          empresa_id: string
+          id: string
+          nome: string
+          telefone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          avatar_url?: string | null
+          cargo?: string
+          created_at?: string
+          email: string
+          empresa_id: string
+          id?: string
+          nome: string
+          telefone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          avatar_url?: string | null
+          cargo?: string
+          created_at?: string
+          email?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          telefone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissoes: {
+        Row: {
+          created_at: string
+          id: string
+          permissao_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permissao_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permissao_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissoes_permissao_id_fkey"
+            columns: ["permissao_id"]
+            isOneToOne: false
+            referencedRelation: "permissoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_my_empresa_id: { Args: never; Returns: string }
+      has_permission: { Args: { _permission_name: string }; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: never; Returns: boolean }
+      is_gerente: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "gerente" | "vendedor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +333,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "gerente", "vendedor"],
+    },
   },
 } as const
