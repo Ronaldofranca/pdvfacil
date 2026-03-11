@@ -38,6 +38,8 @@ export function PDVModal({ open, onOpenChange }: Props) {
   const { data: produtos } = useProdutos();
   const { data: clientes } = useClientes();
   const finalizar = useFinalizarVenda();
+  const { data: maisVendidos } = useProdutosMaisVendidos();
+  const { data: recentes } = useProdutosRecentes();
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [clienteId, setClienteId] = useState("");
