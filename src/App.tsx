@@ -47,8 +47,9 @@ const App = () => (
               <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
               {/* Public catalog routes */}
               <Route path="/catalogo" element={<CatalogoPublicoPage />} />
-              <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
               <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
+              <Route path="/catalogo/produtos" element={<CatalogoPublicoPage />} />
+              <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/vendas" element={<VendasPage />} />
