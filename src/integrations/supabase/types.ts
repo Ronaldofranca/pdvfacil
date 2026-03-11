@@ -454,6 +454,13 @@ export type Database = {
             referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_publico"
+            referencedColumns: ["id"]
+          },
         ]
       }
       historico_compras: {
@@ -559,6 +566,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "itens_venda_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_publico"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "itens_venda_venda_id_fkey"
             columns: ["venda_id"]
             isOneToOne: false
@@ -602,6 +616,13 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kit_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_publico"
             referencedColumns: ["id"]
           },
         ]
@@ -741,6 +762,13 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_publico"
             referencedColumns: ["id"]
           },
         ]
@@ -978,6 +1006,13 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_imagens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_publico"
             referencedColumns: ["id"]
           },
         ]
@@ -1371,6 +1406,13 @@ export type Database = {
             referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "testemunhos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_publico"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -1470,7 +1512,93 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      produtos_publico: {
+        Row: {
+          ativo: boolean | null
+          beneficios: Json | null
+          categoria_id: string | null
+          codigo: string | null
+          created_at: string | null
+          descricao: string | null
+          destaque: boolean | null
+          empresa_id: string | null
+          id: string | null
+          imagem_url: string | null
+          lancamento: boolean | null
+          mais_vendido: boolean | null
+          nome: string | null
+          preco: number | null
+          promocao: boolean | null
+          seo_descricao: string | null
+          seo_titulo: string | null
+          slug: string | null
+          unidade: string | null
+          updated_at: string | null
+          whatsapp_texto: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          beneficios?: Json | null
+          categoria_id?: string | null
+          codigo?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          destaque?: boolean | null
+          empresa_id?: string | null
+          id?: string | null
+          imagem_url?: string | null
+          lancamento?: boolean | null
+          mais_vendido?: boolean | null
+          nome?: string | null
+          preco?: number | null
+          promocao?: boolean | null
+          seo_descricao?: string | null
+          seo_titulo?: string | null
+          slug?: string | null
+          unidade?: string | null
+          updated_at?: string | null
+          whatsapp_texto?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          beneficios?: Json | null
+          categoria_id?: string | null
+          codigo?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          destaque?: boolean | null
+          empresa_id?: string | null
+          id?: string | null
+          imagem_url?: string | null
+          lancamento?: boolean | null
+          mais_vendido?: boolean | null
+          nome?: string | null
+          preco?: number | null
+          promocao?: boolean | null
+          seo_descricao?: string | null
+          seo_titulo?: string | null
+          slug?: string | null
+          unidade?: string | null
+          updated_at?: string | null
+          whatsapp_texto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produtos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_my_empresa_id: { Args: never; Returns: string }
