@@ -739,6 +739,57 @@ export type Database = {
           },
         ]
       }
+      testemunhos: {
+        Row: {
+          ativo: boolean
+          avatar_url: string | null
+          created_at: string
+          empresa_id: string
+          id: string
+          nome_cliente: string
+          nota: number
+          produto_id: string | null
+          texto: string
+        }
+        Insert: {
+          ativo?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome_cliente: string
+          nota?: number
+          produto_id?: string | null
+          texto: string
+        }
+        Update: {
+          ativo?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome_cliente?: string
+          nota?: number
+          produto_id?: string | null
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "testemunhos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "testemunhos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
