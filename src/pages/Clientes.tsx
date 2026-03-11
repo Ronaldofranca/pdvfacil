@@ -128,6 +128,11 @@ export default function ClientesPage() {
 
       <ClienteForm open={formState.open} onOpenChange={(v) => setFormState({ open: v })} cliente={formState.data} />
       <HistoricoCompras open={historicoState.open} onOpenChange={(v) => setHistoricoState({ open: v })} cliente={historicoState.data} />
+      <PDVModal
+        open={pdvState.open}
+        onOpenChange={(v) => setPdvState({ open: v })}
+        initialClienteId={pdvState.clienteId}
+      />
     </div>
   );
 }
