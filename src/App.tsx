@@ -43,6 +43,8 @@ const App = () => (
           <OfflineProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/setup" element={<SetupPage />} />
+              <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
               {/* Public catalog routes */}
               <Route path="/catalogo" element={<CatalogoPublicoPage />} />
               <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
