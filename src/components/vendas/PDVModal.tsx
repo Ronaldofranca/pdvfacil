@@ -148,6 +148,11 @@ export function PDVModal({ open, onOpenChange }: Props) {
     ?.filter((p) => p.ativo)
     .filter((p) => p.nome.toLowerCase().includes(searchProd.toLowerCase()) || p.codigo?.toLowerCase().includes(searchProd.toLowerCase()));
 
+  // Mobile: use full-screen PDV
+  if (isMobile) {
+    return <PDVMobile open={open} onOpenChange={onOpenChange} />;
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
