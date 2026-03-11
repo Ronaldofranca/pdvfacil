@@ -54,10 +54,10 @@ export function useCatalogoProdutos(options?: { destaque?: boolean; promocao?: b
   return useQuery({
     queryKey: ["catalogo_produtos", options],
     queryFn: async () => {
-      let query = supabase
-        .from("produtos")
+      // Use the secure view that excludes custo column
+      let query = (supabase as any)
+        .from("produtos_catalogo")
         .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
-        .eq("ativo", true)
         .order("nome");
 
       if (options?.destaque) query = query.eq("destaque", true);
@@ -77,21 +77,21 @@ export function useCatalogoProdutoBySlug(slug: string | null) {
     queryKey: ["catalogo_produto_slug", slug],
     enabled: !!slug,
     queryFn: async () => {
-      // Try slug first, then id
-      let query = supabase
-        .from("produtos")
-        .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
-        .eq("ativo", true);
+      // Use secure view that excludes custo
+      const client = supabase as any;
 
       // Try by slug
-      const { data: bySlug } = await query.eq("slug", slug!).maybeSingle();
+      const { data: bySlug } = await client
+        .from("produtos_catalogo")
+        .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
+        .eq("slug", slug!)
+        .maybeSingle();
       if (bySlug) return bySlug;
 
       // Fallback to id
-      const { data: byId, error } = await supabase
-        .from("produtos")
+      const { data: byId, error } = await client
+        .from("produtos_catalogo")
         .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
-        .eq("ativo", true)
         .eq("id", slug!)
         .maybeSingle();
       if (error) throw error;
@@ -105,11 +105,10 @@ export function useCatalogoProduto(id: string | null) {
     queryKey: ["catalogo_produto", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("produtos")
+      const { data, error } = await (supabase as any)
+        .from("produtos_catalogo")
         .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
         .eq("id", id!)
-        .eq("ativo", true)
         .single();
       if (error) throw error;
       return data;
