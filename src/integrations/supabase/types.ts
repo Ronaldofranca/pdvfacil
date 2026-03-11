@@ -162,6 +162,48 @@ export type Database = {
         }
         Relationships: []
       }
+      estoque: {
+        Row: {
+          empresa_id: string
+          id: string
+          produto_id: string
+          quantidade: number
+          updated_at: string
+          vendedor_id: string
+        }
+        Insert: {
+          empresa_id: string
+          id?: string
+          produto_id: string
+          quantidade?: number
+          updated_at?: string
+          vendedor_id: string
+        }
+        Update: {
+          empresa_id?: string
+          id?: string
+          produto_id?: string
+          quantidade?: number
+          updated_at?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estoque_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historico_compras: {
         Row: {
           cliente_id: string
@@ -295,6 +337,57 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      movimentos_estoque: {
+        Row: {
+          created_at: string
+          data: string
+          empresa_id: string
+          id: string
+          observacoes: string
+          produto_id: string
+          quantidade: number
+          tipo: Database["public"]["Enums"]["tipo_movimento"]
+          vendedor_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          empresa_id: string
+          id?: string
+          observacoes?: string
+          produto_id: string
+          quantidade: number
+          tipo: Database["public"]["Enums"]["tipo_movimento"]
+          vendedor_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          id?: string
+          observacoes?: string
+          produto_id?: string
+          quantidade?: number
+          tipo?: Database["public"]["Enums"]["tipo_movimento"]
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentos_estoque_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
         ]
@@ -513,6 +606,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "gerente" | "vendedor"
+      tipo_movimento: "venda" | "reposicao" | "dano" | "ajuste"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -641,6 +735,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "gerente", "vendedor"],
+      tipo_movimento: ["venda", "reposicao", "dano", "ajuste"],
     },
   },
 } as const
