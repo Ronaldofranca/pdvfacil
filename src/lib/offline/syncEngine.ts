@@ -21,22 +21,20 @@ async function processItem(item: QueueItem): Promise<void> {
 
   switch (operation) {
     case "insert": {
-      const { error } = await supabase.from(table).insert(payload as any);
+      const { error } = await (supabase.from(table) as any).insert(payload);
       if (error) throw error;
       break;
     }
     case "update": {
       const { id, ...rest } = payload;
-      const { error } = await supabase
-        .from(table)
-        .update(rest as any)
+      const { error } = await (supabase.from(table) as any)
+        .update(rest)
         .eq("id", id as string);
       if (error) throw error;
       break;
     }
     case "delete": {
-      const { error } = await supabase
-        .from(table)
+      const { error } = await (supabase.from(table) as any)
         .delete()
         .eq("id", payload.id as string);
       if (error) throw error;
