@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { OfflineProvider } from "@/contexts/OfflineContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import DashboardPage from "./pages/Dashboard";
@@ -37,32 +38,34 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            {/* Public catalog routes */}
-            <Route path="/catalogo" element={<CatalogoPublicoPage />} />
-            <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
-            <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
-            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/vendas" element={<VendasPage />} />
-              <Route path="/clientes" element={<ClientesPage />} />
-              <Route path="/produtos" element={<ProdutosPage />} />
-              <Route path="/estoque" element={<EstoquePage />} />
-              <Route path="/catalogo-interno" element={<CatalogoInternalPage />} />
-              <Route path="/romaneio" element={<RomaneioPage />} />
-              <Route path="/financeiro" element={<FinanceiroPage />} />
-              <Route path="/relatorios" element={<RelatoriosPage />} />
-              <Route path="/usuarios" element={<UsuariosPage />} />
-              <Route path="/empresas" element={<EmpresasPage />} />
-              <Route path="/notificacoes" element={<NotificacoesPage />} />
-              <Route path="/sync" element={<SyncPage />} />
-              <Route path="/backup" element={<BackupPage />} />
-              <Route path="/audit" element={<AuditPage />} />
-              <Route path="/mais" element={<MaisPage />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <OfflineProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              {/* Public catalog routes */}
+              <Route path="/catalogo" element={<CatalogoPublicoPage />} />
+              <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
+              <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
+              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/vendas" element={<VendasPage />} />
+                <Route path="/clientes" element={<ClientesPage />} />
+                <Route path="/produtos" element={<ProdutosPage />} />
+                <Route path="/estoque" element={<EstoquePage />} />
+                <Route path="/catalogo-interno" element={<CatalogoInternalPage />} />
+                <Route path="/romaneio" element={<RomaneioPage />} />
+                <Route path="/financeiro" element={<FinanceiroPage />} />
+                <Route path="/relatorios" element={<RelatoriosPage />} />
+                <Route path="/usuarios" element={<UsuariosPage />} />
+                <Route path="/empresas" element={<EmpresasPage />} />
+                <Route path="/notificacoes" element={<NotificacoesPage />} />
+                <Route path="/sync" element={<SyncPage />} />
+                <Route path="/backup" element={<BackupPage />} />
+                <Route path="/audit" element={<AuditPage />} />
+                <Route path="/mais" element={<MaisPage />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </OfflineProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
