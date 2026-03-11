@@ -258,6 +258,63 @@ export type Database = {
           },
         ]
       }
+      itens_venda: {
+        Row: {
+          bonus: boolean
+          created_at: string
+          desconto: number
+          id: string
+          nome_produto: string
+          preco_original: number
+          preco_vendido: number
+          produto_id: string
+          quantidade: number
+          subtotal: number
+          venda_id: string
+        }
+        Insert: {
+          bonus?: boolean
+          created_at?: string
+          desconto?: number
+          id?: string
+          nome_produto: string
+          preco_original?: number
+          preco_vendido?: number
+          produto_id: string
+          quantidade?: number
+          subtotal?: number
+          venda_id: string
+        }
+        Update: {
+          bonus?: boolean
+          created_at?: string
+          desconto?: number
+          id?: string
+          nome_produto?: string
+          preco_original?: number
+          preco_vendido?: number
+          produto_id?: string
+          quantidade?: number
+          subtotal?: number
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_venda_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_venda_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kit_itens: {
         Row: {
           created_at: string
@@ -587,6 +644,69 @@ export type Database = {
           },
         ]
       }
+      vendas: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          data_venda: string
+          desconto_total: number
+          empresa_id: string
+          id: string
+          observacoes: string
+          pagamentos: Json
+          status: Database["public"]["Enums"]["status_venda"]
+          subtotal: number
+          total: number
+          updated_at: string
+          vendedor_id: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          data_venda?: string
+          desconto_total?: number
+          empresa_id: string
+          id?: string
+          observacoes?: string
+          pagamentos?: Json
+          status?: Database["public"]["Enums"]["status_venda"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          vendedor_id: string
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          data_venda?: string
+          desconto_total?: number
+          empresa_id?: string
+          id?: string
+          observacoes?: string
+          pagamentos?: Json
+          status?: Database["public"]["Enums"]["status_venda"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -606,6 +726,15 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "gerente" | "vendedor"
+      forma_pagamento:
+        | "dinheiro"
+        | "pix"
+        | "cartao_credito"
+        | "cartao_debito"
+        | "boleto"
+        | "transferencia"
+        | "outro"
+      status_venda: "rascunho" | "pendente" | "finalizada" | "cancelada"
       tipo_movimento: "venda" | "reposicao" | "dano" | "ajuste"
     }
     CompositeTypes: {
@@ -735,6 +864,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "gerente", "vendedor"],
+      forma_pagamento: [
+        "dinheiro",
+        "pix",
+        "cartao_credito",
+        "cartao_debito",
+        "boleto",
+        "transferencia",
+        "outro",
+      ],
+      status_venda: ["rascunho", "pendente", "finalizada", "cancelada"],
       tipo_movimento: ["venda", "reposicao", "dano", "ajuste"],
     },
   },
