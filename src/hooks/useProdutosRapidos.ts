@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { CartItem } from "@/hooks/useVendas";
 
 // Most sold products (by quantity in itens_venda)
 export function useProdutosMaisVendidos(limit = 10) {
