@@ -551,7 +551,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
 
               {/* Cliente */}
               {cart.length > 0 && (
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
                   <Label className="text-xs text-muted-foreground">Cliente (opcional)</Label>
                   <Select value={clienteId} onValueChange={setClienteId}>
                     <SelectTrigger className="h-11 mt-1">
@@ -565,6 +565,19 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                       ))}
                     </SelectContent>
                   </Select>
+                  {clienteId && ultimaVendaItens && ultimaVendaItens.length > 0 && (
+                    <Button
+                      variant="outline"
+                      className="w-full h-11 gap-2 text-sm"
+                      onClick={() => {
+                        setCart(ultimaVendaItens);
+                        toast.success("Itens da última venda carregados!");
+                      }}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Repetir última venda
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
