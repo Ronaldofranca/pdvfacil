@@ -39,6 +39,10 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            {/* Public catalog routes */}
+            <Route path="/catalogo" element={<CatalogoPublicoPage />} />
+            <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
+            <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/vendas" element={<VendasPage />} />
