@@ -89,11 +89,19 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const { data: maisVendidos } = useProdutosMaisVendidos();
   const { data: recentes } = useProdutosRecentes();
 
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [clienteId, setClienteId] = useState("");
+  const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
+  const [clienteId, setClienteId] = useState(initialClienteId ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
+
+  // Reset when opening with initial data
+  useEffect(() => {
+    if (open) {
+      if (initialCart?.length) setCart(initialCart);
+      if (initialClienteId) setClienteId(initialClienteId);
+    }
+  }, [open, initialCart, initialClienteId]);
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const fmt = (v: number) =>
