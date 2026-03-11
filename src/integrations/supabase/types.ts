@@ -449,6 +449,82 @@ export type Database = {
           },
         ]
       }
+      parcelas: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          data_pagamento: string | null
+          empresa_id: string
+          forma_pagamento: string
+          id: string
+          numero: number
+          observacoes: string
+          saldo: number | null
+          status: Database["public"]["Enums"]["status_parcela"]
+          updated_at: string
+          valor_pago: number
+          valor_total: number
+          vencimento: string
+          venda_id: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          empresa_id: string
+          forma_pagamento?: string
+          id?: string
+          numero?: number
+          observacoes?: string
+          saldo?: number | null
+          status?: Database["public"]["Enums"]["status_parcela"]
+          updated_at?: string
+          valor_pago?: number
+          valor_total?: number
+          vencimento: string
+          venda_id?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          empresa_id?: string
+          forma_pagamento?: string
+          id?: string
+          numero?: number
+          observacoes?: string
+          saldo?: number | null
+          status?: Database["public"]["Enums"]["status_parcela"]
+          updated_at?: string
+          valor_pago?: number
+          valor_total?: number
+          vencimento?: string
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissoes: {
         Row: {
           created_at: string
@@ -734,6 +810,7 @@ export type Database = {
         | "boleto"
         | "transferencia"
         | "outro"
+      status_parcela: "pendente" | "paga" | "vencida"
       status_venda: "rascunho" | "pendente" | "finalizada" | "cancelada"
       tipo_movimento: "venda" | "reposicao" | "dano" | "ajuste"
     }
@@ -873,6 +950,7 @@ export const Constants = {
         "transferencia",
         "outro",
       ],
+      status_parcela: ["pendente", "paga", "vencida"],
       status_venda: ["rascunho", "pendente", "finalizada", "cancelada"],
       tipo_movimento: ["venda", "reposicao", "dano", "ajuste"],
     },
