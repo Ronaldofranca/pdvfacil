@@ -128,6 +128,17 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     getCachedClientes().then(setCachedClientes);
   }, [getCachedProdutos, getCachedClientes]);
 
+  // Reset when opening with initial data
+  useEffect(() => {
+    if (open) {
+      if (initialCart?.length) {
+        setCart(initialCart);
+        setStep("carrinho");
+      }
+      if (initialClienteId) setClienteId(initialClienteId);
+    }
+  }, [open, initialCart, initialClienteId]);
+
   // Use online data when available, fall back to cache
   const produtos = isOnline && onlineProdutos ? onlineProdutos : cachedProdutos;
   const clientes = isOnline && onlineClientes ? onlineClientes : cachedClientes;
