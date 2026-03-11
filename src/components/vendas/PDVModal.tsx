@@ -170,23 +170,34 @@ export function PDVModal({ open, onOpenChange }: Props) {
           {/* ─── LEFT: Produtos ─── */}
           <div className="lg:col-span-2 space-y-3">
             <Input placeholder="Buscar produto..." value={searchProd} onChange={(e) => setSearchProd(e.target.value)} />
-            <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
-              {filteredProdutos?.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => addToCart(p)}
-                  className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent text-left transition-colors"
-                >
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+              {searchProd.trim() ? (
+                <div className="space-y-1">
+                  {filteredProdutos?.map((p) => (
+                    <DesktopProductButton key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                  ))}
+                  {!filteredProdutos?.length && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {clienteId && produtosCliente && produtosCliente.length > 0 && (
+                    <DesktopQuickSection title="Produtos deste cliente" items={produtosCliente} allProducts={produtos ?? []} onAdd={addToCart} fmt={fmt} />
+                  )}
+                  {maisVendidos && maisVendidos.length > 0 && (
+                    <DesktopQuickSection title="Mais vendidos" items={maisVendidos} allProducts={produtos ?? []} onAdd={addToCart} fmt={fmt} />
+                  )}
+                  {recentes && recentes.length > 0 && (
+                    <DesktopQuickSection title="Recentes" items={recentes} allProducts={produtos ?? []} onAdd={addToCart} fmt={fmt} />
+                  )}
                   <div>
-                    <p className="text-sm font-medium text-foreground">{p.nome}</p>
-                    {p.codigo && <p className="text-xs text-muted-foreground">{p.codigo}</p>}
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Todos</p>
+                    {produtos?.filter((p) => p.ativo).map((p) => (
+                      <DesktopProductButton key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                    ))}
                   </div>
-                  <span className="text-sm font-semibold text-primary">{fmt(Number(p.preco))}</span>
-                </button>
-              ))}
-              {!filteredProdutos?.length && (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto</p>
+                </>
               )}
             </div>
 
