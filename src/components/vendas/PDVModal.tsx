@@ -32,6 +32,52 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+function DesktopProductButton({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onAdd(product)}
+      className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent text-left transition-colors"
+    >
+      <div>
+        <p className="text-sm font-medium text-foreground">{product.nome}</p>
+        {product.codigo && <p className="text-xs text-muted-foreground">{product.codigo}</p>}
+      </div>
+      <span className="text-sm font-semibold text-primary">{fmt(Number(product.preco))}</span>
+    </button>
+  );
+}
+
+function DesktopQuickSection({ title, items, allProducts, onAdd, fmt }: {
+  title: string;
+  items: { produto_id: string; nome: string }[];
+  allProducts: any[];
+  onAdd: (p: any) => void;
+  fmt: (v: number) => string;
+}) {
+  const productMap = new Map(allProducts.map((p) => [p.id, p]));
+  const resolved = items.map((i) => productMap.get(i.produto_id)).filter((p): p is any => !!p && p.ativo);
+  if (!resolved.length) return null;
+  return (
+    <div className="mb-2">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">{title}</p>
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {resolved.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onAdd(p)}
+            className="shrink-0 px-3 py-1.5 rounded-lg border bg-card hover:bg-accent transition-colors text-left"
+          >
+            <p className="text-xs font-medium text-foreground truncate max-w-[100px]">{p.nome}</p>
+            <p className="text-xs font-bold text-primary">{fmt(Number(p.preco))}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function PDVModal({ open, onOpenChange }: Props) {
   const isMobile = useIsMobile();
   const { profile, user } = useAuth();
