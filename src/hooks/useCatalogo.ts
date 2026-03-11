@@ -31,13 +31,13 @@ export function useUpsertCatalogoConfig() {
       if (existing) {
         const { error } = await supabase
           .from("catalogo_config")
-          .update({ ...config, updated_at: new Date().toISOString() })
+          .update({ ...config, updated_at: new Date().toISOString() } as any)
           .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("catalogo_config")
-          .insert(config);
+          .insert(config as any);
         if (error) throw error;
       }
     },

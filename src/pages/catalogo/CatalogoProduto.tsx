@@ -162,7 +162,7 @@ export default function CatalogoProdutoPage() {
                     className={`w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden shrink-0 transition-all ${
                       selectedImage === i ? "ring-2 opacity-100" : "opacity-50 hover:opacity-80"
                     }`}
-                    style={{ ringColor: primaryColor }}
+                    style={selectedImage === i ? { outlineColor: primaryColor, boxShadow: `0 0 0 2px ${primaryColor}` } : undefined}
                   >
                     <img src={img.url} alt={img.alt} className="w-full h-full object-cover" />
                   </button>
