@@ -1,19 +1,101 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-// Public read queries — uses anon key RLS policies
-
-export function useCatalogoProdutos() {
+// ─── Config ───
+export function useCatalogoConfig() {
   return useQuery({
-    queryKey: ["catalogo_produtos"],
+    queryKey: ["catalogo_config"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("produtos")
-        .select("*, categorias(nome)")
-        .eq("ativo", true)
-        .order("nome");
+        .from("catalogo_config")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+export function useUpsertCatalogoConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (config: Record<string, any>) => {
+      const { data: existing } = await supabase
+        .from("catalogo_config")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("catalogo_config")
+          .update({ ...config, updated_at: new Date().toISOString() } as any)
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("catalogo_config")
+          .insert(config as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["catalogo_config"] });
+      toast.success("Configurações salvas!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// ─── Public catalog queries (anon-safe) ───
+export function useCatalogoProdutos(options?: { destaque?: boolean; promocao?: boolean; lancamento?: boolean; mais_vendido?: boolean }) {
+  return useQuery({
+    queryKey: ["catalogo_produtos", options],
+    queryFn: async () => {
+      let query = supabase
+        .from("produtos")
+        .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
+        .eq("ativo", true)
+        .order("nome");
+
+      if (options?.destaque) query = query.eq("destaque", true);
+      if (options?.promocao) query = query.eq("promocao", true);
+      if (options?.lancamento) query = query.eq("lancamento", true);
+      if (options?.mais_vendido) query = query.eq("mais_vendido", true);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCatalogoProdutoBySlug(slug: string | null) {
+  return useQuery({
+    queryKey: ["catalogo_produto_slug", slug],
+    enabled: !!slug,
+    queryFn: async () => {
+      // Try slug first, then id
+      let query = supabase
+        .from("produtos")
+        .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
+        .eq("ativo", true);
+
+      // Try by slug
+      const { data: bySlug } = await query.eq("slug", slug!).maybeSingle();
+      if (bySlug) return bySlug;
+
+      // Fallback to id
+      const { data: byId, error } = await supabase
+        .from("produtos")
+        .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
+        .eq("ativo", true)
+        .eq("id", slug!)
+        .maybeSingle();
+      if (error) throw error;
+      return byId;
     },
   });
 }
@@ -25,7 +107,7 @@ export function useCatalogoProduto(id: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("produtos")
-        .select("*, categorias(nome)")
+        .select("*, categorias(nome), produto_imagens(id, url, alt, ordem, principal)")
         .eq("id", id!)
         .eq("ativo", true)
         .single();
@@ -50,17 +132,76 @@ export function useCatalogoCategorias() {
   });
 }
 
-export function useCatalogoTestemunhos() {
+export function useCatalogoTestemunhos(produtoId?: string) {
   return useQuery({
-    queryKey: ["catalogo_testemunhos"],
+    queryKey: ["catalogo_testemunhos", produtoId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("testemunhos")
         .select("*, produtos(nome)")
         .eq("ativo", true)
         .order("created_at", { ascending: false });
+      
+      if (produtoId) query = query.eq("produto_id", produtoId);
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+  });
+}
+
+// ─── Product Images Management ───
+export function useProdutoImagens(produtoId: string | null) {
+  return useQuery({
+    queryKey: ["produto_imagens", produtoId],
+    enabled: !!produtoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("produto_imagens")
+        .select("*")
+        .eq("produto_id", produtoId!)
+        .order("ordem");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useAddProdutoImagem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (img: { produto_id: string; empresa_id: string; url: string; alt?: string; ordem?: number; principal?: boolean }) => {
+      const { error } = await supabase.from("produto_imagens").insert({
+        produto_id: img.produto_id,
+        empresa_id: img.empresa_id,
+        url: img.url,
+        alt: img.alt ?? "",
+        ordem: img.ordem ?? 0,
+        principal: img.principal ?? false,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["produto_imagens", vars.produto_id] });
+      toast.success("Imagem adicionada!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeleteProdutoImagem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, produto_id }: { id: string; produto_id: string }) => {
+      const { error } = await supabase.from("produto_imagens").delete().eq("id", id);
+      if (error) throw error;
+      return produto_id;
+    },
+    onSuccess: (produto_id) => {
+      qc.invalidateQueries({ queryKey: ["produto_imagens", produto_id] });
+      toast.success("Imagem removida!");
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 }

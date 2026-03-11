@@ -61,6 +61,104 @@ export type Database = {
           },
         ]
       }
+      catalogo_config: {
+        Row: {
+          banner_url: string | null
+          beneficios: Json
+          cor_botoes: string
+          cor_fundo: string
+          cor_primaria: string
+          cor_secundaria: string
+          created_at: string
+          cta_botao_link: string
+          cta_botao_texto: string
+          cta_descricao: string
+          cta_titulo: string
+          descricao: string
+          empresa_id: string
+          estilo_cards: string
+          id: string
+          secao_beneficios: boolean
+          secao_categorias: boolean
+          secao_cta: boolean
+          secao_destaque: boolean
+          secao_testemunhos: boolean
+          seo_descricao: string
+          seo_titulo: string
+          subtitulo: string
+          tipografia: string
+          titulo: string
+          updated_at: string
+          whatsapp_numero: string
+        }
+        Insert: {
+          banner_url?: string | null
+          beneficios?: Json
+          cor_botoes?: string
+          cor_fundo?: string
+          cor_primaria?: string
+          cor_secundaria?: string
+          created_at?: string
+          cta_botao_link?: string
+          cta_botao_texto?: string
+          cta_descricao?: string
+          cta_titulo?: string
+          descricao?: string
+          empresa_id: string
+          estilo_cards?: string
+          id?: string
+          secao_beneficios?: boolean
+          secao_categorias?: boolean
+          secao_cta?: boolean
+          secao_destaque?: boolean
+          secao_testemunhos?: boolean
+          seo_descricao?: string
+          seo_titulo?: string
+          subtitulo?: string
+          tipografia?: string
+          titulo?: string
+          updated_at?: string
+          whatsapp_numero?: string
+        }
+        Update: {
+          banner_url?: string | null
+          beneficios?: Json
+          cor_botoes?: string
+          cor_fundo?: string
+          cor_primaria?: string
+          cor_secundaria?: string
+          created_at?: string
+          cta_botao_link?: string
+          cta_botao_texto?: string
+          cta_descricao?: string
+          cta_titulo?: string
+          descricao?: string
+          empresa_id?: string
+          estilo_cards?: string
+          id?: string
+          secao_beneficios?: boolean
+          secao_categorias?: boolean
+          secao_cta?: boolean
+          secao_destaque?: boolean
+          secao_testemunhos?: boolean
+          seo_descricao?: string
+          seo_titulo?: string
+          subtitulo?: string
+          tipografia?: string
+          titulo?: string
+          updated_at?: string
+          whatsapp_numero?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogo_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias: {
         Row: {
           ativa: boolean
@@ -792,51 +890,126 @@ export type Database = {
         }
         Relationships: []
       }
+      produto_imagens: {
+        Row: {
+          alt: string
+          created_at: string
+          empresa_id: string
+          id: string
+          ordem: number
+          principal: boolean
+          produto_id: string
+          url: string
+        }
+        Insert: {
+          alt?: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          ordem?: number
+          principal?: boolean
+          produto_id: string
+          url: string
+        }
+        Update: {
+          alt?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          ordem?: number
+          principal?: boolean
+          produto_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produto_imagens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_imagens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           ativo: boolean
+          beneficios: Json
           categoria_id: string | null
           codigo: string
           created_at: string
           custo: number
           descricao: string
+          destaque: boolean
           empresa_id: string
           id: string
           imagem_url: string | null
+          lancamento: boolean
+          mais_vendido: boolean
           nome: string
           preco: number
+          promocao: boolean
+          seo_descricao: string
+          seo_titulo: string
+          slug: string
           unidade: string
           updated_at: string
+          whatsapp_texto: string
         }
         Insert: {
           ativo?: boolean
+          beneficios?: Json
           categoria_id?: string | null
           codigo?: string
           created_at?: string
           custo?: number
           descricao?: string
+          destaque?: boolean
           empresa_id: string
           id?: string
           imagem_url?: string | null
+          lancamento?: boolean
+          mais_vendido?: boolean
           nome: string
           preco?: number
+          promocao?: boolean
+          seo_descricao?: string
+          seo_titulo?: string
+          slug?: string
           unidade?: string
           updated_at?: string
+          whatsapp_texto?: string
         }
         Update: {
           ativo?: boolean
+          beneficios?: Json
           categoria_id?: string | null
           codigo?: string
           created_at?: string
           custo?: number
           descricao?: string
+          destaque?: boolean
           empresa_id?: string
           id?: string
           imagem_url?: string | null
+          lancamento?: boolean
+          mais_vendido?: boolean
           nome?: string
           preco?: number
+          promocao?: boolean
+          seo_descricao?: string
+          seo_titulo?: string
+          slug?: string
           unidade?: string
           updated_at?: string
+          whatsapp_texto?: string
         }
         Relationships: [
           {
