@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
-  ShoppingCart, Search, Plus, Minus, Trash2, Gift, Percent,
-  DollarSign, X, ChevronLeft, ChevronRight, Package, CreditCard, Check
+  ShoppingCart, Search, Plus, Minus, Trash2, Gift,
+  DollarSign, X, Package, CreditCard, Check, WifiOff, Wifi
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@/components/ui/drawer";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
+import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/useOfflinePDV";
+import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -37,9 +38,11 @@ interface Props {
 
 export function PDVMobile({ open, onOpenChange }: Props) {
   const { profile, user } = useAuth();
-  const { data: produtos } = useProdutos();
-  const { data: clientes } = useClientes();
+  const { data: onlineProdutos } = useProdutos();
+  const { data: onlineClientes } = useClientes();
   const finalizar = useFinalizarVenda();
+  const { isOnline, pendingCount } = useOffline();
+  const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
 
   const [step, setStep] = useState<Step>("produtos");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -48,6 +51,21 @@ export function PDVMobile({ open, onOpenChange }: Props) {
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
   const [editingItem, setEditingItem] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Offline-cached data
+  const [cachedProdutos, setCachedProdutos] = useState<CachedProduto[]>([]);
+  const [cachedClientes, setCachedClientes] = useState<CachedCliente[]>([]);
+
+  // Load cached data on mount (for offline fallback)
+  useEffect(() => {
+    getCachedProdutos().then(setCachedProdutos);
+    getCachedClientes().then(setCachedClientes);
+  }, [getCachedProdutos, getCachedClientes]);
+
+  // Use online data when available, fall back to cache
+  const produtos = isOnline && onlineProdutos ? onlineProdutos : cachedProdutos;
+  const clientes = isOnline && onlineClientes ? onlineClientes : cachedClientes;
 
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -126,40 +144,65 @@ export function PDVMobile({ open, onOpenChange }: Props) {
   };
 
   // ─── Finalizar ───
-  const handleFinalizar = () => {
+  const handleFinalizar = async () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
     if (totalPago < total) return toast.error("Valor pago insuficiente");
 
-    finalizar.mutate(
-      {
-        empresa_id: profile.empresa_id,
-        cliente_id: clienteId || null,
-        vendedor_id: user.id,
+    setIsSubmitting(true);
+
+    if (isOnline) {
+      // Online: use normal mutation
+      finalizar.mutate(
+        {
+          empresa_id: profile.empresa_id,
+          cliente_id: clienteId || null,
+          vendedor_id: user.id,
+          itens: cart,
+          pagamentos: pagamentos.filter((p) => p.valor > 0),
+          desconto_total: totalDescontos,
+          observacoes,
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+            onOpenChange(false);
+            setIsSubmitting(false);
+          },
+          onError: () => setIsSubmitting(false),
+        }
+      );
+    } else {
+      // Offline: queue to IndexedDB
+      const success = await finalizarVendaOffline({
         itens: cart,
         pagamentos: pagamentos.filter((p) => p.valor > 0),
         desconto_total: totalDescontos,
+        cliente_id: clienteId || null,
         observacoes,
-      },
-      {
-        onSuccess: () => {
-          setCart([]);
-          setClienteId("");
-          setObservacoes("");
-          setPagamentos([{ forma: "dinheiro", valor: 0 }]);
-          setStep("produtos");
-          onOpenChange(false);
-        },
+      });
+      if (success) {
+        resetForm();
+        onOpenChange(false);
       }
-    );
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setCart([]);
+    setClienteId("");
+    setObservacoes("");
+    setPagamentos([{ forma: "dinheiro", valor: 0 }]);
+    setStep("produtos");
   };
 
   const filteredProdutos = useMemo(
     () =>
-      produtos
-        ?.filter((p) => p.ativo)
+      (produtos as any[])
+        ?.filter((p: any) => p.ativo !== false)
         .filter(
-          (p) =>
+          (p: any) =>
             p.nome.toLowerCase().includes(searchProd.toLowerCase()) ||
             p.codigo?.toLowerCase().includes(searchProd.toLowerCase())
         ),
@@ -180,7 +223,15 @@ export function PDVMobile({ open, onOpenChange }: Props) {
         <Button variant="ghost" size="sm" className="gap-1 -ml-2" onClick={handleClose}>
           <X className="w-5 h-5" /> Fechar
         </Button>
-        <h2 className="font-bold text-foreground">PDV</h2>
+        <div className="flex items-center gap-2">
+          {!isOnline && (
+            <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0.5">
+              <WifiOff className="w-3 h-3" /> Offline
+              {pendingCount > 0 && ` (${pendingCount})`}
+            </Badge>
+          )}
+          <h2 className="font-bold text-foreground">PDV</h2>
+        </div>
         {cart.length > 0 && (
           <Button
             variant="ghost"
@@ -529,13 +580,20 @@ export function PDVMobile({ open, onOpenChange }: Props) {
 
             {/* Finalizar footer */}
             <div className="border-t p-3 bg-background shrink-0 safe-area-bottom">
+              {!isOnline && (
+                <p className="text-xs text-center text-muted-foreground mb-2 flex items-center justify-center gap-1">
+                  <WifiOff className="w-3 h-3" /> Venda será salva localmente e sincronizada depois
+                </p>
+              )}
               <Button
                 className="w-full h-14 text-lg gap-2 font-bold"
-                disabled={finalizar.isPending || cart.length === 0 || totalPago < total}
+                disabled={isSubmitting || finalizar.isPending || cart.length === 0 || totalPago < total}
                 onClick={handleFinalizar}
               >
                 <Check className="w-6 h-6" />
-                {finalizar.isPending ? "Finalizando..." : `Finalizar ${fmt(total)}`}
+                {isSubmitting || finalizar.isPending
+                  ? "Finalizando..."
+                  : `Finalizar ${fmt(total)}`}
               </Button>
             </div>
           </div>
