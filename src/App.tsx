@@ -3,6 +3,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import DashboardPage from "./pages/Dashboard";
 import VendasPage from "./pages/Vendas";
@@ -31,28 +33,30 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/vendas" element={<VendasPage />} />
-            <Route path="/clientes" element={<ClientesPage />} />
-            <Route path="/produtos" element={<ProdutosPage />} />
-            <Route path="/estoque" element={<EstoquePage />} />
-            <Route path="/catalogo" element={<CatalogoPage />} />
-            <Route path="/romaneio" element={<RomaneioPage />} />
-            <Route path="/financeiro" element={<FinanceiroPage />} />
-            <Route path="/relatorios" element={<RelatoriosPage />} />
-            <Route path="/usuarios" element={<UsuariosPage />} />
-            <Route path="/empresas" element={<EmpresasPage />} />
-            <Route path="/notificacoes" element={<NotificacoesPage />} />
-            <Route path="/sync" element={<SyncPage />} />
-            <Route path="/backup" element={<BackupPage />} />
-            <Route path="/audit" element={<AuditPage />} />
-            <Route path="/mais" element={<MaisPage />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/vendas" element={<VendasPage />} />
+              <Route path="/clientes" element={<ClientesPage />} />
+              <Route path="/produtos" element={<ProdutosPage />} />
+              <Route path="/estoque" element={<EstoquePage />} />
+              <Route path="/catalogo" element={<CatalogoPage />} />
+              <Route path="/romaneio" element={<RomaneioPage />} />
+              <Route path="/financeiro" element={<FinanceiroPage />} />
+              <Route path="/relatorios" element={<RelatoriosPage />} />
+              <Route path="/usuarios" element={<UsuariosPage />} />
+              <Route path="/empresas" element={<EmpresasPage />} />
+              <Route path="/notificacoes" element={<NotificacoesPage />} />
+              <Route path="/sync" element={<SyncPage />} />
+              <Route path="/backup" element={<BackupPage />} />
+              <Route path="/audit" element={<AuditPage />} />
+              <Route path="/mais" element={<MaisPage />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
