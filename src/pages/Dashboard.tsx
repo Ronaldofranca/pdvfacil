@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   ShoppingCart, DollarSign, AlertTriangle, CreditCard, PackageX,
   TrendingUp, Target, BellRing, MapPin, PackageSearch, Users,
-  FileDown, Calendar as CalendarIcon, UserCheck, BarChart3,
+  FileDown, Calendar as CalendarIcon, UserCheck, BarChart3, Award, Star,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { useDashboardData, useDashboardPeriodo, type DashboardPeriodo } from "@/
 import { useVendedorDashboard } from "@/hooks/useMetasComissoes";
 import { useAlertasInteligentes } from "@/hooks/useAlertasInteligentes";
 import { usePrevisaoEstoque } from "@/hooks/usePrevisaoEstoque";
+import { useTopIndicadores } from "@/hooks/useIndicacoes";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useAuth } from "@/contexts/AuthContext";
 import { exportPDF, fmtR } from "@/lib/reportExport";
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const { data: vendedorDash } = useVendedorDashboard();
   const { data: alertas } = useAlertasInteligentes();
   const { data: previsoes } = usePrevisaoEstoque();
+  const { data: topIndicadores } = useTopIndicadores();
   const { data: empresas } = useEmpresas();
 
   const alertasAltos = (alertas || []).filter((a) => a.prioridade === "alta").length;
@@ -388,6 +390,33 @@ export default function DashboardPage() {
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* TOP INDICADORES */}
+      {isAdmin && topIndicadores && topIndicadores.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Award className="w-4 h-4 text-primary" /> Top Clientes Indicadores
+              </h2>
+              <Link to="/clientes"><Badge variant="outline" className="text-[10px] cursor-pointer">Ver clientes</Badge></Link>
+            </div>
+            <div className="space-y-2">
+              {topIndicadores.slice(0, 5).map((c, i) => (
+                <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-muted-foreground w-4">{i + 1}º</span>
+                    <p className="text-sm font-medium text-foreground">{c.nome}</p>
+                  </div>
+                  <Badge variant="secondary" className="gap-1">
+                    <Star className="w-3 h-3 text-yellow-500" /> {c.pontos_indicacao} pts
+                  </Badge>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

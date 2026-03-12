@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone } from "lucide-react";
+import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
 import { HistoricoCompras } from "@/components/clientes/HistoricoCompras";
 import { ImportarContatos } from "@/components/clientes/ImportarContatos";
+import { IndicacoesCliente } from "@/components/clientes/IndicacoesCliente";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import type { CartItem } from "@/hooks/useVendas";
@@ -26,6 +27,7 @@ export default function ClientesPage() {
   const [historicoState, setHistoricoState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [importOpen, setImportOpen] = useState(false);
   const [pdvState, setPdvState] = useState<{ open: boolean; clienteId?: string; cart?: CartItem[] }>({ open: false });
+  const [indicacoesState, setIndicacoesState] = useState<{ open: boolean; data?: any }>({ open: false });
 
   const filtered = clientes?.filter((c) =>
     c.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -68,15 +70,16 @@ export default function ClientesPage() {
               <TableHead>Telefone</TableHead>
               <TableHead>Cidade</TableHead>
               <TableHead>GPS</TableHead>
+              <TableHead>Pontos</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-32" />
+              <TableHead className="w-36" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
             ) : !filtered?.length ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado</TableCell></TableRow>
             ) : (
               filtered.map((c) => (
                 <TableRow key={c.id}>
@@ -106,6 +109,15 @@ export default function ClientesPage() {
                     )}
                   </TableCell>
                   <TableCell>
+                    {Number(c.pontos_indicacao) > 0 ? (
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <Star className="w-3 h-3 text-yellow-500" /> {Number(c.pontos_indicacao)}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">0</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <Badge variant={c.ativo ? "default" : "secondary"}>{c.ativo ? "Ativo" : "Inativo"}</Badge>
                   </TableCell>
                   <TableCell>
@@ -119,6 +131,9 @@ export default function ClientesPage() {
                       )}
                       <Button variant="ghost" size="icon" title="Repetir última venda" onClick={() => setPdvState({ open: true, clienteId: c.id })}>
                         <RotateCcw className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="Indicações" onClick={() => setIndicacoesState({ open: true, data: c })}>
+                        <Award className="w-4 h-4 text-yellow-500" />
                       </Button>
                       <Button variant="ghost" size="icon" title="Histórico" onClick={() => setHistoricoState({ open: true, data: c })}>
                         <History className="w-4 h-4" />
@@ -143,6 +158,7 @@ export default function ClientesPage() {
       <ClienteForm open={formState.open} onOpenChange={(v) => setFormState({ open: v })} cliente={formState.data} />
       <HistoricoCompras open={historicoState.open} onOpenChange={(v) => setHistoricoState({ open: v })} cliente={historicoState.data} />
       <ImportarContatos open={importOpen} onOpenChange={setImportOpen} />
+      <IndicacoesCliente open={indicacoesState.open} onOpenChange={(v) => setIndicacoesState({ open: v })} cliente={indicacoesState.data} />
       <PDVModal
         open={pdvState.open}
         onOpenChange={(v) => setPdvState({ open: v })}

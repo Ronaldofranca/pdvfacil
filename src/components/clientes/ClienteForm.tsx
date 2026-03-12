@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Loader2 } from "lucide-react";
-import { useUpsertCliente, type ClienteInput } from "@/hooks/useClientes";
+import { useUpsertCliente, useClientes, type ClienteInput } from "@/hooks/useClientes";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -19,7 +20,9 @@ interface Props {
 export function ClienteForm({ open, onOpenChange, cliente }: Props) {
   const { profile } = useAuth();
   const upsert = useUpsertCliente();
+  const { data: todosClientes } = useClientes();
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [searchIndicador, setSearchIndicador] = useState("");
 
   const [form, setForm] = useState({
     nome: "",
@@ -34,6 +37,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
     longitude: "",
     observacoes: "",
     ativo: true,
+    cliente_indicador_id: "",
   });
 
   useEffect(() => {
@@ -51,10 +55,12 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
         longitude: cliente.longitude != null ? String(cliente.longitude) : "",
         observacoes: cliente.observacoes ?? "",
         ativo: cliente.ativo ?? true,
+        cliente_indicador_id: cliente.cliente_indicador_id ?? "",
       });
     } else {
-      setForm({ nome: "", telefone: "", email: "", cpf_cnpj: "", cidade: "", rua: "", estado: "", cep: "", latitude: "", longitude: "", observacoes: "", ativo: true });
+      setForm({ nome: "", telefone: "", email: "", cpf_cnpj: "", cidade: "", rua: "", estado: "", cep: "", latitude: "", longitude: "", observacoes: "", ativo: true, cliente_indicador_id: "" });
     }
+    setSearchIndicador("");
   }, [cliente, open]);
 
   const captureGPS = () => {
@@ -99,6 +105,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
       longitude: form.longitude ? parseFloat(form.longitude) : null,
       observacoes: form.observacoes,
       ativo: form.ativo,
+      cliente_indicador_id: form.cliente_indicador_id || null,
     };
     upsert.mutate(payload, { onSuccess: () => onOpenChange(false) });
   };
@@ -165,6 +172,47 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
                   <Input value={form.longitude} onChange={(e) => set("longitude", e.target.value)} placeholder="-46.6333" />
                 </div>
               </div>
+            </div>
+
+            {/* Indicador */}
+            <div className="col-span-2 space-y-2">
+              <Label className="text-base font-semibold">Quem indicou este cliente?</Label>
+              <Input
+                placeholder="Buscar cliente indicador..."
+                value={searchIndicador}
+                onChange={(e) => setSearchIndicador(e.target.value)}
+              />
+              {searchIndicador && (
+                <div className="max-h-32 overflow-y-auto border rounded-md">
+                  {(todosClientes ?? [])
+                    .filter((c) => c.id !== cliente?.id && (c.nome.toLowerCase().includes(searchIndicador.toLowerCase()) || c.telefone?.includes(searchIndicador)))
+                    .slice(0, 5)
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors border-b border-border last:border-0"
+                        onClick={() => {
+                          set("cliente_indicador_id", c.id);
+                          setSearchIndicador(c.nome);
+                        }}
+                      >
+                        <span className="font-medium text-foreground">{c.nome}</span>
+                        {c.telefone && <span className="text-muted-foreground ml-2 text-xs">{c.telefone}</span>}
+                      </button>
+                    ))}
+                </div>
+              )}
+              {form.cliente_indicador_id && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Indicador: {todosClientes?.find((c) => c.id === form.cliente_indicador_id)?.nome ?? "Selecionado"}
+                  </span>
+                  <Button type="button" variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { set("cliente_indicador_id", ""); setSearchIndicador(""); }}>
+                    Remover
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="col-span-2">

@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   User, Building2, Palette, ShoppingCart, CreditCard, CalendarDays,
-  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save
+  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award
 } from "lucide-react";
 import { useEmpresas, useUpdateEmpresa } from "@/hooks/useEmpresas";
 import {
@@ -32,6 +32,7 @@ const TABS = [
   { id: "parcelas", label: "Parcelas", icon: CalendarDays },
   { id: "cidades", label: "Cidades", icon: MapPin },
   { id: "vendedores", label: "Vendedores", icon: Users },
+  { id: "indicacoes", label: "Indicações", icon: Award },
   { id: "catalogo", label: "Catálogo", icon: BookOpen },
   { id: "notificacoes", label: "Notificações", icon: Bell },
   { id: "backup", label: "Backup", icon: HardDrive },
@@ -356,6 +357,36 @@ export default function ConfiguracoesPage() {
               </div>
               <Separator />
               <p className="text-xs text-muted-foreground">Permissões individuais de vendedores podem ser gerenciadas em Usuários.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* INDICAÇÕES */}
+        <TabsContent value="indicacoes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Programa de Indicações</CardTitle>
+              <CardDescription>Configurações de pontuação por indicação de clientes</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Pontos por indicação que gera venda</Label>
+                <Input
+                  type="number" min={1}
+                  defaultValue={config?.pontos_por_indicacao ?? 10}
+                  onBlur={(e) => saveConfig({ pontos_por_indicacao: parseInt(e.target.value) || 10 })}
+                />
+                <p className="text-xs text-muted-foreground">Pontos creditados ao indicador quando o cliente indicado realiza uma compra.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor mínimo de compra para validar indicação (R$)</Label>
+                <Input
+                  type="number" min={0} step={0.01}
+                  defaultValue={config?.valor_minimo_indicacao ?? 0}
+                  onBlur={(e) => saveConfig({ valor_minimo_indicacao: parseFloat(e.target.value) || 0 })}
+                />
+                <p className="text-xs text-muted-foreground">Se 0, qualquer compra gera pontos. Se maior que 0, somente compras acima deste valor.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
