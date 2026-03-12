@@ -20,6 +20,27 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ["favicon.ico", "pwa-192.png", "pwa-512.png"],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
+        // Only cache static assets - never cache API responses or auth routes
+        runtimeCaching: [
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "images-cache",
+              expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            },
+          },
+          {
+            urlPattern: /\.(?:js|css|woff2?)$/i,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "static-assets-cache",
+              expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
+            },
+          },
+        ],
+        // Block Supabase API and auth endpoints from being cached
+        navigateFallbackAllowlist: [/^\/(?!rest\/|auth\/|functions\/|storage\/)/],
       },
       manifest: {
         name: "VendaForce - Gestão de Vendas Externas",
