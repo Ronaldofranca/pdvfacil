@@ -121,7 +121,7 @@ export function useToggleFormaPagamento() {
       if (!updated) throw new Error("Sem permissão para alterar forma de pagamento.");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["formas_pagamento"] }),
-  });
+    onError: (e: Error) => toast.error(e.message),
 }
 
 export function useDeleteFormaPagamento() {
