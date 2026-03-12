@@ -191,11 +191,15 @@ export function useDeleteCidade() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { data: removed, error } = await (supabase as any)
         .from("cidades_atendidas")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!removed) throw new Error("Sem permissão para remover cidade.");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cidades_atendidas"] });
