@@ -103,13 +103,9 @@ export default function LoginPage() {
       const remaining = rateLimitResult.remaining;
       setRemainingAttempts(typeof remaining === "number" ? remaining : null);
 
-      const remainingMsg = typeof remaining === "number" && remaining > 0
-        ? ` Tentativas restantes: ${remaining}.`
-        : "";
-
       toast({
-        title: "Erro ao entrar",
-        description: `Email ou senha incorretos.${remainingMsg}`,
+        title: "Credenciais inválidas",
+        description: "Verifique seu email e senha e tente novamente.",
         variant: "destructive",
       });
     } else {

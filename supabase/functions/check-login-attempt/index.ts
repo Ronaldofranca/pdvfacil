@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
         ip,
         user_agent: req.headers.get("user-agent") || "",
       });
-    } else if (result.attempts > 1) {
+    } else {
       await supabaseAdmin.from("security_logs").insert({
         evento: "login_falhou",
         detalhes: {
