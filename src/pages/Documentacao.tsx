@@ -3,11 +3,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FileDown, FileText } from "lucide-react";
 
 export default function Documentacao() {
-  const handleDownload = () => {
-    const link = document.createElement("a");
-    link.href = "/DOCS.md";
-    link.download = "PDVFacil_Documentacao_Tecnica.md";
-    link.click();
+  const handleDownload = async () => {
+    try {
+      const response = await fetch("/DOCS.md");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "PDVFacil_Documentacao_Tecnica.md";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar:", error);
+    }
   };
 
   return (
