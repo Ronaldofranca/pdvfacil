@@ -16,13 +16,13 @@ async function logSecurityEvent(
   detalhes?: Record<string, unknown>,
 ) {
   try {
-    await supabase.from("security_logs").insert({
+    await supabase.from("security_logs").insert([{
       evento,
       empresa_id: empresaId ?? null,
       usuario_id: userId ?? null,
-      detalhes: detalhes ?? {},
+      detalhes: (detalhes ?? {}) as any,
       user_agent: navigator.userAgent,
-    });
+    }]);
   } catch {
     // Security logging should never block UX
   }
