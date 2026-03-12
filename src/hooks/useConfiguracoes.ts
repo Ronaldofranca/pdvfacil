@@ -110,11 +110,15 @@ export function useToggleFormaPagamento() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ativa }: { id: string; ativa: boolean }) => {
-      const { error } = await (supabase as any)
+      const { data: updated, error } = await (supabase as any)
         .from("formas_pagamento")
         .update({ ativa })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!updated) throw new Error("Sem permissão para alterar forma de pagamento.");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["formas_pagamento"] }),
   });
