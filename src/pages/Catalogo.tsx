@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BookOpen, Save, Eye, Palette, Layout, Settings2, Image, Type } from "lucide-react";
+import { BookOpen, Save, Eye, Palette, Layout, Settings2, Image, Type, Share2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -160,7 +160,23 @@ export default function CatalogoAdminPage() {
             <p className="text-sm text-muted-foreground">Configure seu mini site de catálogo</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              const publicUrl = `${window.location.origin}/catalogo`;
+              if (navigator.share) {
+                navigator.share({ title: "Catálogo", url: publicUrl }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(publicUrl);
+                toast.success("Link do catálogo copiado!");
+              }
+            }}
+          >
+            <Share2 className="w-4 h-4" /> Compartilhar
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <a href="/catalogo" target="_blank" rel="noopener noreferrer" className="gap-1.5">
               <Eye className="w-4 h-4" /> Visualizar

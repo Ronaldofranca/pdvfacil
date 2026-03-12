@@ -39,7 +39,7 @@ export const modules: ModuleConfig[] = [
   { key: "clientes", label: "Clientes", icon: Users, path: "/clientes", group: "operacional", description: "Cadastro de clientes" },
   { key: "produtos", label: "Produtos", icon: Package, path: "/produtos", group: "operacional", description: "Catálogo de produtos" },
   { key: "estoque", label: "Estoque", icon: Warehouse, path: "/estoque", group: "operacional", description: "Controle de estoque" },
-  { key: "catalogo", label: "Catálogo", icon: BookOpen, path: "/catalogo", group: "operacional", description: "Catálogo para vendedores" },
+  { key: "catalogo", label: "Catálogo", icon: BookOpen, path: "/catalogo-interno", group: "operacional", description: "Gerenciar catálogo público" },
   { key: "romaneio", label: "Romaneio", icon: Truck, path: "/romaneio", group: "operacional", description: "Controle de carregamento" },
   // Inteligência de Vendas
   { key: "mapa", label: "Mapa", icon: MapPin, path: "/mapa-clientes", group: "inteligencia", description: "Mapa inteligente de clientes" },
