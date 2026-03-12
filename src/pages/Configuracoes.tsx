@@ -361,6 +361,36 @@ export default function ConfiguracoesPage() {
           </Card>
         </TabsContent>
 
+        {/* INDICAÇÕES */}
+        <TabsContent value="indicacoes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Programa de Indicações</CardTitle>
+              <CardDescription>Configurações de pontuação por indicação de clientes</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Pontos por indicação que gera venda</Label>
+                <Input
+                  type="number" min={1}
+                  defaultValue={config?.pontos_por_indicacao ?? 10}
+                  onBlur={(e) => saveConfig({ pontos_por_indicacao: parseInt(e.target.value) || 10 })}
+                />
+                <p className="text-xs text-muted-foreground">Pontos creditados ao indicador quando o cliente indicado realiza uma compra.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor mínimo de compra para validar indicação (R$)</Label>
+                <Input
+                  type="number" min={0} step={0.01}
+                  defaultValue={config?.valor_minimo_indicacao ?? 0}
+                  onBlur={(e) => saveConfig({ valor_minimo_indicacao: parseFloat(e.target.value) || 0 })}
+                />
+                <p className="text-xs text-muted-foreground">Se 0, qualquer compra gera pontos. Se maior que 0, somente compras acima deste valor.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* 9. CATÁLOGO */}
         <TabsContent value="catalogo">
           <Card>
