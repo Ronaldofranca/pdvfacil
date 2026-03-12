@@ -22,6 +22,7 @@ interface AuthContextType {
   roles: AppRole[];
   permissions: Permission[];
   loading: boolean;
+  rolesLoaded: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
@@ -40,9 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   const fetchUserData = async (userId: string) => {
     try {
+      setRolesLoaded(false);
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
@@ -73,6 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Erro ao carregar dados do usuário:", error);
+    } finally {
+      setRolesLoaded(true);
     }
   };
 
@@ -83,21 +88,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          setTimeout(() => fetchUserData(newSession.user.id), 0);
+          await fetchUserData(newSession.user.id);
         } else {
           setProfile(null);
           setRoles([]);
           setPermissions([]);
+          setRolesLoaded(true);
         }
         setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
       if (existingSession?.user) {
-        fetchUserData(existingSession.user.id);
+        await fetchUserData(existingSession.user.id);
+      } else {
+        setRolesLoaded(true);
       }
       setLoading(false);
     });
@@ -126,7 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     roles,
     permissions,
-    loading,
+    loading: loading || !rolesLoaded,
+    rolesLoaded,
     signIn,
     signOut,
     hasRole,
