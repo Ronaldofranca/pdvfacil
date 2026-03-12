@@ -1,5 +1,5 @@
 import { Zap } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,17 +16,19 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   // Redirect if already logged in
-  if (session) {
-    navigate("/", { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (session) {
+      navigate("/", { replace: true });
+    }
+  }, [session, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !password) return;
 
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(trimmedEmail, password);
     setLoading(false);
 
     if (error) {
