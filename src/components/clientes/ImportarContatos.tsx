@@ -239,7 +239,7 @@ export function ImportarContatos({ open, onOpenChange }: { open: boolean; onOpen
 
         {step === "done" && (
           <div className="flex flex-col items-center gap-4 py-6 text-center">
-            <CheckSquare className="w-10 h-10 text-green-500" />
+            <CheckSquare className="w-10 h-10 text-primary" />
             <div>
               <p className="text-sm font-medium">{result.created} clientes criados</p>
               {result.skipped > 0 && (
