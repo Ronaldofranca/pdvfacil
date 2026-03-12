@@ -669,7 +669,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
             {/* Cart summary footer */}
             {cart.length > 0 && (
               <div className="border-t p-4 bg-background space-y-3 shrink-0 safe-area-bottom">
-                <div className="space-y-1 text-sm">
+              <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{fmt(subtotal)}</span>
@@ -685,6 +685,12 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     <span className="text-primary">{fmt(total)}</span>
                   </div>
                 </div>
+                {tierDesconto > 0 && cart.length > 0 && (
+                  <Button variant="outline" className="w-full h-12 gap-2 rounded-2xl text-sm" onClick={applyTierDiscount}>
+                    <Award className="w-5 h-5 text-primary" />
+                    Aplicar desconto de nível ({tierDesconto}%)
+                  </Button>
+                )}
                 <Button
                   className="w-full h-14 text-lg gap-2 rounded-2xl font-bold"
                   onClick={() => {

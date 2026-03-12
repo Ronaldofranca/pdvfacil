@@ -395,6 +395,14 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
 
             <Separator />
 
+            {/* Tier discount */}
+            {tierDesconto > 0 && cart.length > 0 && (
+              <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs" onClick={applyTierDiscount}>
+                <Award className="w-3.5 h-3.5 text-primary" />
+                Aplicar desconto de nível ({tierDesconto}%)
+              </Button>
+            )}
+
             {/* Totais */}
             <div className="space-y-1 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{fmt(subtotal)}</span></div>
