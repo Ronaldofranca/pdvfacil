@@ -37,6 +37,7 @@ export interface ClienteInput {
   longitude?: number | null;
   observacoes?: string;
   ativo?: boolean;
+  cliente_indicador_id?: string | null;
 }
 
 export function useClientes() {
