@@ -252,6 +252,8 @@ export type Database = {
           rua: string
           telefone: string
           tipo: string
+          total_compras: number
+          total_indicacoes: number
           updated_at: string
         }
         Insert: {
@@ -273,6 +275,8 @@ export type Database = {
           rua?: string
           telefone?: string
           tipo?: string
+          total_compras?: number
+          total_indicacoes?: number
           updated_at?: string
         }
         Update: {
@@ -294,6 +298,8 @@ export type Database = {
           rua?: string
           telefone?: string
           tipo?: string
+          total_compras?: number
+          total_indicacoes?: number
           updated_at?: string
         }
         Relationships: [
