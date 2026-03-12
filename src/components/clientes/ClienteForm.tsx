@@ -55,10 +55,12 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
         longitude: cliente.longitude != null ? String(cliente.longitude) : "",
         observacoes: cliente.observacoes ?? "",
         ativo: cliente.ativo ?? true,
+        cliente_indicador_id: cliente.cliente_indicador_id ?? "",
       });
     } else {
-      setForm({ nome: "", telefone: "", email: "", cpf_cnpj: "", cidade: "", rua: "", estado: "", cep: "", latitude: "", longitude: "", observacoes: "", ativo: true });
+      setForm({ nome: "", telefone: "", email: "", cpf_cnpj: "", cidade: "", rua: "", estado: "", cep: "", latitude: "", longitude: "", observacoes: "", ativo: true, cliente_indicador_id: "" });
     }
+    setSearchIndicador("");
   }, [cliente, open]);
 
   const captureGPS = () => {
