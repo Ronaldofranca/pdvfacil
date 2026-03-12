@@ -820,9 +820,18 @@ function QuickProductCard({ product, onAdd, fmt }: { product: any; onAdd: (p: an
       onClick={() => onAdd(product)}
       className="w-full flex items-center justify-between p-4 rounded-2xl border-2 border-border bg-card active:bg-accent active:scale-[0.98] transition-all"
     >
-      <div className="text-left">
-        <p className="font-semibold text-foreground text-base">{product.nome}</p>
-        {product.codigo && <p className="text-xs text-muted-foreground mt-0.5">{product.codigo}</p>}
+      <div className="flex items-center gap-3 text-left">
+        {product.imagem_url ? (
+          <img src={product.imagem_url} alt={product.nome} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+        ) : (
+          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+            <Package className="w-5 h-5 text-muted-foreground" />
+          </div>
+        )}
+        <div>
+          <p className="font-semibold text-foreground text-base">{product.nome}</p>
+          {product.codigo && <p className="text-xs text-muted-foreground mt-0.5">{product.codigo}</p>}
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <span className="font-bold text-primary text-lg">{fmt(Number(product.preco))}</span>
