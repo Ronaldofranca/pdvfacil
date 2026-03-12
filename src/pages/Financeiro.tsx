@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Search, Plus, CreditCard, AlertTriangle, CheckCircle, Clock, Filter } from "lucide-react";
+import { DollarSign, Search, Plus, CreditCard, AlertTriangle, CheckCircle, Clock, Filter, Receipt } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useParcelas } from "@/hooks/useParcelas";
 import { usePermissions } from "@/hooks/usePermissions";
 import { GerarParcelasForm } from "@/components/financeiro/GerarParcelasForm";
 import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
+import { ReciboParcela } from "@/components/financeiro/ReciboParcela";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
