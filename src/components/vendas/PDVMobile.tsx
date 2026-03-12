@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
-  DollarSign, X, Package as PackageIcon, CreditCard, Check, WifiOff,
-  RotateCcw, Users, ChevronRight, Zap, Package
+  DollarSign, X, Package, CreditCard, Check, WifiOff,
+  RotateCcw, Users, ChevronRight, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
