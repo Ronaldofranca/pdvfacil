@@ -62,6 +62,17 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const [searchCliente, setSearchCliente] = useState("");
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>({
+    entrada: 0,
+    num_parcelas: 1,
+    primeiro_vencimento: (() => {
+      const d = new Date();
+      d.setMonth(d.getMonth() + 1);
+      return d.toISOString().split("T")[0];
+    })(),
+  });
+
+  const hasCrediario = pagamentos.some((p) => p.forma === "crediario");
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
