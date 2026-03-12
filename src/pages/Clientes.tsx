@@ -70,8 +70,9 @@ export default function ClientesPage() {
               <TableHead>Telefone</TableHead>
               <TableHead>Cidade</TableHead>
               <TableHead>GPS</TableHead>
+              <TableHead>Pontos</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-32" />
+              <TableHead className="w-36" />
             </TableRow>
           </TableHeader>
           <TableBody>
