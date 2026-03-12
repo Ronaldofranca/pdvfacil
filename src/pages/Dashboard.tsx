@@ -394,6 +394,33 @@ export default function DashboardPage() {
         </Card>
       )}
 
+      {/* TOP INDICADORES */}
+      {isAdmin && topIndicadores && topIndicadores.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Award className="w-4 h-4 text-primary" /> Top Clientes Indicadores
+              </h2>
+              <Link to="/clientes"><Badge variant="outline" className="text-[10px] cursor-pointer">Ver clientes</Badge></Link>
+            </div>
+            <div className="space-y-2">
+              {topIndicadores.slice(0, 5).map((c, i) => (
+                <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-muted-foreground w-4">{i + 1}º</span>
+                    <p className="text-sm font-medium text-foreground">{c.nome}</p>
+                  </div>
+                  <Badge variant="secondary" className="gap-1">
+                    <Star className="w-3 h-3 text-yellow-500" /> {c.pontos_indicacao} pts
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick Actions */}
       <div className="grid grid-cols-4 gap-2">
         {[
