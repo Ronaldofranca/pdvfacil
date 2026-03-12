@@ -27,6 +27,7 @@ export default function FinanceiroPage() {
   const [search, setSearch] = useState("");
   const [gerarOpen, setGerarOpen] = useState(false);
   const [pagamentoState, setPagamentoState] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [reciboState, setReciboState] = useState<{ open: boolean; data?: any }>({ open: false });
 
   const filters = statusFilter !== "todas" ? { status: statusFilter } : undefined;
   const { data: parcelas, isLoading } = useParcelas(filters);
