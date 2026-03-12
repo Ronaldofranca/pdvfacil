@@ -132,6 +132,9 @@ export default function ClientesPage() {
                       <Button variant="ghost" size="icon" title="Repetir última venda" onClick={() => setPdvState({ open: true, clienteId: c.id })}>
                         <RotateCcw className="w-4 h-4" />
                       </Button>
+                      <Button variant="ghost" size="icon" title="Indicações" onClick={() => setIndicacoesState({ open: true, data: c })}>
+                        <Award className="w-4 h-4 text-yellow-500" />
+                      </Button>
                       <Button variant="ghost" size="icon" title="Histórico" onClick={() => setHistoricoState({ open: true, data: c })}>
                         <History className="w-4 h-4" />
                       </Button>
