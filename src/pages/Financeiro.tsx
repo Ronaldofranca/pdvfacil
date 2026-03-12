@@ -138,12 +138,15 @@ export default function FinanceiroPage() {
                       </Badge>
                     </TableCell>
                     {canRegisterPagamento && (
-                      <TableCell>
+                      <TableCell className="flex gap-1">
                         {p.status !== "paga" && (
                           <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setPagamentoState({ open: true, data: p })}>
                             <CreditCard className="w-3 h-3" /> Pagar
                           </Button>
                         )}
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setReciboState({ open: true, data: p })}>
+                          <Receipt className="w-3 h-3" /> Recibo
+                        </Button>
                       </TableCell>
                     )}
                   </TableRow>
