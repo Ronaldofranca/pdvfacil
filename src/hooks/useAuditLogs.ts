@@ -1,8 +1,29 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
-export function useAuditLogs(filters?: { tabela?: string; limit?: number }) {
+export interface AuditLogEntry {
+  id: string;
+  empresa_id: string;
+  usuario_id: string | null;
+  acao: string;
+  tabela: string;
+  registro_id: string | null;
+  dados_anteriores: Record<string, unknown> | null;
+  dados_novos: Record<string, unknown> | null;
+  ip: string;
+  created_at: string;
+}
+
+export interface AuditFilters {
+  tabela?: string;
+  usuario_id?: string;
+  acao?: string;
+  data_inicio?: string;
+  data_fim?: string;
+  limit?: number;
+}
+
+export function useAuditLogs(filters?: AuditFilters) {
   return useQuery({
     queryKey: ["audit_logs", filters],
     queryFn: async () => {
@@ -10,22 +31,15 @@ export function useAuditLogs(filters?: { tabela?: string; limit?: number }) {
         .from("audit_logs")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(filters?.limit ?? 200);
+        .limit(filters?.limit ?? 500);
       if (filters?.tabela) q = q.eq("tabela", filters.tabela);
+      if (filters?.usuario_id) q = q.eq("usuario_id", filters.usuario_id);
+      if (filters?.acao) q = q.eq("acao", filters.acao);
+      if (filters?.data_inicio) q = q.gte("created_at", filters.data_inicio);
+      if (filters?.data_fim) q = q.lte("created_at", filters.data_fim + "T23:59:59");
       const { data, error } = await q;
       if (error) throw error;
-      return data as {
-        id: string;
-        empresa_id: string;
-        usuario_id: string | null;
-        acao: string;
-        tabela: string;
-        registro_id: string | null;
-        dados_anteriores: Record<string, unknown> | null;
-        dados_novos: Record<string, unknown> | null;
-        ip: string;
-        created_at: string;
-      }[];
+      return data as AuditLogEntry[];
     },
   });
 }
@@ -50,6 +64,20 @@ export function useSecurityLogs(limit = 100) {
         user_agent: string;
         created_at: string;
       }[];
+    },
+  });
+}
+
+export function useAuditUsers() {
+  return useQuery({
+    queryKey: ["audit_users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, nome")
+        .order("nome");
+      if (error) throw error;
+      return data as { user_id: string; nome: string }[];
     },
   });
 }
