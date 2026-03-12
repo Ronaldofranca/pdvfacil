@@ -16,10 +16,11 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   // Redirect if already logged in
-  if (session) {
-    navigate("/", { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (session) {
+      navigate("/", { replace: true });
+    }
+  }, [session, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
