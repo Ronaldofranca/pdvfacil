@@ -168,10 +168,16 @@ export function useAddCidade() {
   const { profile } = useAuth();
   return useMutation({
     mutationFn: async ({ cidade, estado }: { cidade: string; estado: string }) => {
-      const { error } = await (supabase as any)
+      if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
+
+      const { data: inserted, error } = await (supabase as any)
         .from("cidades_atendidas")
-        .insert({ empresa_id: profile!.empresa_id, cidade, estado });
+        .insert({ empresa_id: profile.empresa_id, cidade, estado })
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!inserted) throw new Error("Sem permissão para adicionar cidade.");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cidades_atendidas"] });
