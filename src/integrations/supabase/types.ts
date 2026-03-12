@@ -1010,6 +1010,53 @@ export type Database = {
           },
         ]
       }
+      niveis_recompensa: {
+        Row: {
+          ativo: boolean
+          beneficios: string
+          cor: string
+          created_at: string
+          empresa_id: string
+          icone: string
+          id: string
+          nome: string
+          pontos_minimos: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          beneficios?: string
+          cor?: string
+          created_at?: string
+          empresa_id: string
+          icone?: string
+          id?: string
+          nome: string
+          pontos_minimos?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          beneficios?: string
+          cor?: string
+          created_at?: string
+          empresa_id?: string
+          icone?: string
+          id?: string
+          nome?: string
+          pontos_minimos?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "niveis_recompensa_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notificacoes: {
         Row: {
           created_at: string

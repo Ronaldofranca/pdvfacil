@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { Star, Gift, Users, TrendingUp, Award } from "lucide-react";
 import { useIndicacoesDoCliente, useResumoIndicacoes, useUsarPontos } from "@/hooks/useIndicacoes";
+import { useNiveisRecompensa, getNivelAtual, getProximoNivel } from "@/hooks/useNiveisRecompensa";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -22,6 +24,7 @@ export function IndicacoesCliente({ open, onOpenChange, cliente }: Props) {
   const { profile } = useAuth();
   const { data: indicacoes, isLoading: loadInd } = useIndicacoesDoCliente(cliente?.id ?? null);
   const { data: resumo, isLoading: loadRes } = useResumoIndicacoes(cliente?.id ?? null);
+  const { data: niveis } = useNiveisRecompensa();
   const usarPontos = useUsarPontos();
 
   const [pontosUsar, setPontosUsar] = useState("");
@@ -51,6 +54,13 @@ export function IndicacoesCliente({ open, onOpenChange, cliente }: Props) {
 
   if (!cliente) return null;
 
+  const pontosAcumulados = resumo?.pontosAcumulados ?? 0;
+  const nivelAtual = niveis ? getNivelAtual(pontosAcumulados, niveis) : null;
+  const proximoNivel = niveis ? getProximoNivel(pontosAcumulados, niveis) : null;
+  const progressoProximo = proximoNivel
+    ? Math.min(100, Math.round((pontosAcumulados / proximoNivel.pontos_minimos) * 100))
+    : 100;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -60,6 +70,52 @@ export function IndicacoesCliente({ open, onOpenChange, cliente }: Props) {
             Indicações — {cliente.nome}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Nível atual */}
+        {niveis && niveis.length > 0 && (
+          <Card className="border" style={{ borderColor: nivelAtual?.cor ?? "hsl(var(--border))" }}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: (nivelAtual?.cor ?? "#6b7280") + "22", color: nivelAtual?.cor ?? "#6b7280" }}
+                >
+                  <Award className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground">
+                      {nivelAtual ? nivelAtual.nome : "Sem nível"}
+                    </span>
+                    {nivelAtual && (
+                      <Badge variant="secondary" className="text-[10px]" style={{ backgroundColor: nivelAtual.cor + "22", color: nivelAtual.cor }}>
+                        {nivelAtual.pontos_minimos}+ pts
+                      </Badge>
+                    )}
+                  </div>
+                  {nivelAtual?.beneficios && (
+                    <p className="text-xs text-muted-foreground">{nivelAtual.beneficios}</p>
+                  )}
+                </div>
+              </div>
+              {proximoNivel && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>{pontosAcumulados} pts</span>
+                    <span>Próximo: {proximoNivel.nome} ({proximoNivel.pontos_minimos} pts)</span>
+                  </div>
+                  <Progress value={progressoProximo} className="h-2" />
+                  <p className="text-[10px] text-muted-foreground">
+                    Faltam {proximoNivel.pontos_minimos - pontosAcumulados} pontos para {proximoNivel.nome}
+                  </p>
+                </div>
+              )}
+              {!proximoNivel && nivelAtual && (
+                <p className="text-[10px] text-muted-foreground">🏆 Nível máximo atingido!</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Resumo */}
         <div className="grid grid-cols-3 gap-3">
@@ -85,6 +141,29 @@ export function IndicacoesCliente({ open, onOpenChange, cliente }: Props) {
             </CardContent>
           </Card>
         </div>
+
+        {/* Todos os níveis */}
+        {niveis && niveis.length > 1 && (
+          <div>
+            <h3 className="text-xs font-semibold mb-2 text-muted-foreground">Todos os níveis</h3>
+            <div className="flex gap-2 flex-wrap">
+              {niveis.map((n) => {
+                const isAtual = nivelAtual?.id === n.id;
+                return (
+                  <Badge
+                    key={n.id}
+                    variant={isAtual ? "default" : "outline"}
+                    className="gap-1 text-[10px]"
+                    style={isAtual ? { backgroundColor: n.cor, borderColor: n.cor } : { borderColor: n.cor, color: n.cor }}
+                  >
+                    <Award className="w-3 h-3" />
+                    {n.nome} ({n.pontos_minimos}+)
+                  </Badge>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Usar Pontos */}
         {(resumo?.pontosDisponiveis ?? 0) > 0 && (
