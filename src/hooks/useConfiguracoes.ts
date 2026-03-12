@@ -123,6 +123,7 @@ export function useToggleFormaPagamento() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["formas_pagamento"] }),
     onError: (e: Error) => toast.error(e.message),
   });
+}
 
 export function useDeleteFormaPagamento() {
   const qc = useQueryClient();
