@@ -411,6 +411,11 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     <span className="text-sm font-bold text-primary">{clienteSelecionado.nome?.charAt(0)?.toUpperCase()}</span>
                   </div>
                   <span className="text-sm font-medium text-foreground">{clienteSelecionado.nome}</span>
+                  {Number((clienteSelecionado as any).pontos_indicacao) > 0 && (
+                    <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                      <Star className="w-2.5 h-2.5 text-yellow-500" /> {Number((clienteSelecionado as any).pontos_indicacao)} pts
+                    </Badge>
+                  )}
                 </div>
                 {ultimaVendaItens && ultimaVendaItens.length > 0 && (
                   <Button
