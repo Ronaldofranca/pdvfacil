@@ -45,9 +45,14 @@ export default function ClientesPage() {
             <p className="text-sm text-muted-foreground">CRM — Gestão de clientes</p>
           </div>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setFormState({ open: true })}>
-          <Plus className="w-4 h-4" /> Novo Cliente
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setImportOpen(true)}>
+            <Smartphone className="w-4 h-4" /> Importar Contatos
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setFormState({ open: true })}>
+            <Plus className="w-4 h-4" /> Novo Cliente
+          </Button>
+        </div>
       </div>
 
       <div className="relative">
