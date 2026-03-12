@@ -876,3 +876,89 @@ function LR({ cols }: { cols: number }) {
 function ER({ cols, msg }: { cols: number; msg?: string }) {
   return <TableRow><TableCell colSpan={cols} className="text-center text-muted-foreground py-8">{msg ?? "Sem dados no período"}</TableCell></TableRow>;
 }
+
+function RankingIndicacoesTab({ doExportCSV, doExportPDF }: { doExportCSV: (rows: Record<string, any>[], name: string) => void; doExportPDF: (title: string, headers: string[], rows: string[][], totals?: string[]) => void }) {
+  const { data: topIndicadores, isLoading } = useTopIndicadores();
+  const { data: niveis } = useNiveisRecompensa();
+
+  const getNivel = (pontos: number) => {
+    if (!niveis?.length) return "—";
+    const nivel = getNivelAtual(pontos, niveis);
+    return nivel?.nome ?? "Sem nível";
+  };
+
+  const totalPontos = (topIndicadores ?? []).reduce((s, c) => s + c.pontos_indicacao, 0);
+
+  return (
+    <>
+      <ExportBar
+        onCSV={() => doExportCSV((topIndicadores ?? []).map((c) => ({
+          Posição: (topIndicadores ?? []).indexOf(c) + 1,
+          Cliente: c.nome,
+          Pontos: c.pontos_indicacao,
+          Nível: getNivel(c.pontos_indicacao),
+          Telefone: c.telefone,
+        })), "ranking_indicacoes")}
+        onPDF={() => doExportPDF("Ranking de Indicações",
+          ["#", "Cliente", "Pontos", "Nível"],
+          (topIndicadores ?? []).map((c, i) => [
+            `${i + 1}º`,
+            c.nome,
+            String(c.pontos_indicacao),
+            getNivel(c.pontos_indicacao),
+          ]),
+          ["TOTAL", "", String(totalPontos), ""]
+        )}
+      />
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <SummaryCard label="Total Indicadores" value={String((topIndicadores ?? []).length)} />
+        <SummaryCard label="Total Pontos" value={String(totalPontos)} color="text-primary" />
+        {niveis && niveis.length > 0 && (
+          <SummaryCard
+            label="Nível Mais Alto"
+            value={niveis[niveis.length - 1]?.nome ?? "—"}
+            sub={`${(topIndicadores ?? []).filter(c => {
+              const n = getNivelAtual(c.pontos_indicacao, niveis);
+              return n?.id === niveis[niveis.length - 1]?.id;
+            }).length} cliente(s)`}
+          />
+        )}
+      </div>
+
+      <Card><Table><TableHeader><TableRow>
+        <TableHead>#</TableHead>
+        <TableHead>Cliente</TableHead>
+        <TableHead>Telefone</TableHead>
+        <TableHead>Nível</TableHead>
+        <TableHead className="text-right">Pontos</TableHead>
+      </TableRow></TableHeader><TableBody>
+        {isLoading ? <LR cols={5} /> : !(topIndicadores ?? []).length ? <ER cols={5} msg="Nenhuma indicação registrada" /> :
+          topIndicadores!.map((c, i) => {
+            const nivel = niveis ? getNivelAtual(c.pontos_indicacao, niveis) : null;
+            return (
+              <TableRow key={c.id}>
+                <TableCell className="font-bold text-muted-foreground">{i + 1}º</TableCell>
+                <TableCell className="font-medium">{c.nome}</TableCell>
+                <TableCell className="text-sm">{c.telefone || "—"}</TableCell>
+                <TableCell>
+                  {nivel ? (
+                    <Badge variant="outline" className="gap-1 text-xs" style={{ borderColor: nivel.cor, color: nivel.cor }}>
+                      <Award className="w-3 h-3" /> {nivel.nome}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Badge variant="secondary" className="gap-1">
+                    <Star className="w-3 h-3 text-yellow-500" /> {c.pontos_indicacao}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+      </TableBody></Table></Card>
+    </>
+  );
+}
