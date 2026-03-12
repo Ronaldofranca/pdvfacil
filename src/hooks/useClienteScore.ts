@@ -7,61 +7,91 @@ export interface ClienteScore {
   totalComprado: number;
   qtdCompras: number;
   parcelasPagas: number;
+  parcelasPagasEmDia: number;
+  parcelasPagasComAtraso: number;
   parcelasVencidas: number;
+  parcelasPendentes: number;
   tempoMedioPagamentoDias: number;
   score: number;
-  classificacao: "VIP" | "Bom" | "Comum" | "Risco";
+  percentualEmDia: number;
+  classificacao: "Excelente" | "Bom" | "Regular" | "Risco";
   cor: string;
+  emoji: string;
 }
 
 function calcScore(
   totalComprado: number,
   qtdCompras: number,
-  parcelasPagas: number,
+  parcelasPagasEmDia: number,
+  parcelasPagasComAtraso: number,
   parcelasVencidas: number,
   tempoMedioDias: number
-): { score: number; classificacao: ClienteScore["classificacao"]; cor: string } {
-  let score = 0;
+): {
+  score: number;
+  percentualEmDia: number;
+  classificacao: ClienteScore["classificacao"];
+  cor: string;
+  emoji: string;
+} {
+  const totalParcelas = parcelasPagasEmDia + parcelasPagasComAtraso + parcelasVencidas;
 
-  // Volume de compras (0-30)
-  if (totalComprado >= 10000) score += 30;
-  else if (totalComprado >= 5000) score += 22;
-  else if (totalComprado >= 1000) score += 15;
-  else if (totalComprado >= 500) score += 8;
-
-  // Frequência (0-25)
-  if (qtdCompras >= 20) score += 25;
-  else if (qtdCompras >= 10) score += 18;
-  else if (qtdCompras >= 5) score += 12;
-  else if (qtdCompras >= 2) score += 6;
-
-  // Adimplência (0-30)
-  const totalParcelas = parcelasPagas + parcelasVencidas;
+  // Calculate on-time payment percentage
+  let percentualEmDia = 0;
   if (totalParcelas > 0) {
-    const taxaPaga = parcelasPagas / totalParcelas;
-    score += Math.round(taxaPaga * 30);
+    percentualEmDia = Math.round((parcelasPagasEmDia / totalParcelas) * 100);
   } else {
-    score += 15;
+    // No parcelas yet - neutral
+    percentualEmDia = 100;
   }
 
+  // Build score (0-100)
+  let score = 0;
+
+  // On-time payment rate (0-50 points) - most important factor
+  score += Math.round((percentualEmDia / 100) * 50);
+
+  // Volume de compras (0-20)
+  if (totalComprado >= 10000) score += 20;
+  else if (totalComprado >= 5000) score += 15;
+  else if (totalComprado >= 1000) score += 10;
+  else if (totalComprado >= 500) score += 5;
+
+  // Frequência (0-15)
+  if (qtdCompras >= 20) score += 15;
+  else if (qtdCompras >= 10) score += 10;
+  else if (qtdCompras >= 5) score += 7;
+  else if (qtdCompras >= 2) score += 3;
+
   // Tempo médio de pagamento (0-15)
-  if (tempoMedioDias <= 5) score += 15;
-  else if (tempoMedioDias <= 15) score += 10;
-  else if (tempoMedioDias <= 30) score += 5;
+  if (tempoMedioDias <= 0) score += 15;
+  else if (tempoMedioDias <= 5) score += 12;
+  else if (tempoMedioDias <= 15) score += 7;
+  else if (tempoMedioDias <= 30) score += 3;
 
-  const classificacao: ClienteScore["classificacao"] =
-    score >= 80 ? "VIP" : score >= 55 ? "Bom" : score >= 30 ? "Comum" : "Risco";
+  // Classification based on on-time percentage (primary) and score (secondary)
+  let classificacao: ClienteScore["classificacao"];
+  let cor: string;
+  let emoji: string;
 
-  const cor =
-    classificacao === "VIP"
-      ? "text-primary"
-      : classificacao === "Bom"
-      ? "text-blue-500"
-      : classificacao === "Comum"
-      ? "text-muted-foreground"
-      : "text-destructive";
+  if (percentualEmDia >= 90 && score >= 60) {
+    classificacao = "Excelente";
+    cor = "text-primary";
+    emoji = "⭐";
+  } else if (percentualEmDia >= 70 && score >= 40) {
+    classificacao = "Bom";
+    cor = "text-blue-500";
+    emoji = "👍";
+  } else if (percentualEmDia >= 40) {
+    classificacao = "Regular";
+    cor = "text-yellow-500";
+    emoji = "⚠️";
+  } else {
+    classificacao = "Risco";
+    cor = "text-destructive";
+    emoji = "🚨";
+  }
 
-  return { score, classificacao, cor };
+  return { score, percentualEmDia, classificacao, cor, emoji };
 }
 
 export function useClienteScores() {
@@ -82,10 +112,10 @@ export function useClienteScores() {
         .eq("status", "finalizada");
       if (vErr) throw vErr;
 
-      // Fetch parcelas
+      // Fetch parcelas with payment data
       const { data: parcelas, error: pErr } = await supabase
         .from("parcelas")
-        .select("cliente_id, status, vencimento, data_pagamento");
+        .select("cliente_id, status, vencimento, data_pagamento, valor_pago, valor_total");
       if (pErr) throw pErr;
 
       const scores: ClienteScore[] = (clientes || []).map((c) => {
@@ -94,26 +124,55 @@ export function useClienteScores() {
         const qtdCompras = clienteVendas.length;
 
         const clienteParcelas = (parcelas || []).filter((p) => p.cliente_id === c.id);
-        const parcelasPagas = clienteParcelas.filter((p) => p.status === "paga").length;
-        const parcelasVencidas = clienteParcelas.filter((p) => p.status === "vencida").length;
+
+        // Classify each parcela
+        let parcelasPagasEmDia = 0;
+        let parcelasPagasComAtraso = 0;
+        let parcelasVencidas = 0;
+        let parcelasPendentes = 0;
+        let parcelasPagas = 0;
+
+        for (const p of clienteParcelas) {
+          if (p.status === "paga") {
+            parcelasPagas++;
+            // Check if paid on time (data_pagamento <= vencimento)
+            if (p.data_pagamento && p.vencimento) {
+              const pagDate = new Date(p.data_pagamento).getTime();
+              const vencDate = new Date(p.vencimento + "T23:59:59").getTime();
+              if (pagDate <= vencDate) {
+                parcelasPagasEmDia++;
+              } else {
+                parcelasPagasComAtraso++;
+              }
+            } else {
+              // If no date info, assume on time
+              parcelasPagasEmDia++;
+            }
+          } else if (p.status === "vencida") {
+            parcelasVencidas++;
+          } else {
+            parcelasPendentes++;
+          }
+        }
 
         const pagasComData = clienteParcelas.filter(
           (p) => p.status === "paga" && p.data_pagamento && p.vencimento
         );
-        let tempoMedioDias = 10;
+        let tempoMedioDias = 0;
         if (pagasComData.length > 0) {
           const totalDias = pagasComData.reduce((acc, p) => {
-            const venc = new Date(p.vencimento).getTime();
+            const venc = new Date(p.vencimento + "T12:00:00").getTime();
             const pag = new Date(p.data_pagamento!).getTime();
             return acc + Math.max(0, (pag - venc) / 86400000);
           }, 0);
           tempoMedioDias = totalDias / pagasComData.length;
         }
 
-        const { score, classificacao, cor } = calcScore(
+        const { score, percentualEmDia, classificacao, cor, emoji } = calcScore(
           totalComprado,
           qtdCompras,
-          parcelasPagas,
+          parcelasPagasEmDia,
+          parcelasPagasComAtraso,
           parcelasVencidas,
           tempoMedioDias
         );
@@ -124,11 +183,16 @@ export function useClienteScores() {
           totalComprado,
           qtdCompras,
           parcelasPagas,
+          parcelasPagasEmDia,
+          parcelasPagasComAtraso,
           parcelasVencidas,
+          parcelasPendentes,
           tempoMedioPagamentoDias: Math.round(tempoMedioDias),
           score,
+          percentualEmDia,
           classificacao,
           cor,
+          emoji,
         };
       });
 
