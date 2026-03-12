@@ -103,7 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: permData, error: permError } = await supabase
           .from("role_permissoes")
           .select("permissoes(nome)")
-          .in("role", userRoles);
+          .in("role", userRoles)
+          .eq("empresa_id", profileData.empresa_id);
 
         if (seq !== fetchSeqRef.current) return;
         if (permError) throw permError;
