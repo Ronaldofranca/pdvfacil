@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import {
   BarChart3, Calendar as CalendarIcon, TrendingUp, Package, CreditCard,
   AlertTriangle, DollarSign, BarChart, Users, MapPin, Truck, FileDown,
-  FileSpreadsheet, Filter, UserCheck
+  FileSpreadsheet, Filter, UserCheck, Award, Star
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
