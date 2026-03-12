@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVen
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import { PDVMobile } from "./PDVMobile";
 import { toast } from "sonner";
 
@@ -97,6 +98,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const finalizar = useFinalizarVenda();
   const { data: maisVendidos } = useProdutosMaisVendidos();
   const { data: recentes } = useProdutosRecentes();
+  const { data: niveis } = useNiveisRecompensa();
 
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
   const [clienteId, setClienteId] = useState(initialClienteId ?? "");
@@ -165,6 +167,29 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     const item = cart[idx];
     const newQty = Math.max(1, item.quantidade + delta);
     updateItem(idx, { quantidade: newQty });
+  };
+
+  // ─── Tier discount ───
+  const clienteSel = clientes?.find((c) => c.id === clienteId);
+  const tierDesconto = (() => {
+    if (!clienteSel || !niveis?.length) return 0;
+    const nivel = getNivelAtual(Number((clienteSel as any).pontos_indicacao ?? 0), niveis);
+    if (!nivel?.beneficios) return 0;
+    const match = nivel.beneficios.match(/(\d+)%/);
+    return match ? parseInt(match[1]) : 0;
+  })();
+
+  const applyTierDiscount = () => {
+    if (tierDesconto <= 0 || cart.length === 0) return;
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.bonus) return item;
+        const desc = Math.round(item.quantidade * item.preco_vendido * (tierDesconto / 100) * 100) / 100;
+        const sub = item.quantidade * item.preco_vendido - desc;
+        return { ...item, desconto: desc, subtotal: sub };
+      })
+    );
+    toast.success(`Desconto de ${tierDesconto}% aplicado (nível do cliente)`);
   };
 
   // ─── Totals ───
@@ -369,6 +394,14 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
             </div>
 
             <Separator />
+
+            {/* Tier discount */}
+            {tierDesconto > 0 && cart.length > 0 && (
+              <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs" onClick={applyTierDiscount}>
+                <Award className="w-3.5 h-3.5 text-primary" />
+                Aplicar desconto de nível ({tierDesconto}%)
+              </Button>
+            )}
 
             {/* Totais */}
             <div className="space-y-1 text-sm">

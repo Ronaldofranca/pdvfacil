@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
   DollarSign, X, Package, CreditCard, Check, WifiOff,
-  RotateCcw, Users, ChevronRight, Zap, Star
+  RotateCcw, Users, ChevronRight, Zap, Star, Award
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, use
 import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/useOfflinePDV";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import { toast } from "sonner";
 
 const FORMAS_PAGAMENTO = [
@@ -48,6 +49,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const { data: recentes } = useProdutosRecentes();
   const { isOnline, pendingCount } = useOffline();
   const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
+  const { data: niveis } = useNiveisRecompensa();
 
   const [step, setStep] = useState<Step>("cliente");
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
@@ -143,6 +145,28 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     const item = cart[idx];
     const newQty = Math.max(1, item.quantidade + delta);
     updateItem(idx, { quantidade: newQty });
+  };
+
+  // ─── Tier discount ───
+  const tierDesconto = (() => {
+    if (!clienteSelecionado || !niveis?.length) return 0;
+    const nivel = getNivelAtual(Number((clienteSelecionado as any).pontos_indicacao ?? 0), niveis);
+    if (!nivel?.beneficios) return 0;
+    const match = nivel.beneficios.match(/(\d+)%/);
+    return match ? parseInt(match[1]) : 0;
+  })();
+
+  const applyTierDiscount = () => {
+    if (tierDesconto <= 0 || cart.length === 0) return;
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.bonus) return item;
+        const desc = Math.round(item.quantidade * item.preco_vendido * (tierDesconto / 100) * 100) / 100;
+        const sub = item.quantidade * item.preco_vendido - desc;
+        return { ...item, desconto: desc, subtotal: sub };
+      })
+    );
+    toast.success(`Desconto de ${tierDesconto}% aplicado (nível do cliente)`);
   };
 
   // ─── Totals ───
@@ -645,7 +669,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
             {/* Cart summary footer */}
             {cart.length > 0 && (
               <div className="border-t p-4 bg-background space-y-3 shrink-0 safe-area-bottom">
-                <div className="space-y-1 text-sm">
+              <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{fmt(subtotal)}</span>
@@ -661,6 +685,12 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     <span className="text-primary">{fmt(total)}</span>
                   </div>
                 </div>
+                {tierDesconto > 0 && cart.length > 0 && (
+                  <Button variant="outline" className="w-full h-12 gap-2 rounded-2xl text-sm" onClick={applyTierDiscount}>
+                    <Award className="w-5 h-5 text-primary" />
+                    Aplicar desconto de nível ({tierDesconto}%)
+                  </Button>
+                )}
                 <Button
                   className="w-full h-14 text-lg gap-2 rounded-2xl font-bold"
                   onClick={() => {
