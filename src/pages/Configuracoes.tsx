@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   User, Building2, Palette, ShoppingCart, CreditCard, CalendarDays,
-  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save
+  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award
 } from "lucide-react";
 import { useEmpresas, useUpdateEmpresa } from "@/hooks/useEmpresas";
 import {
