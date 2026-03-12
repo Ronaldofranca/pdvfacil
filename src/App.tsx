@@ -33,6 +33,7 @@ import MapaClientesPage from "./pages/MapaClientes";
 import MetasComissoesPage from "./pages/MetasComissoes";
 import PrevisaoEstoquePage from "./pages/PrevisaoEstoque";
 import AlertasPage from "./pages/Alertas";
+import ConfiguracoesPage from "./pages/Configuracoes";
 import DocumentacaoPage from "./pages/Documentacao";
 import NotFound from "./pages/NotFound";
 
