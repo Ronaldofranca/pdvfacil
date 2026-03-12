@@ -644,6 +644,61 @@ export type Database = {
           },
         ]
       }
+      historico_cobrancas: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          data_envio: string
+          empresa_id: string
+          id: string
+          mensagem: string
+          parcela_id: string | null
+          tipo_cobranca: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          data_envio?: string
+          empresa_id: string
+          id?: string
+          mensagem?: string
+          parcela_id?: string | null
+          tipo_cobranca?: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          data_envio?: string
+          empresa_id?: string
+          id?: string
+          mensagem?: string
+          parcela_id?: string | null
+          tipo_cobranca?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_cobrancas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_cobrancas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_cobrancas_parcela_id_fkey"
+            columns: ["parcela_id"]
+            isOneToOne: false
+            referencedRelation: "parcelas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historico_compras: {
         Row: {
           cliente_id: string
@@ -1197,6 +1252,7 @@ export type Database = {
           observacoes: string
           saldo: number | null
           status: Database["public"]["Enums"]["status_parcela"]
+          ultima_cobranca: string | null
           updated_at: string
           valor_pago: number
           valor_total: number
@@ -1214,6 +1270,7 @@ export type Database = {
           observacoes?: string
           saldo?: number | null
           status?: Database["public"]["Enums"]["status_parcela"]
+          ultima_cobranca?: string | null
           updated_at?: string
           valor_pago?: number
           valor_total?: number
@@ -1231,6 +1288,7 @@ export type Database = {
           observacoes?: string
           saldo?: number | null
           status?: Database["public"]["Enums"]["status_parcela"]
+          ultima_cobranca?: string | null
           updated_at?: string
           valor_pago?: number
           valor_total?: number

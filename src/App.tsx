@@ -35,6 +35,7 @@ import PrevisaoEstoquePage from "./pages/PrevisaoEstoque";
 import AlertasPage from "./pages/Alertas";
 import ConfiguracoesPage from "./pages/Configuracoes";
 import DocumentacaoPage from "./pages/Documentacao";
+import CobrancasPage from "./pages/Cobrancas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ const App = () => (
                 <Route path="/catalogo-interno" element={<CatalogoInternalPage />} />
                 <Route path="/romaneio" element={<RomaneioPage />} />
                 <Route path="/financeiro" element={<FinanceiroPage />} />
+                <Route path="/cobrancas" element={<CobrancasPage />} />
                 <Route path="/relatorios" element={<RelatoriosPage />} />
                 <Route path="/usuarios" element={<ProtectedRoute requiredRole="admin"><UsuariosPage /></ProtectedRoute>} />
                 <Route path="/empresas" element={<ProtectedRoute requiredRole="admin"><EmpresasPage /></ProtectedRoute>} />

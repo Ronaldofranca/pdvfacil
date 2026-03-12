@@ -117,6 +117,7 @@ export type ModuleKey =
   | "catalogo"
   | "romaneio"
   | "financeiro"
+  | "cobrancas"
   | "relatorios"
   | "usuarios"
   | "empresas"
