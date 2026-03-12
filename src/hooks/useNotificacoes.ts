@@ -63,11 +63,12 @@ export function useMarcarLida() {
 export function useMarcarTodasLidas() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (userId: string) => {
       const { error } = await (supabase as any)
         .from("notificacoes")
         .update({ lida: true })
-        .eq("lida", false);
+        .eq("lida", false)
+        .eq("usuario_id", userId);
       if (error) throw error;
     },
     onSuccess: () => {

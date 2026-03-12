@@ -77,7 +77,7 @@ export function useFinalizarVenda() {
           cliente_id: v.cliente_id || null,
           vendedor_id: v.vendedor_id,
           status: "finalizada" as any,
-          subtotal,
+          subtotal: subtotalBruto,
           desconto_total: v.desconto_total,
           total,
           pagamentos: v.pagamentos as any,

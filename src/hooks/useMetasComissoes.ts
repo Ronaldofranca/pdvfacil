@@ -56,9 +56,9 @@ export function useUpsertMeta() {
       meta_valor: number;
       percentual_comissao: number;
     }) => {
-      const { error } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from("metas_vendedor")
-        .upsert(meta, { onConflict: "empresa_id,vendedor_id,mes,ano" });
+        .upsert(meta, { onConflict: "vendedor_id,mes,ano" });
       if (error) throw error;
     },
     onSuccess: () => {
