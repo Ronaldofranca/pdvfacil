@@ -92,7 +92,8 @@ export function useVendaItens(vendaId: string | null) {
 export function useFinalizarVenda() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (v: VendaInput) => {
+    mutationFn: async (raw: VendaInput) => {
+      const v = vendaInputSchema.parse(raw);
       const subtotalBruto = v.itens.reduce((s, i) => s + i.quantidade * i.preco_original, 0);
       const total = v.itens.reduce((s, i) => s + i.subtotal, 0);
 
