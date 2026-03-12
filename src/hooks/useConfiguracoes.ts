@@ -25,24 +25,36 @@ export function useUpsertConfiguracoes() {
   const { profile } = useAuth();
   return useMutation({
     mutationFn: async (values: Record<string, any>) => {
-      const empresa_id = profile!.empresa_id;
-      const { data: existing } = await (supabase as any)
+      if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
+
+      const empresa_id = profile.empresa_id;
+      const { data: existing, error: existingError } = await (supabase as any)
         .from("configuracoes")
         .select("id")
         .eq("empresa_id", empresa_id)
         .maybeSingle();
 
+      if (existingError) throw existingError;
+
       if (existing) {
-        const { error } = await (supabase as any)
+        const { data: updated, error } = await (supabase as any)
           .from("configuracoes")
           .update({ ...values, updated_at: new Date().toISOString() })
-          .eq("id", existing.id);
+          .eq("id", existing.id)
+          .select("id")
+          .maybeSingle();
+
         if (error) throw error;
+        if (!updated) throw new Error("Sem permissão para atualizar estas configurações.");
       } else {
-        const { error } = await (supabase as any)
+        const { data: inserted, error } = await (supabase as any)
           .from("configuracoes")
-          .insert({ ...values, empresa_id });
+          .insert({ ...values, empresa_id })
+          .select("id")
+          .maybeSingle();
+
         if (error) throw error;
+        if (!inserted) throw new Error("Sem permissão para criar configurações da empresa.");
       }
     },
     onSuccess: () => {
@@ -75,10 +87,16 @@ export function useAddFormaPagamento() {
   const { profile } = useAuth();
   return useMutation({
     mutationFn: async (nome: string) => {
-      const { error } = await (supabase as any)
+      if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
+
+      const { data: inserted, error } = await (supabase as any)
         .from("formas_pagamento")
-        .insert({ empresa_id: profile!.empresa_id, nome });
+        .insert({ empresa_id: profile.empresa_id, nome })
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!inserted) throw new Error("Sem permissão para adicionar forma de pagamento.");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["formas_pagamento"] });
@@ -92,25 +110,33 @@ export function useToggleFormaPagamento() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ativa }: { id: string; ativa: boolean }) => {
-      const { error } = await (supabase as any)
+      const { data: updated, error } = await (supabase as any)
         .from("formas_pagamento")
         .update({ ativa })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!updated) throw new Error("Sem permissão para alterar forma de pagamento.");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["formas_pagamento"] }),
+    onError: (e: Error) => toast.error(e.message),
   });
-}
 
 export function useDeleteFormaPagamento() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { data: removed, error } = await (supabase as any)
         .from("formas_pagamento")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!removed) throw new Error("Sem permissão para remover forma de pagamento.");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["formas_pagamento"] });
@@ -142,10 +168,16 @@ export function useAddCidade() {
   const { profile } = useAuth();
   return useMutation({
     mutationFn: async ({ cidade, estado }: { cidade: string; estado: string }) => {
-      const { error } = await (supabase as any)
+      if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
+
+      const { data: inserted, error } = await (supabase as any)
         .from("cidades_atendidas")
-        .insert({ empresa_id: profile!.empresa_id, cidade, estado });
+        .insert({ empresa_id: profile.empresa_id, cidade, estado })
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!inserted) throw new Error("Sem permissão para adicionar cidade.");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cidades_atendidas"] });
@@ -159,11 +191,15 @@ export function useDeleteCidade() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { data: removed, error } = await (supabase as any)
         .from("cidades_atendidas")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!removed) throw new Error("Sem permissão para remover cidade.");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cidades_atendidas"] });
