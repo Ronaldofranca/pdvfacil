@@ -51,7 +51,7 @@ const App = () => (
               <Route path="/login" element={<LoginPage />} />
               
               <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
-              <Route path="/documentacao" element={<DocumentacaoPage />} />
+              <Route path="/documentacao" element={<ProtectedRoute><DocumentacaoPage /></ProtectedRoute>} />
               {/* Public catalog routes */}
               <Route path="/catalogo" element={<CatalogoPublicoPage />} />
               <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
