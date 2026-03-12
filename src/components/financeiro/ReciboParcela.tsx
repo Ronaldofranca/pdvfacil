@@ -15,6 +15,13 @@ interface Props {
   parcela: any;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  pendente: "Pendente",
+  parcial: "Parcialmente Paga",
+  paga: "Paga",
+  vencida: "Vencida",
+};
+
 export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
   const { data: pagamentos } = usePagamentosDaParcela(parcela?.id ?? null);
   const { data: empresas } = useEmpresas();
@@ -36,7 +43,7 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
     rows.push(["Valor Total", fmtR(Number(parcela.valor_total))]);
     rows.push(["Valor Pago", fmtR(Number(parcela.valor_pago))]);
     rows.push(["Saldo Restante", fmtR(Number(parcela.saldo))]);
-    rows.push(["Status", parcela.status.toUpperCase()]);
+    rows.push(["Status", STATUS_LABELS[parcela.status] ?? parcela.status]);
 
     if (pagamentos?.length) {
       rows.push(["---", "---"]);
@@ -56,12 +63,6 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
       headers: ["Campo", "Valor"],
       rows,
     });
-  };
-
-  const STATUS_LABELS: Record<string, string> = {
-    pendente: "Pendente",
-    paga: "Paga",
-    vencida: "Vencida",
   };
 
   return (
@@ -92,7 +93,12 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status</span>
-              <Badge variant={parcela.status === "paga" ? "default" : parcela.status === "vencida" ? "destructive" : "secondary"}>
+              <Badge variant={
+                parcela.status === "paga" ? "default" : 
+                parcela.status === "vencida" ? "destructive" : 
+                parcela.status === "parcial" ? "outline" :
+                "secondary"
+              }>
                 {STATUS_LABELS[parcela.status] ?? parcela.status}
               </Badge>
             </div>
