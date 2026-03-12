@@ -32,6 +32,7 @@ const TABS = [
   { id: "parcelas", label: "Parcelas", icon: CalendarDays },
   { id: "cidades", label: "Cidades", icon: MapPin },
   { id: "vendedores", label: "Vendedores", icon: Users },
+  { id: "indicacoes", label: "Indicações", icon: Award },
   { id: "catalogo", label: "Catálogo", icon: BookOpen },
   { id: "notificacoes", label: "Notificações", icon: Bell },
   { id: "backup", label: "Backup", icon: HardDrive },
