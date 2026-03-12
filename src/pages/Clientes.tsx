@@ -110,6 +110,13 @@ export default function ClientesPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      {c.telefone && (
+                        <Button variant="ghost" size="icon" title="WhatsApp" asChild>
+                          <a href={`https://wa.me/55${c.telefone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                            <MessageCircle className="w-4 h-4 text-green-600" />
+                          </a>
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" title="Repetir última venda" onClick={() => setPdvState({ open: true, clienteId: c.id })}>
                         <RotateCcw className="w-4 h-4" />
                       </Button>
