@@ -24,6 +24,7 @@ const FORMAS_PAGAMENTO = [
   { value: "pix", label: "PIX" },
   { value: "cartao_credito", label: "Cartão Crédito" },
   { value: "cartao_debito", label: "Cartão Débito" },
+  { value: "crediario", label: "Crediário" },
   { value: "boleto", label: "Boleto" },
   { value: "transferencia", label: "Transferência" },
 ];
