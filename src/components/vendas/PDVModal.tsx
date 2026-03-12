@@ -107,6 +107,17 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
+  const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>({
+    entrada: 0,
+    num_parcelas: 1,
+    primeiro_vencimento: (() => {
+      const d = new Date();
+      d.setMonth(d.getMonth() + 1);
+      return d.toISOString().split("T")[0];
+    })(),
+  });
+
+  const hasCrediario = pagamentos.some((p) => p.forma === "crediario");
 
   // Reset when opening with initial data
   useEffect(() => {
