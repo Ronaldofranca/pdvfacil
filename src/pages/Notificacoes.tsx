@@ -16,6 +16,7 @@ const TIPO_ICONS: Record<string, { icon: React.ElementType; color: string }> = {
 };
 
 export default function NotificacoesPage() {
+  const { user } = useAuth();
   const { data: notificacoes, isLoading } = useNotificacoes();
   const marcarLida = useMarcarLida();
   const marcarTodas = useMarcarTodasLidas();
