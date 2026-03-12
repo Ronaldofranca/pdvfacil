@@ -37,6 +37,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
     longitude: "",
     observacoes: "",
     ativo: true,
+    cliente_indicador_id: "",
   });
 
   useEffect(() => {
