@@ -27,7 +27,7 @@ export default function LoginPage() {
     if (!trimmedEmail || !password) return;
 
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(trimmedEmail, password);
     setLoading(false);
 
     if (error) {
