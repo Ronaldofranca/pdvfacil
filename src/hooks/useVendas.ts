@@ -66,8 +66,8 @@ export function useFinalizarVenda() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: VendaInput) => {
-      const subtotal = v.itens.reduce((s, i) => s + i.subtotal, 0);
-      const total = subtotal - v.desconto_total;
+      const subtotalBruto = v.itens.reduce((s, i) => s + i.quantidade * i.preco_original, 0);
+      const total = v.itens.reduce((s, i) => s + i.subtotal, 0);
 
       // 1. Criar venda
       const { data: venda, error: vendaErr } = await supabase
