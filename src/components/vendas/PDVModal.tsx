@@ -475,13 +475,23 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                   )}
                 </div>
               ))}
-              {troco > 0 && (
+              {!hasCrediario && troco > 0 && (
                 <p className="text-sm font-medium text-green-600">Troco: {fmt(troco)}</p>
               )}
-              {totalPago > 0 && totalPago < total && (
+              {!hasCrediario && totalPago > 0 && totalPago < total && (
                 <p className="text-sm font-medium text-destructive">Faltam: {fmt(total - totalPago)}</p>
               )}
             </div>
+
+            {/* Crediário config */}
+            {hasCrediario && (
+              <CrediarioConfigPanel
+                config={crediarioConfig}
+                onChange={setCrediarioConfig}
+                total={total}
+                compact
+              />
+            )}
 
             {/* Obs */}
             <Textarea placeholder="Observações..." value={observacoes} onChange={(e) => setObservacoes(e.target.value)} className="text-xs" rows={2} />
@@ -494,7 +504,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
           <Button
             type="button"
             className="flex-1 gap-1.5"
-            disabled={finalizar.isPending || cart.length === 0 || totalPago < total}
+            disabled={finalizar.isPending || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
             onClick={handleFinalizar}
           >
             <ShoppingCart className="w-4 h-4" />
