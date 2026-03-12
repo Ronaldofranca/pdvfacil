@@ -391,6 +391,8 @@ export default function ConfiguracoesPage() {
                 />
                 <p className="text-xs text-muted-foreground">Se 0, qualquer compra gera pontos. Se maior que 0, somente compras acima deste valor.</p>
               </div>
+              <Separator />
+              <NiveisRecompensaManager />
             </CardContent>
           </Card>
         </TabsContent>
