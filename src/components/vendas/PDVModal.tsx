@@ -11,11 +11,12 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
-import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
+import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
+import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { PDVMobile } from "./PDVMobile";
 import { toast } from "sonner";
 
