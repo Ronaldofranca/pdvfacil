@@ -914,6 +914,36 @@ export type Database = {
           },
         ]
       }
+      login_attempts: {
+        Row: {
+          bloqueado_ate: string | null
+          created_at: string
+          email: string
+          id: string
+          ip: string
+          tentativas: number
+          updated_at: string
+        }
+        Insert: {
+          bloqueado_ate?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          ip?: string
+          tentativas?: number
+          updated_at?: string
+        }
+        Update: {
+          bloqueado_ate?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip?: string
+          tentativas?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       metas_vendedor: {
         Row: {
           ano: number
@@ -1962,6 +1992,16 @@ export type Database = {
           qtd: number
         }[]
       }
+      check_login_attempt: {
+        Args: {
+          _block_minutes?: number
+          _email: string
+          _ip: string
+          _max_attempts?: number
+          _window_minutes?: number
+        }
+        Returns: Json
+      }
       check_parcelas_pagamentos: {
         Args: never
         Returns: {
@@ -2018,6 +2058,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_gerente: { Args: never; Returns: boolean }
+      reset_login_attempts: { Args: { _email: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "gerente" | "vendedor"

@@ -6,11 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const [blockedUntil, setBlockedUntil] = useState<string | null>(null);
+  const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
   const { signIn, session } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -22,22 +26,96 @@ export default function LoginPage() {
     }
   }, [session, navigate]);
 
+  // Countdown timer for block
+  useEffect(() => {
+    if (!blockedUntil) return;
+    const checkBlock = () => {
+      if (new Date(blockedUntil) <= new Date()) {
+        setBlocked(false);
+        setBlockedUntil(null);
+        setRemainingAttempts(null);
+      }
+    };
+    const interval = setInterval(checkBlock, 1000);
+    checkBlock();
+    return () => clearInterval(interval);
+  }, [blockedUntil]);
+
+  const checkRateLimit = async (trimmedEmail: string, action: "check" | "reset") => {
+    try {
+      const { data, error } = await supabase.functions.invoke("check-login-attempt", {
+        body: { email: trimmedEmail, action },
+      });
+      if (error) {
+        console.warn("Rate limit check failed, allowing login:", error);
+        return { blocked: false };
+      }
+      return data as { blocked: boolean; attempts?: number; remaining?: number; blocked_until?: string };
+    } catch {
+      // Don't block login if rate limit service is unavailable
+      return { blocked: false };
+    }
+  };
+
+  const getBlockTimeRemaining = () => {
+    if (!blockedUntil) return "";
+    const diff = new Date(blockedUntil).getTime() - Date.now();
+    if (diff <= 0) return "";
+    const mins = Math.ceil(diff / 60000);
+    return `Tente novamente em ${mins} minuto${mins > 1 ? "s" : ""}.`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail || !password) return;
 
+    if (blocked) {
+      toast({
+        title: "Acesso bloqueado",
+        description: "Muitas tentativas de login. " + getBlockTimeRemaining(),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
+
+    // Check rate limit before attempting login
+    const rateLimitResult = await checkRateLimit(trimmedEmail, "check");
+
+    if (rateLimitResult.blocked) {
+      setBlocked(true);
+      setBlockedUntil(rateLimitResult.blocked_until || null);
+      setLoading(false);
+      toast({
+        title: "Acesso bloqueado",
+        description: "Muitas tentativas de login. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error } = await signIn(trimmedEmail, password);
     setLoading(false);
 
     if (error) {
+      const remaining = rateLimitResult.remaining;
+      setRemainingAttempts(typeof remaining === "number" ? remaining : null);
+
+      const remainingMsg = typeof remaining === "number" && remaining > 0
+        ? ` Tentativas restantes: ${remaining}.`
+        : "";
+
       toast({
         title: "Erro ao entrar",
-        description: "Email ou senha incorretos.",
+        description: `Email ou senha incorretos.${remainingMsg}`,
         variant: "destructive",
       });
     } else {
+      // Reset rate limit on successful login
+      await checkRateLimit(trimmedEmail, "reset");
+      setRemainingAttempts(null);
       navigate("/", { replace: true });
     }
   };
@@ -52,6 +130,13 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-foreground">VendaForce</h1>
           <p className="text-sm text-muted-foreground">Gestão de Vendas Externas</p>
         </div>
+
+        {blocked && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-center text-sm text-destructive">
+            🔒 Muitas tentativas de login. {getBlockTimeRemaining()}
+          </div>
+        )}
+
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -61,7 +146,7 @@ export default function LoginPage() {
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
+              disabled={loading || blocked}
             />
           </div>
           <div className="space-y-2">
@@ -72,12 +157,17 @@ export default function LoginPage() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
+              disabled={loading || blocked}
             />
           </div>
-          <Button className="w-full" type="submit" disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
+          <Button className="w-full" type="submit" disabled={loading || blocked}>
+            {loading ? "Entrando..." : blocked ? "Bloqueado" : "Entrar"}
           </Button>
+          {remainingAttempts !== null && remainingAttempts > 0 && !blocked && (
+            <p className="text-center text-xs text-muted-foreground">
+              ⚠️ {remainingAttempts} tentativa{remainingAttempts > 1 ? "s" : ""} restante{remainingAttempts > 1 ? "s" : ""}
+            </p>
+          )}
         </form>
         <p className="text-center text-xs text-muted-foreground">
           Não tem conta? Entre em contato com o administrador.
