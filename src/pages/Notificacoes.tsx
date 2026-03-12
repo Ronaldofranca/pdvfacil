@@ -38,7 +38,7 @@ export default function NotificacoesPage() {
           </div>
         </div>
         {unread > 0 && (
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => marcarTodas.mutate()}>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => user && marcarTodas.mutate(user.id)}>
             <CheckCheck className="w-4 h-4" /> Marcar todas como lidas
           </Button>
         )}
