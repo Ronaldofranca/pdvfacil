@@ -29,7 +29,7 @@ const TABELA_LABELS: Record<string, string> = {
   produtos: "Produtos",
   parcelas: "Parcelas",
   pagamentos: "Pagamentos",
-  movimentos_estoque: "Movimentos Estoque",
+  movimentos_estoque: "Mov. Estoque",
   estoque: "Estoque",
   configuracoes: "Configurações",
   romaneios: "Romaneios",
@@ -37,11 +37,6 @@ const TABELA_LABELS: Record<string, string> = {
 
 export default function AuditPage() {
   const { isAdmin, rolesLoaded } = useAuth();
-
-  if (rolesLoaded && !isAdmin) {
-    return <Navigate to="/" replace />;
-  }
-
   const [tabelaFilter, setTabelaFilter] = useState("all");
   const [acaoFilter, setAcaoFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
@@ -61,6 +56,10 @@ export default function AuditPage() {
   const { data: logs, isLoading } = useAuditLogs(filters);
   const { data: secLogs, isLoading: secLoading } = useSecurityLogs();
   const { data: users } = useAuditUsers();
+
+  if (rolesLoaded && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   const userMap = new Map(users?.map((u) => [u.user_id, u.nome]) ?? []);
 
@@ -103,7 +102,7 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
             <Shield className="w-5 h-5 text-primary" />
@@ -130,7 +129,6 @@ export default function AuditPage() {
         </TabsList>
 
         <TabsContent value="audit" className="space-y-4">
-          {/* Filters */}
           <div className="flex flex-wrap gap-2">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -179,10 +177,9 @@ export default function AuditPage() {
             </div>
           </div>
 
-          {/* Stats */}
           <div className="flex gap-4 text-sm text-muted-foreground">
             <span>{filteredLogs?.length ?? 0} registros</span>
-            {filteredLogs && (
+            {filteredLogs && filteredLogs.length > 0 && (
               <>
                 <span>•</span>
                 <span>{filteredLogs.filter((l) => l.acao === "INSERT").length} criações</span>
@@ -271,7 +268,6 @@ export default function AuditPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Detail Dialog */}
       <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
