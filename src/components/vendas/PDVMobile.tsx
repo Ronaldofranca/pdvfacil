@@ -815,17 +815,26 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                   <Plus className="w-5 h-5" /> Dividir pagamento
                 </Button>
 
-                {troco > 0 && (
+                {!hasCrediario && troco > 0 && (
                   <Card className="p-3 rounded-2xl bg-accent/50">
                     <p className="text-center font-bold text-lg text-foreground">Troco: {fmt(troco)}</p>
                   </Card>
                 )}
-                {totalPago > 0 && totalPago < total && (
+                {!hasCrediario && totalPago > 0 && totalPago < total && (
                   <p className="text-base font-semibold text-destructive text-center">
                     Faltam: {fmt(total - totalPago)}
                   </p>
                 )}
               </div>
+
+              {/* Crediário config */}
+              {hasCrediario && (
+                <CrediarioConfigPanel
+                  config={crediarioConfig}
+                  onChange={setCrediarioConfig}
+                  total={total}
+                />
+              )}
 
               {/* Obs */}
               <Textarea
@@ -846,7 +855,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
               )}
               <Button
                 className="w-full h-16 text-xl gap-3 rounded-2xl font-bold"
-                disabled={isSubmitting || finalizar.isPending || cart.length === 0 || totalPago < total}
+                disabled={isSubmitting || finalizar.isPending || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
                 onClick={handleFinalizar}
               >
                 <Check className="w-7 h-7" />

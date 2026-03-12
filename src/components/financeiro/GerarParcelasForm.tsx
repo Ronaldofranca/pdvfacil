@@ -101,6 +101,15 @@ export function GerarParcelasForm({ open, onOpenChange, vendaId, clienteId, valo
               </Select>
             </div>
           </div>
+          {/* Descrição opcional */}
+          <div>
+            <Label>Descrição / Referência (opcional)</Label>
+            <Input
+              value={form.descricao}
+              onChange={(e) => set("descricao", e.target.value)}
+              placeholder="Ex: Compra de produtos, serviço prestado..."
+            />
+          </div>
           {parseFloat(form.valor_total) > 0 && parseInt(form.num_parcelas) > 0 && (
             <p className="text-sm text-muted-foreground">
               {form.num_parcelas}x de <span className="font-semibold text-foreground">{fmt(valorParcela)}</span>
