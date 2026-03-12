@@ -377,7 +377,14 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                       <span className="text-lg font-bold text-primary">{c.nome?.charAt(0)?.toUpperCase()}</span>
                     </div>
                     <div className="text-left">
-                      <p className="font-semibold text-foreground">{c.nome}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-foreground">{c.nome}</p>
+                        {Number((c as any).pontos_indicacao) > 0 && (
+                          <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                            <Star className="w-2.5 h-2.5 text-yellow-500" /> {Number((c as any).pontos_indicacao)}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {c.telefone || c.cidade || c.email || ""}
                       </p>
