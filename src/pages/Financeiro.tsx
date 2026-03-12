@@ -159,6 +159,7 @@ export default function FinanceiroPage() {
 
       <GerarParcelasForm open={gerarOpen} onOpenChange={setGerarOpen} />
       <PagamentoForm open={pagamentoState.open} onOpenChange={(v) => setPagamentoState({ open: v })} parcela={pagamentoState.data} />
+      <ReciboParcela open={reciboState.open} onOpenChange={(v) => setReciboState({ open: v })} parcela={reciboState.data} />
     </div>
   );
 }
