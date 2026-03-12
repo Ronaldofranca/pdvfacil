@@ -50,6 +50,7 @@ export default function DashboardPage() {
   const { data: vendedorDash } = useVendedorDashboard();
   const { data: alertas } = useAlertasInteligentes();
   const { data: previsoes } = usePrevisaoEstoque();
+  const { data: topIndicadores } = useTopIndicadores();
   const { data: empresas } = useEmpresas();
 
   const alertasAltos = (alertas || []).filter((a) => a.prioridade === "alta").length;
