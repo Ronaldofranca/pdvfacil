@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
         description: "Sistema SaaS de gestão de vendas externas",
         theme_color: "#0f1117",
         background_color: "#0f1117",
-        display: "standalone",
+        display: "fullscreen",
         orientation: "portrait",
         start_url: "/",
         icons: [
