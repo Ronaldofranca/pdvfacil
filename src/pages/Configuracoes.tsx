@@ -508,6 +508,103 @@ export default function ConfiguracoesPage() {
   );
 }
 
+// Sub-component for reward levels management
+function NiveisRecompensaManager() {
+  const { data: niveis } = useAllNiveisRecompensa();
+  const addNivel = useAddNivelRecompensa();
+  const updateNivel = useUpdateNivelRecompensa();
+  const deleteNivel = useDeleteNivelRecompensa();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ nome: "", pontos_minimos: "", cor: "#10b981", icone: "Star", beneficios: "" });
+
+  const handleAdd = () => {
+    if (!form.nome || !form.pontos_minimos) return;
+    addNivel.mutate(
+      { nome: form.nome, pontos_minimos: parseInt(form.pontos_minimos), cor: form.cor, icone: form.icone, beneficios: form.beneficios },
+      { onSuccess: () => { setForm({ nome: "", pontos_minimos: "", cor: "#10b981", icone: "Star", beneficios: "" }); setShowForm(false); } }
+    );
+  };
+
+  const CORES = ["#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#3b82f6", "#ec4899"];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold">Níveis de Recompensa</h3>
+          <p className="text-xs text-muted-foreground">Defina faixas de pontos para classificar clientes indicadores</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}>
+          <Plus className="h-3 w-3 mr-1" /> Novo Nível
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="border-dashed">
+          <CardContent className="p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Nome do nível</Label>
+                <Input placeholder="Ex: Bronze" value={form.nome} onChange={(e) => setForm(p => ({ ...p, nome: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Pontos mínimos</Label>
+                <Input type="number" min={0} placeholder="Ex: 50" value={form.pontos_minimos} onChange={(e) => setForm(p => ({ ...p, pontos_minimos: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Benefícios</Label>
+              <Input placeholder="Ex: 5% de desconto em compras" value={form.beneficios} onChange={(e) => setForm(p => ({ ...p, beneficios: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Cor</Label>
+              <div className="flex gap-2">
+                {CORES.map(c => (
+                  <button key={c} className={cn("w-7 h-7 rounded-full border-2 transition-all", form.cor === c ? "border-foreground scale-110" : "border-transparent")} style={{ backgroundColor: c }} onClick={() => setForm(p => ({ ...p, cor: c }))} />
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleAdd} disabled={addNivel.isPending}>{addNivel.isPending ? "Salvando..." : "Salvar"}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {niveis && niveis.length > 0 ? (
+        <div className="space-y-2">
+          {niveis.map((n) => (
+            <div key={n.id} className="flex items-center gap-3 p-3 rounded-lg border border-border">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: n.cor + "22", color: n.cor }}>
+                <Award className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">{n.nome}</span>
+                  <Badge variant="secondary" className="text-[10px]">{n.pontos_minimos}+ pts</Badge>
+                  {!n.ativo && <Badge variant="outline" className="text-[10px] text-muted-foreground">Inativo</Badge>}
+                </div>
+                {n.beneficios && <p className="text-xs text-muted-foreground truncate">{n.beneficios}</p>}
+              </div>
+              <div className="flex gap-1">
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateNivel.mutate({ id: n.id, ativo: !n.ativo })}>
+                  {n.ativo ? <Shield className="h-3 w-3" /> : <Shield className="h-3 w-3 text-muted-foreground" />}
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteNivel.mutate(n.id)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground text-center py-4">Nenhum nível cadastrado. Crie níveis como Bronze, Prata, Ouro para classificar seus indicadores.</p>
+      )}
+    </div>
+  );
+}
+
 // Sub-component for empresa form
 function EmpresaForm({ empresa, onSave }: { empresa: any; onSave: (v: any) => void }) {
   const [form, setForm] = useState({
