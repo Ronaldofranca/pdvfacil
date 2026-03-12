@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Search, Plus, CreditCard, AlertTriangle, CheckCircle, Clock, Filter, Receipt } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DollarSign, Search, Plus, CreditCard, AlertTriangle, CheckCircle, Clock, Filter, Receipt, CircleDot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 
 const STATUS_CFG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
   pendente: { label: "Pendente", variant: "secondary", icon: Clock },
+  parcial: { label: "Parcial", variant: "outline", icon: CircleDot },
   paga: { label: "Paga", variant: "default", icon: CheckCircle },
   vencida: { label: "Vencida", variant: "destructive", icon: AlertTriangle },
 };
@@ -39,9 +39,10 @@ export default function FinanceiroPage() {
   );
 
   // Resumo
-  const totalPendente = parcelas?.filter((p) => p.status === "pendente").reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
+  const totalPendente = parcelas?.filter((p) => p.status === "pendente" || p.status === "parcial").reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
   const totalVencido = parcelas?.filter((p) => p.status === "vencida").reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
   const totalPago = parcelas?.filter((p) => p.status === "paga").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+  const totalParcial = parcelas?.filter((p) => p.status === "parcial").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
 
   return (
     <div className="space-y-6">
@@ -64,7 +65,7 @@ export default function FinanceiroPage() {
       </div>
 
       {/* Resumo */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 text-center">
           <p className="text-xs text-muted-foreground">Pendente</p>
           <p className="text-lg font-bold text-foreground">{fmt(totalPendente)}</p>
@@ -72,6 +73,10 @@ export default function FinanceiroPage() {
         <Card className="p-4 text-center">
           <p className="text-xs text-muted-foreground">Vencido</p>
           <p className="text-lg font-bold text-destructive">{fmt(totalVencido)}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-xs text-muted-foreground">Parcialmente Pago</p>
+          <p className="text-lg font-bold text-accent-foreground">{fmt(totalParcial)}</p>
         </Card>
         <Card className="p-4 text-center">
           <p className="text-xs text-muted-foreground">Recebido</p>
@@ -86,13 +91,14 @@ export default function FinanceiroPage() {
           <Input className="pl-9" placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[180px]">
             <Filter className="w-3.5 h-3.5 mr-1.5" />
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todas">Todas</SelectItem>
             <SelectItem value="pendente">Pendentes</SelectItem>
+            <SelectItem value="parcial">Parcialmente Pagas</SelectItem>
             <SelectItem value="vencida">Vencidas</SelectItem>
             <SelectItem value="paga">Pagas</SelectItem>
           </SelectContent>
