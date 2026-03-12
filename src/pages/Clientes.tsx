@@ -109,6 +109,15 @@ export default function ClientesPage() {
                     )}
                   </TableCell>
                   <TableCell>
+                    {Number(c.pontos_indicacao) > 0 ? (
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <Star className="w-3 h-3 text-yellow-500" /> {Number(c.pontos_indicacao)}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">0</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <Badge variant={c.ativo ? "default" : "secondary"}>{c.ativo ? "Ativo" : "Inativo"}</Badge>
                   </TableCell>
                   <TableCell>
