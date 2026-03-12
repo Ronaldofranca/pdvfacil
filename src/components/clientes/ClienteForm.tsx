@@ -105,6 +105,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
       longitude: form.longitude ? parseFloat(form.longitude) : null,
       observacoes: form.observacoes,
       ativo: form.ativo,
+      cliente_indicador_id: form.cliente_indicador_id || null,
     };
     upsert.mutate(payload, { onSuccess: () => onOpenChange(false) });
   };
