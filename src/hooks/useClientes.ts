@@ -95,8 +95,8 @@ export function useUpsertCliente() {
         payload.cliente_indicador_id = (raw as any).cliente_indicador_id || null;
       }
       const { data, error } = c.id
-        ? await supabase.from("clientes").update(payload).eq("id", c.id).select().single()
-        : await supabase.from("clientes").insert({ ...payload, empresa_id: c.empresa_id }).select().single();
+        ? await (supabase as any).from("clientes").update(payload).eq("id", c.id).select().single()
+        : await (supabase as any).from("clientes").insert({ ...payload, empresa_id: c.empresa_id }).select().single();
       if (error) throw error;
       return data;
     },
