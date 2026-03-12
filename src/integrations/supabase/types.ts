@@ -2070,7 +2070,7 @@ export type Database = {
         | "boleto"
         | "transferencia"
         | "outro"
-      status_parcela: "pendente" | "paga" | "vencida"
+      status_parcela: "pendente" | "paga" | "vencida" | "parcial"
       status_venda: "rascunho" | "pendente" | "finalizada" | "cancelada"
       tipo_movimento: "venda" | "reposicao" | "dano" | "ajuste"
     }
@@ -2210,7 +2210,7 @@ export const Constants = {
         "transferencia",
         "outro",
       ],
-      status_parcela: ["pendente", "paga", "vencida"],
+      status_parcela: ["pendente", "paga", "vencida", "parcial"],
       status_venda: ["rascunho", "pendente", "finalizada", "cancelada"],
       tipo_movimento: ["venda", "reposicao", "dano", "ajuste"],
     },
