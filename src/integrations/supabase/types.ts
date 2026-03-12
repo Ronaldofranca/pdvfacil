@@ -197,6 +197,41 @@ export type Database = {
           },
         ]
       }
+      cidades_atendidas: {
+        Row: {
+          ativa: boolean
+          cidade: string
+          created_at: string
+          empresa_id: string
+          estado: string
+          id: string
+        }
+        Insert: {
+          ativa?: boolean
+          cidade: string
+          created_at?: string
+          empresa_id: string
+          estado?: string
+          id?: string
+        }
+        Update: {
+          ativa?: boolean
+          cidade?: string
+          created_at?: string
+          empresa_id?: string
+          estado?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cidades_atendidas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           ativo: boolean
@@ -260,6 +295,95 @@ export type Database = {
             foreignKeyName: "clientes_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      configuracoes: {
+        Row: {
+          alerta_cliente_inativo: boolean
+          alerta_estoque_baixo: boolean
+          alerta_meta_vendedor: boolean
+          alerta_parcelas_vencidas: boolean
+          bloquear_venda_sem_estoque_vendedor: boolean
+          catalogo_publico_ativo: boolean
+          comissao_padrao: number
+          created_at: string
+          dias_cliente_inativo: number
+          empresa_id: string
+          estoque_minimo_alerta: number
+          id: string
+          intervalo_parcelas: number
+          juros_parcelas: number
+          login_max_tentativas: number
+          meta_mensal_padrao: number
+          mostrar_preco_custo: boolean
+          parcelas_max: number
+          permitir_alterar_preco: boolean
+          permitir_brinde: boolean
+          permitir_desconto: boolean
+          permitir_venda_sem_estoque: boolean
+          sessao_expiracao_horas: number
+          updated_at: string
+        }
+        Insert: {
+          alerta_cliente_inativo?: boolean
+          alerta_estoque_baixo?: boolean
+          alerta_meta_vendedor?: boolean
+          alerta_parcelas_vencidas?: boolean
+          bloquear_venda_sem_estoque_vendedor?: boolean
+          catalogo_publico_ativo?: boolean
+          comissao_padrao?: number
+          created_at?: string
+          dias_cliente_inativo?: number
+          empresa_id: string
+          estoque_minimo_alerta?: number
+          id?: string
+          intervalo_parcelas?: number
+          juros_parcelas?: number
+          login_max_tentativas?: number
+          meta_mensal_padrao?: number
+          mostrar_preco_custo?: boolean
+          parcelas_max?: number
+          permitir_alterar_preco?: boolean
+          permitir_brinde?: boolean
+          permitir_desconto?: boolean
+          permitir_venda_sem_estoque?: boolean
+          sessao_expiracao_horas?: number
+          updated_at?: string
+        }
+        Update: {
+          alerta_cliente_inativo?: boolean
+          alerta_estoque_baixo?: boolean
+          alerta_meta_vendedor?: boolean
+          alerta_parcelas_vencidas?: boolean
+          bloquear_venda_sem_estoque_vendedor?: boolean
+          catalogo_publico_ativo?: boolean
+          comissao_padrao?: number
+          created_at?: string
+          dias_cliente_inativo?: number
+          empresa_id?: string
+          estoque_minimo_alerta?: number
+          id?: string
+          intervalo_parcelas?: number
+          juros_parcelas?: number
+          login_max_tentativas?: number
+          meta_mensal_padrao?: number
+          mostrar_preco_custo?: boolean
+          parcelas_max?: number
+          permitir_alterar_preco?: boolean
+          permitir_brinde?: boolean
+          permitir_desconto?: boolean
+          permitir_venda_sem_estoque?: boolean
+          sessao_expiracao_horas?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
             referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
@@ -459,6 +583,38 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      formas_pagamento: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          empresa_id: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formas_pagamento_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
