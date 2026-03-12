@@ -34,6 +34,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const AUTH_INIT_TIMEOUT_MS = 10000;
+const USER_DATA_TIMEOUT_MS = 8000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -51,16 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRolesLoaded(true);
   };
 
-  const fetchUserData = async (userId: string) => {
-    const seq = ++fetchSeqRef.current;
+  const fetchUserData = async (userId: string, seq: number) => {
     setRolesLoaded(false);
 
     const fallbackTimer = window.setTimeout(() => {
       if (seq === fetchSeqRef.current) {
-        console.warn("Auth roles timeout fallback acionado");
+        console.warn("Timeout ao carregar profile/roles; liberando app com dados mínimos");
         setRolesLoaded(true);
       }
-    }, 8000);
+    }, USER_DATA_TIMEOUT_MS);
 
     try {
       const { data: profileData, error: profileError } = await supabase
@@ -88,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (seq !== fetchSeqRef.current) return;
       if (rolesError) throw rolesError;
 
-      const userRoles = (rolesData?.map((r: { role: AppRole }) => r.role) ?? []) as AppRole[];
+      const userRoles = (rolesData?.map((r: any) => r.role) ?? []) as AppRole[];
       setRoles(userRoles);
 
       if (userRoles.length === 0) {
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let subscription: { unsubscribe: () => void } | null = null;
 
     const applySession = (nextSession: Session | null) => {
       if (!mounted) return;
@@ -129,29 +132,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(nextSession?.user ?? null);
 
       if (nextSession?.user) {
-        void fetchUserData(nextSession.user.id);
+        const seq = ++fetchSeqRef.current;
+        void fetchUserData(nextSession.user.id, seq);
       } else {
         fetchSeqRef.current += 1;
         resetUserData();
       }
-
-      setLoading(false);
     };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      applySession(newSession);
-    });
+    const bootstrapAuth = async () => {
+      const initTimer = window.setTimeout(() => {
+        if (!mounted) return;
+        console.warn("Timeout na inicialização de autenticação; liberando tela");
+        setLoading(false);
+        setRolesLoaded(true);
+      }, AUTH_INIT_TIMEOUT_MS);
 
-    void supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      applySession(existingSession);
-    });
+      try {
+        const {
+          data: { session: existingSession },
+        } = await supabase.auth.getSession();
+
+        applySession(existingSession);
+      } catch (error) {
+        console.error("Falha ao restaurar sessão:", error);
+        fetchSeqRef.current += 1;
+        resetUserData();
+      } finally {
+        window.clearTimeout(initTimer);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+
+      const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        applySession(newSession);
+      });
+
+      subscription = data.subscription;
+    };
+
+    void bootstrapAuth();
 
     return () => {
       mounted = false;
       fetchSeqRef.current += 1;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
@@ -175,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     roles,
     permissions,
-    loading: loading || !rolesLoaded,
+    loading: loading || (session ? !rolesLoaded : false),
     rolesLoaded,
     signIn,
     signOut,
