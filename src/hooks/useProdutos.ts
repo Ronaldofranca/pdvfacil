@@ -1,6 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const produtoSchema = z.object({
+  id: z.string().uuid().optional(),
+  empresa_id: z.string().uuid(),
+  nome: z.string().trim().min(1, "Nome é obrigatório").max(200),
+  descricao: z.string().max(2000).optional(),
+  codigo: z.string().max(50).optional(),
+  categoria_id: z.string().uuid().nullable().optional(),
+  preco: z.number().min(0).optional(),
+  custo: z.number().min(0).optional(),
+  unidade: z.string().max(10).optional(),
+  imagem_url: z.string().url().nullable().optional().or(z.literal("")),
+  ativo: z.boolean().optional(),
+});
 
 // ─── Categorias ───
 export function useCategorias() {
