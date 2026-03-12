@@ -104,9 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (seq !== fetchSeqRef.current) return;
       if (permError) throw permError;
 
-      const userPerms = (
-        permData?.map((p: { permissoes?: { nome?: Permission } | null }) => p.permissoes?.nome).filter(Boolean) ?? []
-      ) as Permission[];
+      const userPerms = (permData?.map((p: any) => p.permissoes?.nome).filter(Boolean) ?? []) as Permission[];
       setPermissions([...new Set(userPerms)]);
     } catch (error) {
       if (seq !== fetchSeqRef.current) return;
