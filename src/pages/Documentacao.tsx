@@ -1,9 +1,32 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileDown, FileText } from "lucide-react";
+import { FileDown, FileText, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Documentacao() {
-  const fileUrl = "/DOCS.md";
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    try {
+      setDownloading(true);
+      const res = await fetch("/DOCS.md", { cache: "no-store" });
+      if (!res.ok) throw new Error("Falha ao buscar arquivo");
+      const text = await res.text();
+      const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "PDVFacil_Documentacao_Tecnica.md";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Download iniciado!");
+    } catch {
+      toast.error("Erro ao baixar documentação. Tente novamente.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background p-4">
@@ -16,11 +39,9 @@ export default function Documentacao() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <Button size="lg" className="w-full gap-2" asChild>
-            <a href={fileUrl} download="PDVFacil_Documentacao_Tecnica.md" target="_blank" rel="noopener noreferrer">
-              <FileDown className="h-5 w-5" />
-              Baixar Documentação (.md)
-            </a>
+          <Button size="lg" className="w-full gap-2" onClick={handleDownload} disabled={downloading}>
+            {downloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileDown className="h-5 w-5" />}
+            {downloading ? "Baixando..." : "Baixar Documentação (.md)"}
           </Button>
         </CardContent>
       </Card>
