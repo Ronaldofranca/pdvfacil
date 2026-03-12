@@ -789,6 +789,11 @@ export default function RelatoriosPage() {
             ))}
           </TableBody></Table></Card>
         </TabsContent>
+
+        {/* ═══ RANKING INDICAÇÕES ═══ */}
+        <TabsContent value="ranking" className="space-y-4">
+          <RankingIndicacoesTab doExportCSV={doExportCSV} doExportPDF={doExportPDF} />
+        </TabsContent>
       </Tabs>
     </div>
   );
