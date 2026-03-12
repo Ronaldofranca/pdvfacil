@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw } from "lucide-react";
+import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { useClientes, useDeleteCliente } from "@/hooks/useClientes";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
 import { HistoricoCompras } from "@/components/clientes/HistoricoCompras";
+import { ImportarContatos } from "@/components/clientes/ImportarContatos";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import type { CartItem } from "@/hooks/useVendas";
@@ -23,6 +24,7 @@ export default function ClientesPage() {
   const [search, setSearch] = useState("");
   const [formState, setFormState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [historicoState, setHistoricoState] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [importOpen, setImportOpen] = useState(false);
   const [pdvState, setPdvState] = useState<{ open: boolean; clienteId?: string; cart?: CartItem[] }>({ open: false });
 
   const filtered = clientes?.filter((c) =>
@@ -43,9 +45,14 @@ export default function ClientesPage() {
             <p className="text-sm text-muted-foreground">CRM — Gestão de clientes</p>
           </div>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setFormState({ open: true })}>
-          <Plus className="w-4 h-4" /> Novo Cliente
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setImportOpen(true)}>
+            <Smartphone className="w-4 h-4" /> Importar Contatos
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setFormState({ open: true })}>
+            <Plus className="w-4 h-4" /> Novo Cliente
+          </Button>
+        </div>
       </div>
 
       <div className="relative">
@@ -103,6 +110,13 @@ export default function ClientesPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      {c.telefone && (
+                        <Button variant="ghost" size="icon" title="WhatsApp" asChild>
+                          <a href={`https://wa.me/55${c.telefone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                            <MessageCircle className="w-4 h-4 text-green-600" />
+                          </a>
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" title="Repetir última venda" onClick={() => setPdvState({ open: true, clienteId: c.id })}>
                         <RotateCcw className="w-4 h-4" />
                       </Button>
@@ -128,6 +142,7 @@ export default function ClientesPage() {
 
       <ClienteForm open={formState.open} onOpenChange={(v) => setFormState({ open: v })} cliente={formState.data} />
       <HistoricoCompras open={historicoState.open} onOpenChange={(v) => setHistoricoState({ open: v })} cliente={historicoState.data} />
+      <ImportarContatos open={importOpen} onOpenChange={setImportOpen} />
       <PDVModal
         open={pdvState.open}
         onOpenChange={(v) => setPdvState({ open: v })}
