@@ -35,6 +35,7 @@ import PrevisaoEstoquePage from "./pages/PrevisaoEstoque";
 import AlertasPage from "./pages/Alertas";
 import ConfiguracoesPage from "./pages/Configuracoes";
 import DocumentacaoPage from "./pages/Documentacao";
+import CobrancasPage from "./pages/Cobrancas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
