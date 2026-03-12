@@ -33,6 +33,7 @@ import MapaClientesPage from "./pages/MapaClientes";
 import MetasComissoesPage from "./pages/MetasComissoes";
 import PrevisaoEstoquePage from "./pages/PrevisaoEstoque";
 import AlertasPage from "./pages/Alertas";
+import DocumentacaoPage from "./pages/Documentacao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/login" element={<LoginPage />} />
               <Route path="/setup" element={<SetupPage />} />
               <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
+              <Route path="/documentacao" element={<DocumentacaoPage />} />
               {/* Public catalog routes */}
               <Route path="/catalogo" element={<CatalogoPublicoPage />} />
               <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
