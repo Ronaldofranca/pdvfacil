@@ -98,16 +98,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const { data: permData, error: permError } = await supabase
-        .from("role_permissoes")
-        .select("permissoes(nome)")
-        .in("role", userRoles);
+      try {
+        const { data: permData, error: permError } = await supabase
+          .from("role_permissoes")
+          .select("permissoes(nome)")
+          .in("role", userRoles);
 
-      if (seq !== fetchSeqRef.current) return;
-      if (permError) throw permError;
+        if (seq !== fetchSeqRef.current) return;
+        if (permError) throw permError;
 
-      const userPerms = (permData?.map((p: any) => p.permissoes?.nome).filter(Boolean) ?? []) as Permission[];
-      setPermissions([...new Set(userPerms)]);
+        const userPerms = (permData?.map((p: any) => p.permissoes?.nome).filter(Boolean) ?? []) as Permission[];
+        setPermissions([...new Set(userPerms)]);
+      } catch (permError) {
+        if (seq !== fetchSeqRef.current) return;
+        console.error("Erro ao carregar permissões do usuário:", permError);
+        setPermissions([]);
+      }
     } catch (error) {
       if (seq !== fetchSeqRef.current) return;
       console.error("Erro ao carregar dados do usuário:", error);
