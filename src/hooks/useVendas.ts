@@ -19,6 +19,12 @@ const pagamentoSchema = z.object({
   valor: z.number().min(0),
 });
 
+const crediarioSchema = z.object({
+  entrada: z.number().min(0),
+  num_parcelas: z.number().int().min(1).max(48),
+  primeiro_vencimento: z.string().min(10),
+}).optional();
+
 const vendaInputSchema = z.object({
   empresa_id: z.string().uuid(),
   cliente_id: z.string().uuid().nullable().optional(),
@@ -27,6 +33,7 @@ const vendaInputSchema = z.object({
   pagamentos: z.array(pagamentoSchema).min(1, "Informe pelo menos 1 pagamento"),
   desconto_total: z.number().min(0),
   observacoes: z.string().max(1000).optional(),
+  crediario: crediarioSchema,
 });
 
 // ─── Types ───
@@ -46,6 +53,12 @@ export interface Pagamento {
   valor: number;
 }
 
+export interface CrediarioConfig {
+  entrada: number;
+  num_parcelas: number;
+  primeiro_vencimento: string; // YYYY-MM-DD
+}
+
 export interface VendaInput {
   empresa_id: string;
   cliente_id?: string | null;
@@ -54,6 +67,7 @@ export interface VendaInput {
   pagamentos: Pagamento[];
   desconto_total: number;
   observacoes?: string;
+  crediario?: CrediarioConfig;
 }
 
 // ─── Queries ───
@@ -96,6 +110,10 @@ export function useFinalizarVenda() {
       const v = vendaInputSchema.parse(raw);
       const subtotalBruto = v.itens.reduce((s, i) => s + i.quantidade * i.preco_original, 0);
       const total = v.itens.reduce((s, i) => s + i.subtotal, 0);
+
+      // Check if crediário payment and needs parcelas
+      const hasCrediario = v.pagamentos.some((p) => p.forma === "crediario");
+      const crediarioConfig = v.crediario;
 
       // 1. Criar venda
       const { data: venda, error: vendaErr } = await supabase
@@ -145,12 +163,51 @@ export function useFinalizarVenda() {
         await supabase.from("movimentos_estoque").insert(movimentos);
       }
 
+      // 4. Gerar parcelas automaticamente se crediário
+      if (hasCrediario && crediarioConfig && crediarioConfig.num_parcelas > 0) {
+        const entrada = crediarioConfig.entrada || 0;
+        const valorRestante = total - entrada;
+
+        if (valorRestante > 0) {
+          const valorParcela = Math.floor((valorRestante / crediarioConfig.num_parcelas) * 100) / 100;
+          const resto = Math.round((valorRestante - valorParcela * crediarioConfig.num_parcelas) * 100) / 100;
+
+          const parcelas = [];
+          const baseDate = new Date(crediarioConfig.primeiro_vencimento + "T12:00:00");
+
+          for (let i = 0; i < crediarioConfig.num_parcelas; i++) {
+            const venc = new Date(baseDate);
+            venc.setMonth(venc.getMonth() + i);
+            const valor = i === 0 ? valorParcela + resto : valorParcela;
+
+            parcelas.push({
+              empresa_id: v.empresa_id,
+              venda_id: venda.id,
+              cliente_id: v.cliente_id || null,
+              numero: i + 1,
+              valor_total: valor,
+              valor_pago: 0,
+              vencimento: venc.toISOString().split("T")[0],
+              forma_pagamento: "crediario",
+            });
+          }
+
+          const { error: parcelasErr } = await supabase.from("parcelas").insert(parcelas);
+          if (parcelasErr) throw parcelasErr;
+        }
+
+        // Se houve entrada, registrar como pagamento da primeira parcela ou pagamento avulso
+        // A entrada já está contabilizada no pagamento da venda
+      }
+
       return venda;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vendas"] });
       qc.invalidateQueries({ queryKey: ["estoque"] });
       qc.invalidateQueries({ queryKey: ["movimentos_estoque"] });
+      qc.invalidateQueries({ queryKey: ["parcelas"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       toast.success("Venda finalizada com sucesso!");
     },
     onError: (e: Error) => toast.error(e.message),

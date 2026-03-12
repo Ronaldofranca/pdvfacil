@@ -35,6 +35,7 @@ export function GerarParcelasForm({ open, onOpenChange, vendaId, clienteId, valo
     num_parcelas: "1",
     primeiro_vencimento: new Date().toISOString().split("T")[0],
     forma_pagamento: "boleto",
+    descricao: "",
   });
 
   const set = (f: string, v: string) => setForm((prev) => ({ ...prev, [f]: v }));
@@ -99,6 +100,15 @@ export function GerarParcelasForm({ open, onOpenChange, vendaId, clienteId, valo
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          {/* Descrição opcional */}
+          <div>
+            <Label>Descrição / Referência (opcional)</Label>
+            <Input
+              value={form.descricao}
+              onChange={(e) => set("descricao", e.target.value)}
+              placeholder="Ex: Compra de produtos, serviço prestado..."
+            />
           </div>
           {parseFloat(form.valor_total) > 0 && parseInt(form.num_parcelas) > 0 && (
             <p className="text-sm text-muted-foreground">

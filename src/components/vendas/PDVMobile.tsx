@@ -14,12 +14,13 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
-import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
+import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/useOfflinePDV";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
+import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { toast } from "sonner";
 
 const FORMAS_PAGAMENTO = [
@@ -61,6 +62,17 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const [searchCliente, setSearchCliente] = useState("");
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>({
+    entrada: 0,
+    num_parcelas: 1,
+    primeiro_vencimento: (() => {
+      const d = new Date();
+      d.setMonth(d.getMonth() + 1);
+      return d.toISOString().split("T")[0];
+    })(),
+  });
+
+  const hasCrediario = pagamentos.some((p) => p.forma === "crediario");
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
@@ -193,7 +205,13 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const handleFinalizar = async () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
-    if (totalPago < total) return toast.error("Valor pago insuficiente");
+    
+    if (hasCrediario) {
+      if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");
+      if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
+    } else {
+      if (totalPago < total) return toast.error("Valor pago insuficiente");
+    }
 
     setIsSubmitting(true);
 
@@ -204,9 +222,12 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
           cliente_id: clienteId || null,
           vendedor_id: user.id,
           itens: cart,
-          pagamentos: pagamentos.filter((p) => p.valor > 0),
+          pagamentos: hasCrediario
+            ? [{ forma: "crediario", valor: total }]
+            : pagamentos.filter((p) => p.valor > 0),
           desconto_total: totalDescontos,
           observacoes,
+          crediario: hasCrediario ? crediarioConfig : undefined,
         },
         {
           onSuccess: () => {
@@ -794,17 +815,26 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                   <Plus className="w-5 h-5" /> Dividir pagamento
                 </Button>
 
-                {troco > 0 && (
+                {!hasCrediario && troco > 0 && (
                   <Card className="p-3 rounded-2xl bg-accent/50">
                     <p className="text-center font-bold text-lg text-foreground">Troco: {fmt(troco)}</p>
                   </Card>
                 )}
-                {totalPago > 0 && totalPago < total && (
+                {!hasCrediario && totalPago > 0 && totalPago < total && (
                   <p className="text-base font-semibold text-destructive text-center">
                     Faltam: {fmt(total - totalPago)}
                   </p>
                 )}
               </div>
+
+              {/* Crediário config */}
+              {hasCrediario && (
+                <CrediarioConfigPanel
+                  config={crediarioConfig}
+                  onChange={setCrediarioConfig}
+                  total={total}
+                />
+              )}
 
               {/* Obs */}
               <Textarea
@@ -825,7 +855,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
               )}
               <Button
                 className="w-full h-16 text-xl gap-3 rounded-2xl font-bold"
-                disabled={isSubmitting || finalizar.isPending || cart.length === 0 || totalPago < total}
+                disabled={isSubmitting || finalizar.isPending || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
                 onClick={handleFinalizar}
               >
                 <Check className="w-7 h-7" />

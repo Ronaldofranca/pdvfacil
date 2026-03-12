@@ -11,11 +11,12 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
-import { useFinalizarVenda, type CartItem, type Pagamento } from "@/hooks/useVendas";
+import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
+import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { PDVMobile } from "./PDVMobile";
 import { toast } from "sonner";
 
@@ -106,6 +107,17 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
+  const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>({
+    entrada: 0,
+    num_parcelas: 1,
+    primeiro_vencimento: (() => {
+      const d = new Date();
+      d.setMonth(d.getMonth() + 1);
+      return d.toISOString().split("T")[0];
+    })(),
+  });
+
+  const hasCrediario = pagamentos.some((p) => p.forma === "crediario");
 
   // Reset when opening with initial data
   useEffect(() => {
@@ -216,7 +228,14 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const handleFinalizar = () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
-    if (totalPago < total) return toast.error("Valor pago insuficiente");
+    
+    // For crediário, entrada counts as payment
+    if (hasCrediario) {
+      if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");
+      if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
+    } else {
+      if (totalPago < total) return toast.error("Valor pago insuficiente");
+    }
 
     finalizar.mutate(
       {
@@ -224,9 +243,12 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
         cliente_id: clienteId || null,
         vendedor_id: user.id,
         itens: cart,
-        pagamentos: pagamentos.filter((p) => p.valor > 0),
+        pagamentos: hasCrediario
+          ? [{ forma: "crediario", valor: total }]
+          : pagamentos.filter((p) => p.valor > 0),
         desconto_total: totalDescontos,
         observacoes,
+        crediario: hasCrediario ? crediarioConfig : undefined,
       },
       {
         onSuccess: () => {
@@ -453,13 +475,23 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                   )}
                 </div>
               ))}
-              {troco > 0 && (
+              {!hasCrediario && troco > 0 && (
                 <p className="text-sm font-medium text-green-600">Troco: {fmt(troco)}</p>
               )}
-              {totalPago > 0 && totalPago < total && (
+              {!hasCrediario && totalPago > 0 && totalPago < total && (
                 <p className="text-sm font-medium text-destructive">Faltam: {fmt(total - totalPago)}</p>
               )}
             </div>
+
+            {/* Crediário config */}
+            {hasCrediario && (
+              <CrediarioConfigPanel
+                config={crediarioConfig}
+                onChange={setCrediarioConfig}
+                total={total}
+                compact
+              />
+            )}
 
             {/* Obs */}
             <Textarea placeholder="Observações..." value={observacoes} onChange={(e) => setObservacoes(e.target.value)} className="text-xs" rows={2} />
@@ -472,7 +504,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
           <Button
             type="button"
             className="flex-1 gap-1.5"
-            disabled={finalizar.isPending || cart.length === 0 || totalPago < total}
+            disabled={finalizar.isPending || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
             onClick={handleFinalizar}
           >
             <ShoppingCart className="w-4 h-4" />

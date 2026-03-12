@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Search, Plus, CreditCard, AlertTriangle, CheckCircle, Clock, Filter } from "lucide-react";
+import { DollarSign, Search, Plus, CreditCard, AlertTriangle, CheckCircle, Clock, Filter, Receipt } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useParcelas } from "@/hooks/useParcelas";
 import { usePermissions } from "@/hooks/usePermissions";
 import { GerarParcelasForm } from "@/components/financeiro/GerarParcelasForm";
 import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
+import { ReciboParcela } from "@/components/financeiro/ReciboParcela";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -26,6 +27,7 @@ export default function FinanceiroPage() {
   const [search, setSearch] = useState("");
   const [gerarOpen, setGerarOpen] = useState(false);
   const [pagamentoState, setPagamentoState] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [reciboState, setReciboState] = useState<{ open: boolean; data?: any }>({ open: false });
 
   const filters = statusFilter !== "todas" ? { status: statusFilter } : undefined;
   const { data: parcelas, isLoading } = useParcelas(filters);
@@ -136,12 +138,15 @@ export default function FinanceiroPage() {
                       </Badge>
                     </TableCell>
                     {canRegisterPagamento && (
-                      <TableCell>
+                      <TableCell className="flex gap-1">
                         {p.status !== "paga" && (
                           <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setPagamentoState({ open: true, data: p })}>
                             <CreditCard className="w-3 h-3" /> Pagar
                           </Button>
                         )}
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setReciboState({ open: true, data: p })}>
+                          <Receipt className="w-3 h-3" /> Recibo
+                        </Button>
                       </TableCell>
                     )}
                   </TableRow>
@@ -154,6 +159,7 @@ export default function FinanceiroPage() {
 
       <GerarParcelasForm open={gerarOpen} onOpenChange={setGerarOpen} />
       <PagamentoForm open={pagamentoState.open} onOpenChange={(v) => setPagamentoState({ open: v })} parcela={pagamentoState.data} />
+      <ReciboParcela open={reciboState.open} onOpenChange={(v) => setReciboState({ open: v })} parcela={reciboState.data} />
     </div>
   );
 }
