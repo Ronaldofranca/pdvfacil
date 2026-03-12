@@ -33,6 +33,7 @@ import MapaClientesPage from "./pages/MapaClientes";
 import MetasComissoesPage from "./pages/MetasComissoes";
 import PrevisaoEstoquePage from "./pages/PrevisaoEstoque";
 import AlertasPage from "./pages/Alertas";
+import ConfiguracoesPage from "./pages/Configuracoes";
 import DocumentacaoPage from "./pages/Documentacao";
 import NotFound from "./pages/NotFound";
 
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="/metas" element={<MetasComissoesPage />} />
                 <Route path="/previsao-estoque" element={<PrevisaoEstoquePage />} />
                 <Route path="/alertas" element={<AlertasPage />} />
+                <Route path="/configuracoes" element={<ConfiguracoesPage />} />
                 <Route path="/mais" element={<MaisPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />

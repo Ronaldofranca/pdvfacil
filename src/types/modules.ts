@@ -127,4 +127,5 @@ export type ModuleKey =
   | "mapa"
   | "metas"
   | "previsao"
-  | "alertas";
+  | "alertas"
+  | "configuracoes";
