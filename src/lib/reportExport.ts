@@ -1,5 +1,16 @@
 import { format } from "date-fns";
 
+// ─── HTML Sanitizer ───
+function escapeHtml(unsafe: unknown): string {
+  const s = unsafe === null || unsafe === undefined ? "" : String(unsafe);
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // ─── CSV Export ───
 export function exportCSV(rows: Record<string, any>[], filename: string) {
   if (!rows.length) return;
@@ -25,12 +36,24 @@ export function exportPDF(options: {
 }) {
   const { title, periodo, empresa, headers, rows, totals } = options;
 
+  const safeTitle = escapeHtml(title);
+  const safePeriodo = periodo ? escapeHtml(periodo) : "";
+  const safeEmpresa = empresa ? escapeHtml(empresa) : "";
+
+  const headerCells = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+  const bodyCells = rows
+    .map((r) => `<tr>${r.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`)
+    .join("");
+  const totalCells = totals
+    ? `<tr class="totals">${totals.map((t) => `<td>${escapeHtml(t)}</td>`).join("")}</tr>`
+    : "";
+
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>${title}</title>
+<title>${safeTitle}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 24px; color: #1a1a2e; font-size: 11px; }
@@ -49,19 +72,19 @@ export function exportPDF(options: {
 <body>
   <div class="header">
     <div>
-      <h1>${title}</h1>
-      ${periodo ? `<p style="color:#666;margin-top:4px;">Período: ${periodo}</p>` : ""}
+      <h1>${safeTitle}</h1>
+      ${safePeriodo ? `<p style="color:#666;margin-top:4px;">Período: ${safePeriodo}</p>` : ""}
     </div>
     <div class="meta">
-      ${empresa ? `<p><strong>${empresa}</strong></p>` : ""}
+      ${safeEmpresa ? `<p><strong>${safeEmpresa}</strong></p>` : ""}
       <p>Gerado em ${format(new Date(), "dd/MM/yyyy HH:mm")}</p>
     </div>
   </div>
   <table>
-    <thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+    <thead><tr>${headerCells}</tr></thead>
     <tbody>
-      ${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}
-      ${totals ? `<tr class="totals">${totals.map((t) => `<td>${t}</td>`).join("")}</tr>` : ""}
+      ${bodyCells}
+      ${totalCells}
     </tbody>
   </table>
   <div class="footer">Relatório gerado automaticamente pelo sistema VendaForce</div>

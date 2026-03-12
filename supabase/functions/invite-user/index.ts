@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   try {
     // Validate caller JWT
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -23,23 +23,31 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller is admin
+    // Verify caller using getClaims for proper JWT validation
     const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const {
-      data: { user: caller },
-    } = await callerClient.auth.getUser();
-    if (!caller) {
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check admin role
+    const callerId = claimsData.claims.sub;
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check admin role via RPC
     const { data: isAdminResult } = await callerClient.rpc("is_admin");
     if (!isAdminResult) {
       return new Response(
@@ -50,10 +58,30 @@ Deno.serve(async (req) => {
 
     // Get caller empresa_id
     const { data: empresaId } = await callerClient.rpc("get_my_empresa_id");
+    if (!empresaId) {
+      return new Response(
+        JSON.stringify({ error: "Empresa não encontrada" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    const { email, nome, cargo, role } = await req.json();
-    if (!email) {
-      return new Response(JSON.stringify({ error: "Email é obrigatório" }), {
+    const body = await req.json();
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const nome = typeof body.nome === "string" ? body.nome.trim().slice(0, 200) : "";
+    const cargo = typeof body.cargo === "string" ? body.cargo.trim().slice(0, 100) : "";
+    const role = typeof body.role === "string" ? body.role.trim() : "vendedor";
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return new Response(JSON.stringify({ error: "Email inválido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate role is a valid app_role
+    const validRoles = ["admin", "gerente", "vendedor"];
+    if (!validRoles.includes(role)) {
+      return new Response(JSON.stringify({ error: "Role inválida" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -61,27 +89,27 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Create user with invite (sends magic link email)
+    // Create user with invite
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(email, {
         data: {
           empresa_id: empresaId,
           nome: nome || email.split("@")[0],
-          cargo: cargo || "",
+          cargo: cargo,
         },
       });
 
     if (inviteError) {
-      return new Response(JSON.stringify({ error: inviteError.message }), {
+      // Don't leak internal error details
+      console.error("Invite error:", inviteError.message);
+      return new Response(JSON.stringify({ error: "Erro ao enviar convite. Verifique se o email já está cadastrado." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // If a specific role was requested (not vendedor default), update it
-    if (role && role !== "vendedor" && inviteData.user) {
-      // Wait a moment for the trigger to create the default role
-      // Then update it
+    if (role !== "vendedor" && inviteData.user) {
       const { error: roleError } = await adminClient
         .from("user_roles")
         .update({ role })
@@ -97,7 +125,6 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         message: `Convite enviado para ${email}`,
-        user_id: inviteData.user?.id,
       }),
       {
         status: 200,
@@ -105,6 +132,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err) {
+    console.error("Internal error:", err);
     return new Response(JSON.stringify({ error: "Erro interno do servidor" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
