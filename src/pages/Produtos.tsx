@@ -96,7 +96,18 @@ export default function ProdutosPage() {
                 ) : (
                   filteredProdutos.map((p) => (
                     <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.nome}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          {p.imagem_url ? (
+                            <img src={p.imagem_url} alt={p.nome} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              <Package className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          )}
+                          {p.nome}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{p.codigo || "—"}</TableCell>
                       <TableCell>{(p as any).categorias?.nome || "—"}</TableCell>
                       <TableCell className="text-right">{fmt(Number(p.custo))}</TableCell>
