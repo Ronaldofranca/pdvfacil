@@ -88,11 +88,15 @@ export default function ConfiguracoesPage() {
   };
 
   const handleChangePassword = async () => {
-    const { error } = await supabase.auth.resetPasswordForEmail(user!.email!, {
-      redirectTo: `${window.location.origin}/login`,
-    });
-    if (error) toast.error(error.message);
-    else toast.success("Email de redefinição de senha enviado!");
+    try {
+      await supabase.auth.resetPasswordForEmail(user!.email!, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+    } catch {
+      // Silently handle - don't reveal if email exists
+    }
+    // Always show the same message regardless of result
+    toast.success("Se o email estiver cadastrado, você receberá instruções para redefinir sua senha.");
   };
 
   const SwitchRow = ({ label, description, checked, onCheckedChange, disabled }: {
