@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AppRole, Permission } from "@/types/auth";
@@ -9,32 +8,10 @@ interface ProtectedRouteProps {
   requiredPermission?: Permission;
 }
 
-const AUTH_LOADING_TIMEOUT_MS = 12000;
-
 export function ProtectedRoute({ children, requiredRole, requiredPermission }: ProtectedRouteProps) {
-  const { session, loading, hasRole, hasPermission, signOut } = useAuth();
-  const [authTimeout, setAuthTimeout] = useState(false);
+  const { session, loading, rolesLoaded, hasRole, hasPermission } = useAuth();
 
-  useEffect(() => {
-    if (!loading) {
-      setAuthTimeout(false);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setAuthTimeout(true);
-    }, AUTH_LOADING_TIMEOUT_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loading]);
-
-  useEffect(() => {
-    if (authTimeout && session) {
-      void signOut();
-    }
-  }, [authTimeout, session, signOut]);
-
-  if (loading && !authTimeout) {
+  if (loading) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -42,8 +19,16 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
     );
   }
 
-  if (!session || authTimeout) {
+  if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  if ((requiredRole || requiredPermission) && !rolesLoaded) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
   }
 
   if (requiredRole && !hasRole(requiredRole)) {

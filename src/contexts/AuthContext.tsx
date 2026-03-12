@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
   const fetchSeqRef = useRef(0);
+  const loadedUserIdRef = useRef<string | null>(null);
 
   const resetUserData = () => {
     setProfile(null);
@@ -131,19 +132,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     let subscription: { unsubscribe: () => void } | null = null;
 
-    const applySession = (nextSession: Session | null) => {
+    const applySession = (nextSession: Session | null, options?: { refreshUserData?: boolean }) => {
       if (!mounted) return;
 
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
 
-      if (nextSession?.user) {
-        const seq = ++fetchSeqRef.current;
-        void fetchUserData(nextSession.user.id, seq);
-      } else {
+      const nextUserId = nextSession?.user?.id ?? null;
+      const userChanged = loadedUserIdRef.current !== nextUserId;
+
+      if (!nextUserId) {
+        loadedUserIdRef.current = null;
         fetchSeqRef.current += 1;
         resetUserData();
+        return;
       }
+
+      if (userChanged || options?.refreshUserData) {
+        loadedUserIdRef.current = nextUserId;
+        const seq = ++fetchSeqRef.current;
+        void fetchUserData(nextUserId, seq);
+        return;
+      }
+
+      setRolesLoaded(true);
     };
 
     const bootstrapAuth = async () => {
@@ -159,10 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: { session: existingSession },
         } = await supabase.auth.getSession();
 
-        applySession(existingSession);
+        applySession(existingSession, { refreshUserData: true });
       } catch (error) {
         console.error("Falha ao restaurar sessão:", error);
         fetchSeqRef.current += 1;
+        loadedUserIdRef.current = null;
         resetUserData();
       } finally {
         window.clearTimeout(initTimer);
@@ -171,8 +184,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
-        applySession(newSession);
+      const { data } = supabase.auth.onAuthStateChange((event, newSession) => {
+        const shouldRefreshUserData = event === "SIGNED_IN" || event === "USER_UPDATED";
+        applySession(newSession, { refreshUserData: shouldRefreshUserData });
       });
 
       subscription = data.subscription;
@@ -195,6 +209,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     fetchSeqRef.current += 1;
+    loadedUserIdRef.current = null;
+    setSession(null);
+    setUser(null);
     resetUserData();
   };
 
