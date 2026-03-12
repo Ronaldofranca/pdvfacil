@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BookOpen, Save, Eye, Palette, Layout, Settings2, Image, Type } from "lucide-react";
+import { BookOpen, Save, Eye, Palette, Layout, Settings2, Image, Type, Share2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
