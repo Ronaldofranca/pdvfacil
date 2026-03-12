@@ -228,7 +228,14 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const handleFinalizar = () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
-    if (totalPago < total) return toast.error("Valor pago insuficiente");
+    
+    // For crediário, entrada counts as payment
+    if (hasCrediario) {
+      if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");
+      if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
+    } else {
+      if (totalPago < total) return toast.error("Valor pago insuficiente");
+    }
 
     finalizar.mutate(
       {
@@ -236,9 +243,12 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
         cliente_id: clienteId || null,
         vendedor_id: user.id,
         itens: cart,
-        pagamentos: pagamentos.filter((p) => p.valor > 0),
+        pagamentos: hasCrediario
+          ? [{ forma: "crediario", valor: total }]
+          : pagamentos.filter((p) => p.valor > 0),
         desconto_total: totalDescontos,
         observacoes,
+        crediario: hasCrediario ? crediarioConfig : undefined,
       },
       {
         onSuccess: () => {
