@@ -25,24 +25,36 @@ export function useUpsertConfiguracoes() {
   const { profile } = useAuth();
   return useMutation({
     mutationFn: async (values: Record<string, any>) => {
-      const empresa_id = profile!.empresa_id;
-      const { data: existing } = await (supabase as any)
+      if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
+
+      const empresa_id = profile.empresa_id;
+      const { data: existing, error: existingError } = await (supabase as any)
         .from("configuracoes")
         .select("id")
         .eq("empresa_id", empresa_id)
         .maybeSingle();
 
+      if (existingError) throw existingError;
+
       if (existing) {
-        const { error } = await (supabase as any)
+        const { data: updated, error } = await (supabase as any)
           .from("configuracoes")
           .update({ ...values, updated_at: new Date().toISOString() })
-          .eq("id", existing.id);
+          .eq("id", existing.id)
+          .select("id")
+          .maybeSingle();
+
         if (error) throw error;
+        if (!updated) throw new Error("Sem permissão para atualizar estas configurações.");
       } else {
-        const { error } = await (supabase as any)
+        const { data: inserted, error } = await (supabase as any)
           .from("configuracoes")
-          .insert({ ...values, empresa_id });
+          .insert({ ...values, empresa_id })
+          .select("id")
+          .maybeSingle();
+
         if (error) throw error;
+        if (!inserted) throw new Error("Sem permissão para criar configurações da empresa.");
       }
     },
     onSuccess: () => {
