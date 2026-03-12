@@ -22,6 +22,10 @@ import {
   useFormasPagamento, useAddFormaPagamento, useToggleFormaPagamento, useDeleteFormaPagamento,
   useCidadesAtendidas, useAddCidade, useDeleteCidade,
 } from "@/hooks/useConfiguracoes";
+import {
+  useAllNiveisRecompensa, useAddNivelRecompensa, useUpdateNivelRecompensa, useDeleteNivelRecompensa,
+  type NivelRecompensa,
+} from "@/hooks/useNiveisRecompensa";
 
 const TABS = [
   { id: "perfil", label: "Perfil", icon: User },
