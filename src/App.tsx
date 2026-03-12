@@ -49,7 +49,7 @@ const App = () => (
           <OfflineProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/setup" element={<SetupPage />} />
+              
               <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
               <Route path="/documentacao" element={<DocumentacaoPage />} />
               {/* Public catalog routes */}
