@@ -22,6 +22,7 @@ interface AuthContextType {
   roles: AppRole[];
   permissions: Permission[];
   loading: boolean;
+  rolesLoaded: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
