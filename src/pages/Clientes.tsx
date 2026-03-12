@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone } from "lucide-react";
+import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
 import { HistoricoCompras } from "@/components/clientes/HistoricoCompras";
 import { ImportarContatos } from "@/components/clientes/ImportarContatos";
+import { IndicacoesCliente } from "@/components/clientes/IndicacoesCliente";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import type { CartItem } from "@/hooks/useVendas";
