@@ -27,6 +27,8 @@ import {
   useRelMovimentacaoEstoque, useRelMetasVendedores, useRelRomaneios,
 } from "@/hooks/useRelatorios";
 import { useEmpresas } from "@/hooks/useEmpresas";
+import { useTopIndicadores } from "@/hooks/useIndicacoes";
+import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import { exportCSV, exportPDF, fmtR, fmtN } from "@/lib/reportExport";
 
 const COLORS = [
