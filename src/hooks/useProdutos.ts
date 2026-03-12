@@ -79,7 +79,8 @@ export function useProdutos() {
 export function useUpsertProduto() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: ProdutoInput) => {
+    mutationFn: async (raw: ProdutoInput) => {
+      const p = produtoSchema.parse(raw);
       const payload = {
         nome: p.nome,
         descricao: p.descricao ?? "",

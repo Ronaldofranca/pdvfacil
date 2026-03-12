@@ -72,7 +72,8 @@ export function useCliente(id: string | null) {
 export function useUpsertCliente() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (c: ClienteInput) => {
+    mutationFn: async (raw: ClienteInput) => {
+      const c = clienteSchema.parse(raw);
       const payload = {
         nome: c.nome,
         telefone: c.telefone ?? "",
