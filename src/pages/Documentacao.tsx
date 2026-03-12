@@ -3,22 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FileDown, FileText } from "lucide-react";
 
 export default function Documentacao() {
-  const handleDownload = async () => {
-    try {
-      const response = await fetch("/DOCS.md");
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "PDVFacil_Documentacao_Tecnica.md";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Erro ao baixar:", error);
-    }
-  };
+  const fileUrl = "/DOCS.md";
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background p-4">
@@ -31,9 +16,11 @@ export default function Documentacao() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <Button size="lg" className="w-full gap-2" onClick={handleDownload}>
-            <FileDown className="h-5 w-5" />
-            Baixar Documentação (.md)
+          <Button size="lg" className="w-full gap-2" asChild>
+            <a href={fileUrl} download="PDVFacil_Documentacao_Tecnica.md" target="_blank" rel="noopener noreferrer">
+              <FileDown className="h-5 w-5" />
+              Baixar Documentação (.md)
+            </a>
           </Button>
         </CardContent>
       </Card>
