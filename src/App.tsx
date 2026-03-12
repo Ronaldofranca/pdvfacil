@@ -27,7 +27,7 @@ import BackupPage from "./pages/Backup";
 import AuditPage from "./pages/Audit";
 import MaisPage from "./pages/Mais";
 import LoginPage from "./pages/Login";
-import SetupPage from "./pages/Setup";
+
 import AceitarConvitePage from "./pages/AceitarConvite";
 import MapaClientesPage from "./pages/MapaClientes";
 import MetasComissoesPage from "./pages/MetasComissoes";
@@ -49,7 +49,7 @@ const App = () => (
           <OfflineProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/setup" element={<SetupPage />} />
+              
               <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
               <Route path="/documentacao" element={<DocumentacaoPage />} />
               {/* Public catalog routes */}
