@@ -67,17 +67,9 @@ const App = () => (
                 <Route path="/romaneio" element={<RomaneioPage />} />
                 <Route path="/financeiro" element={<FinanceiroPage />} />
                 <Route path="/relatorios" element={<RelatoriosPage />} />
-                <Route path="/usuarios" element={<UsuariosPage />} />
-                <Route path="/empresas" element={<EmpresasPage />} />
-                <Route path="/notificacoes" element={<NotificacoesPage />} />
-                <Route path="/sync" element={<SyncPage />} />
-                <Route path="/backup" element={<BackupPage />} />
-                <Route path="/audit" element={<ProtectedRoute requiredRole="admin"><AuditPage /></ProtectedRoute>} />
-                <Route path="/mapa-clientes" element={<MapaClientesPage />} />
-                <Route path="/metas" element={<MetasComissoesPage />} />
-                <Route path="/previsao-estoque" element={<PrevisaoEstoquePage />} />
-                <Route path="/alertas" element={<AlertasPage />} />
-                <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+                <Route path="/usuarios" element={<ProtectedRoute requiredRole="admin"><UsuariosPage /></ProtectedRoute>} />
+                <Route path="/empresas" element={<ProtectedRoute requiredRole="admin"><EmpresasPage /></ProtectedRoute>} />
+                <Route path="/configuracoes" element={<ProtectedRoute requiredRole="admin"><ConfiguracoesPage /></ProtectedRoute>} />
                 <Route path="/mais" element={<MaisPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
