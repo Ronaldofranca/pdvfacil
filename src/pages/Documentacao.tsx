@@ -16,9 +16,11 @@ export default function Documentacao() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <Button size="lg" className="w-full gap-2" onClick={handleDownload}>
-            <FileDown className="h-5 w-5" />
-            Baixar Documentação (.md)
+          <Button size="lg" className="w-full gap-2" asChild>
+            <a href={fileUrl} download="PDVFacil_Documentacao_Tecnica.md" target="_blank" rel="noopener noreferrer">
+              <FileDown className="h-5 w-5" />
+              Baixar Documentação (.md)
+            </a>
           </Button>
         </CardContent>
       </Card>
