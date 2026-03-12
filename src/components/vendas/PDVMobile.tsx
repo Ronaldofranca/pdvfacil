@@ -147,6 +147,28 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     updateItem(idx, { quantidade: newQty });
   };
 
+  // ─── Tier discount ───
+  const tierDesconto = (() => {
+    if (!clienteSelecionado || !niveis?.length) return 0;
+    const nivel = getNivelAtual(Number((clienteSelecionado as any).pontos_indicacao ?? 0), niveis);
+    if (!nivel?.beneficios) return 0;
+    const match = nivel.beneficios.match(/(\d+)%/);
+    return match ? parseInt(match[1]) : 0;
+  })();
+
+  const applyTierDiscount = () => {
+    if (tierDesconto <= 0 || cart.length === 0) return;
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.bonus) return item;
+        const desc = Math.round(item.quantidade * item.preco_vendido * (tierDesconto / 100) * 100) / 100;
+        const sub = item.quantidade * item.preco_vendido - desc;
+        return { ...item, desconto: desc, subtotal: sub };
+      })
+    );
+    toast.success(`Desconto de ${tierDesconto}% aplicado (nível do cliente)`);
+  };
+
   // ─── Totals ───
   const subtotal = cart.reduce((s, i) => s + i.quantidade * i.preco_original, 0);
   const totalDescontos = cart.reduce((s, i) => s + i.desconto + (i.bonus ? i.quantidade * i.preco_vendido : 0), 0);
