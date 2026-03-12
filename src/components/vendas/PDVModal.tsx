@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,9 +41,18 @@ function DesktopProductButton({ product, onAdd, fmt }: { product: any; onAdd: (p
       onClick={() => onAdd(product)}
       className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent text-left transition-colors"
     >
-      <div>
-        <p className="text-sm font-medium text-foreground">{product.nome}</p>
-        {product.codigo && <p className="text-xs text-muted-foreground">{product.codigo}</p>}
+      <div className="flex items-center gap-2">
+        {product.imagem_url ? (
+          <img src={product.imagem_url} alt={product.nome} className="w-8 h-8 rounded-md object-cover shrink-0" />
+        ) : (
+          <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+            <Package className="w-3.5 h-3.5 text-muted-foreground" />
+          </div>
+        )}
+        <div>
+          <p className="text-sm font-medium text-foreground">{product.nome}</p>
+          {product.codigo && <p className="text-xs text-muted-foreground">{product.codigo}</p>}
+        </div>
       </div>
       <span className="text-sm font-semibold text-primary">{fmt(Number(product.preco))}</span>
     </button>
