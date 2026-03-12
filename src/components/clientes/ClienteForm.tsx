@@ -20,7 +20,9 @@ interface Props {
 export function ClienteForm({ open, onOpenChange, cliente }: Props) {
   const { profile } = useAuth();
   const upsert = useUpsertCliente();
+  const { data: todosClientes } = useClientes();
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [searchIndicador, setSearchIndicador] = useState("");
 
   const [form, setForm] = useState({
     nome: "",
