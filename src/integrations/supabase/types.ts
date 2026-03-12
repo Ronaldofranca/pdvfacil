@@ -237,6 +237,7 @@ export type Database = {
           ativo: boolean
           cep: string
           cidade: string
+          cliente_indicador_id: string | null
           cpf_cnpj: string
           created_at: string
           email: string
@@ -247,6 +248,7 @@ export type Database = {
           longitude: number | null
           nome: string
           observacoes: string
+          pontos_indicacao: number
           rua: string
           telefone: string
           tipo: string
@@ -256,6 +258,7 @@ export type Database = {
           ativo?: boolean
           cep?: string
           cidade?: string
+          cliente_indicador_id?: string | null
           cpf_cnpj?: string
           created_at?: string
           email?: string
@@ -266,6 +269,7 @@ export type Database = {
           longitude?: number | null
           nome: string
           observacoes?: string
+          pontos_indicacao?: number
           rua?: string
           telefone?: string
           tipo?: string
@@ -275,6 +279,7 @@ export type Database = {
           ativo?: boolean
           cep?: string
           cidade?: string
+          cliente_indicador_id?: string | null
           cpf_cnpj?: string
           created_at?: string
           email?: string
@@ -285,12 +290,20 @@ export type Database = {
           longitude?: number | null
           nome?: string
           observacoes?: string
+          pontos_indicacao?: number
           rua?: string
           telefone?: string
           tipo?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "clientes_cliente_indicador_id_fkey"
+            columns: ["cliente_indicador_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clientes_empresa_id_fkey"
             columns: ["empresa_id"]
@@ -324,8 +337,10 @@ export type Database = {
           permitir_brinde: boolean
           permitir_desconto: boolean
           permitir_venda_sem_estoque: boolean
+          pontos_por_indicacao: number
           sessao_expiracao_horas: number
           updated_at: string
+          valor_minimo_indicacao: number
         }
         Insert: {
           alerta_cliente_inativo?: boolean
@@ -350,8 +365,10 @@ export type Database = {
           permitir_brinde?: boolean
           permitir_desconto?: boolean
           permitir_venda_sem_estoque?: boolean
+          pontos_por_indicacao?: number
           sessao_expiracao_horas?: number
           updated_at?: string
+          valor_minimo_indicacao?: number
         }
         Update: {
           alerta_cliente_inativo?: boolean
@@ -376,8 +393,10 @@ export type Database = {
           permitir_brinde?: boolean
           permitir_desconto?: boolean
           permitir_venda_sem_estoque?: boolean
+          pontos_por_indicacao?: number
           sessao_expiracao_horas?: number
           updated_at?: string
+          valor_minimo_indicacao?: number
         }
         Relationships: [
           {
@@ -669,6 +688,68 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indicacoes_clientes: {
+        Row: {
+          cliente_indicado_id: string
+          cliente_indicador_id: string
+          created_at: string
+          data_indicacao: string
+          empresa_id: string
+          id: string
+          pontos_gerados: number
+          venda_id: string | null
+        }
+        Insert: {
+          cliente_indicado_id: string
+          cliente_indicador_id: string
+          created_at?: string
+          data_indicacao?: string
+          empresa_id: string
+          id?: string
+          pontos_gerados?: number
+          venda_id?: string | null
+        }
+        Update: {
+          cliente_indicado_id?: string
+          cliente_indicador_id?: string
+          created_at?: string
+          data_indicacao?: string
+          empresa_id?: string
+          id?: string
+          pontos_gerados?: number
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicacoes_clientes_cliente_indicado_id_fkey"
+            columns: ["cliente_indicado_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicacoes_clientes_cliente_indicador_id_fkey"
+            columns: ["cliente_indicador_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicacoes_clientes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicacoes_clientes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
             referencedColumns: ["id"]
           },
         ]
@@ -1609,6 +1690,61 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      uso_pontos: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          descricao: string
+          empresa_id: string
+          id: string
+          pontos_usados: number
+          tipo: string
+          venda_id: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          descricao?: string
+          empresa_id: string
+          id?: string
+          pontos_usados: number
+          tipo?: string
+          venda_id?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          pontos_usados?: number
+          tipo?: string
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uso_pontos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uso_pontos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uso_pontos_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
             referencedColumns: ["id"]
           },
         ]
