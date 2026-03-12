@@ -405,7 +405,7 @@ export default function DashboardPage() {
               <Link to="/clientes"><Badge variant="outline" className="text-[10px] cursor-pointer">Ver clientes</Badge></Link>
             </div>
             <div className="space-y-2">
-              {topIndicadores.slice(0, 5).map((c, i) => (
+              {topIndicadores.slice(0, 10).map((c, i) => (
                 <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-muted-foreground w-4">{i + 1}º</span>
@@ -417,10 +417,25 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+
+            {/* Summary stats */}
+            <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-border">
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">
+                  {topIndicadores.reduce((s, c) => s + c.pontos_indicacao, 0)}
+                </p>
+                <p className="text-[10px] text-muted-foreground">Total de Pontos Distribuídos</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">
+                  {topIndicadores.length}
+                </p>
+                <p className="text-[10px] text-muted-foreground">Clientes Indicadores</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
-
       {/* Quick Actions */}
       <div className="grid grid-cols-4 gap-2">
         {[

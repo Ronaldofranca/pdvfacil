@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
   DollarSign, X, Package, CreditCard, Check, WifiOff,
-  RotateCcw, Users, ChevronRight, Zap
+  RotateCcw, Users, ChevronRight, Zap, Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -377,7 +377,14 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                       <span className="text-lg font-bold text-primary">{c.nome?.charAt(0)?.toUpperCase()}</span>
                     </div>
                     <div className="text-left">
-                      <p className="font-semibold text-foreground">{c.nome}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-foreground">{c.nome}</p>
+                        {Number((c as any).pontos_indicacao) > 0 && (
+                          <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                            <Star className="w-2.5 h-2.5 text-yellow-500" /> {Number((c as any).pontos_indicacao)}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {c.telefone || c.cidade || c.email || ""}
                       </p>
@@ -404,6 +411,11 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     <span className="text-sm font-bold text-primary">{clienteSelecionado.nome?.charAt(0)?.toUpperCase()}</span>
                   </div>
                   <span className="text-sm font-medium text-foreground">{clienteSelecionado.nome}</span>
+                  {Number((clienteSelecionado as any).pontos_indicacao) > 0 && (
+                    <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                      <Star className="w-2.5 h-2.5 text-yellow-500" /> {Number((clienteSelecionado as any).pontos_indicacao)} pts
+                    </Badge>
+                  )}
                 </div>
                 {ultimaVendaItens && ultimaVendaItens.length > 0 && (
                   <Button

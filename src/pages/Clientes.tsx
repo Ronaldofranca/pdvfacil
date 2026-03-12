@@ -14,13 +14,26 @@ import { ImportarContatos } from "@/components/clientes/ImportarContatos";
 import { IndicacoesCliente } from "@/components/clientes/IndicacoesCliente";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
+import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import type { CartItem } from "@/hooks/useVendas";
 import { toast } from "sonner";
+
+function ClienteLevelBadge({ pontos, niveis }: { pontos: number; niveis: any[] | undefined }) {
+  if (!niveis?.length) return null;
+  const nivel = getNivelAtual(pontos, niveis);
+  if (!nivel) return null;
+  return (
+    <Badge variant="outline" className="gap-1 text-[10px]" style={{ borderColor: nivel.cor, color: nivel.cor }}>
+      <Award className="w-3 h-3" /> {nivel.nome}
+    </Badge>
+  );
+}
 
 export default function ClientesPage() {
   const { isAdmin } = usePermissions();
   const { data: clientes, isLoading } = useClientes();
   const deleteCliente = useDeleteCliente();
+  const { data: niveis } = useNiveisRecompensa();
 
   const [search, setSearch] = useState("");
   const [formState, setFormState] = useState<{ open: boolean; data?: any }>({ open: false });
@@ -69,7 +82,7 @@ export default function ClientesPage() {
               <TableHead>Nome</TableHead>
               <TableHead>Telefone</TableHead>
               <TableHead>Cidade</TableHead>
-              <TableHead>GPS</TableHead>
+              <TableHead>Nível</TableHead>
               <TableHead>Pontos</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-36" />
@@ -99,14 +112,7 @@ export default function ClientesPage() {
                   </TableCell>
                   <TableCell className="text-sm">{c.cidade || "—"}{c.estado ? ` / ${c.estado}` : ""}</TableCell>
                   <TableCell>
-                    {c.latitude != null && c.longitude != null ? (
-                      <Badge variant="outline" className="gap-1 text-xs">
-                        <MapPin className="w-3 h-3" />
-                        {Number(c.latitude).toFixed(4)}, {Number(c.longitude).toFixed(4)}
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Sem GPS</span>
-                    )}
+                    <ClienteLevelBadge pontos={Number(c.pontos_indicacao)} niveis={niveis} />
                   </TableCell>
                   <TableCell>
                     {Number(c.pontos_indicacao) > 0 ? (
