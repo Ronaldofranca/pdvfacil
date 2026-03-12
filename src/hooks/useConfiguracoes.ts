@@ -87,10 +87,16 @@ export function useAddFormaPagamento() {
   const { profile } = useAuth();
   return useMutation({
     mutationFn: async (nome: string) => {
-      const { error } = await (supabase as any)
+      if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
+
+      const { data: inserted, error } = await (supabase as any)
         .from("formas_pagamento")
-        .insert({ empresa_id: profile!.empresa_id, nome });
+        .insert({ empresa_id: profile.empresa_id, nome })
+        .select("id")
+        .maybeSingle();
+
       if (error) throw error;
+      if (!inserted) throw new Error("Sem permissão para adicionar forma de pagamento.");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["formas_pagamento"] });
