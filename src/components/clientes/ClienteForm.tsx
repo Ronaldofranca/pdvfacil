@@ -174,6 +174,47 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
               </div>
             </div>
 
+            {/* Indicador */}
+            <div className="col-span-2 space-y-2">
+              <Label className="text-base font-semibold">Quem indicou este cliente?</Label>
+              <Input
+                placeholder="Buscar cliente indicador..."
+                value={searchIndicador}
+                onChange={(e) => setSearchIndicador(e.target.value)}
+              />
+              {searchIndicador && (
+                <div className="max-h-32 overflow-y-auto border rounded-md">
+                  {(todosClientes ?? [])
+                    .filter((c) => c.id !== cliente?.id && (c.nome.toLowerCase().includes(searchIndicador.toLowerCase()) || c.telefone?.includes(searchIndicador)))
+                    .slice(0, 5)
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors border-b border-border last:border-0"
+                        onClick={() => {
+                          set("cliente_indicador_id", c.id);
+                          setSearchIndicador(c.nome);
+                        }}
+                      >
+                        <span className="font-medium text-foreground">{c.nome}</span>
+                        {c.telefone && <span className="text-muted-foreground ml-2 text-xs">{c.telefone}</span>}
+                      </button>
+                    ))}
+                </div>
+              )}
+              {form.cliente_indicador_id && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Indicador: {todosClientes?.find((c) => c.id === form.cliente_indicador_id)?.nome ?? "Selecionado"}
+                  </span>
+                  <Button type="button" variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { set("cliente_indicador_id", ""); setSearchIndicador(""); }}>
+                    Remover
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <div className="col-span-2">
               <Label>Observações</Label>
               <Textarea value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} />
