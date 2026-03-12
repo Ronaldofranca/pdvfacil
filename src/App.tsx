@@ -72,7 +72,7 @@ const App = () => (
                 <Route path="/notificacoes" element={<NotificacoesPage />} />
                 <Route path="/sync" element={<SyncPage />} />
                 <Route path="/backup" element={<BackupPage />} />
-                <Route path="/audit" element={<AuditPage />} />
+                <Route path="/audit" element={<ProtectedRoute requiredRole="admin"><AuditPage /></ProtectedRoute>} />
                 <Route path="/mapa-clientes" element={<MapaClientesPage />} />
                 <Route path="/metas" element={<MetasComissoesPage />} />
                 <Route path="/previsao-estoque" element={<PrevisaoEstoquePage />} />
