@@ -75,7 +75,7 @@ export function useUpsertCliente() {
   return useMutation({
     mutationFn: async (raw: ClienteInput) => {
       const c = clienteSchema.parse(raw);
-      const payload = {
+      const payload: Record<string, any> = {
         nome: c.nome,
         telefone: c.telefone ?? "",
         email: c.email ?? "",
@@ -91,6 +91,9 @@ export function useUpsertCliente() {
         ativo: c.ativo ?? true,
         updated_at: new Date().toISOString(),
       };
+      if ((raw as any).cliente_indicador_id !== undefined) {
+        payload.cliente_indicador_id = (raw as any).cliente_indicador_id || null;
+      }
       const { data, error } = c.id
         ? await supabase.from("clientes").update(payload).eq("id", c.id).select().single()
         : await supabase.from("clientes").insert({ ...payload, empresa_id: c.empresa_id }).select().single();
