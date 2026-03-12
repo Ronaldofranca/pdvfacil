@@ -8,7 +8,25 @@ export function useRelVendasPeriodo(inicio: string, fim: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendas")
-        .select("id, total, desconto_total, subtotal, data_venda, status, clientes(nome)")
+        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, clientes(nome)")
+        .gte("data_venda", inicio)
+        .lte("data_venda", fim + "T23:59:59")
+        .eq("status", "finalizada" as any)
+        .order("data_venda", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// ─── Vendas com itens (para relatórios detalhados) ───
+export function useRelVendasDetalhadas(inicio: string, fim: string) {
+  return useQuery({
+    queryKey: ["rel_vendas_detalhadas", inicio, fim],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vendas")
+        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, cliente_id, clientes(nome), itens_venda(produto_id, nome_produto, quantidade, preco_vendido, preco_original, subtotal, desconto, bonus)")
         .gte("data_venda", inicio)
         .lte("data_venda", fim + "T23:59:59")
         .eq("status", "finalizada" as any)
@@ -40,11 +58,10 @@ export function useRelProdutosVendidos(inicio: string, fim: string) {
         .in("venda_id", vendaIds);
       if (error) throw error;
 
-      // Agrupar por produto
-      const map = new Map<string, { nome: string; qtd: number; receita: number; custo: number }>();
+      const map = new Map<string, { nome: string; qtd: number; receita: number }>();
       for (const item of data ?? []) {
         const key = item.produto_id;
-        const curr = map.get(key) ?? { nome: item.nome_produto, qtd: 0, receita: 0, custo: 0 };
+        const curr = map.get(key) ?? { nome: item.nome_produto, qtd: 0, receita: 0 };
         curr.qtd += Number(item.quantidade);
         curr.receita += Number(item.subtotal);
         map.set(key, curr);
@@ -64,7 +81,7 @@ export function useRelParcelasPagas(inicio: string, fim: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pagamentos")
-        .select("id, valor_pago, forma_pagamento, data_pagamento")
+        .select("id, valor_pago, forma_pagamento, data_pagamento, usuario_id, parcela_id")
         .gte("data_pagamento", inicio)
         .lte("data_pagamento", fim + "T23:59:59")
         .order("data_pagamento", { ascending: false });
@@ -90,12 +107,65 @@ export function useRelParcelasVencidas() {
   });
 }
 
+// ─── Todas as parcelas ───
+export function useRelTodasParcelas(inicio: string, fim: string) {
+  return useQuery({
+    queryKey: ["rel_todas_parcelas", inicio, fim],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("parcelas")
+        .select("*, clientes(nome)")
+        .gte("vencimento", inicio)
+        .lte("vencimento", fim)
+        .order("vencimento");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// ─── Parcelas por cliente (agrupadas) ───
+export function useRelParcelasPorCliente() {
+  return useQuery({
+    queryKey: ["rel_parcelas_por_cliente"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("parcelas")
+        .select("*, clientes(nome)")
+        .order("vencimento");
+      if (error) throw error;
+
+      const map = new Map<string, {
+        nome: string;
+        total_comprado: number;
+        total_pago: number;
+        total_pendente: number;
+        total_vencido: number;
+        parcelas: typeof data;
+      }>();
+
+      for (const p of data ?? []) {
+        const cid = p.cliente_id ?? "sem_cliente";
+        const nome = (p as any).clientes?.nome ?? "Sem cliente";
+        const curr = map.get(cid) ?? { nome, total_comprado: 0, total_pago: 0, total_pendente: 0, total_vencido: 0, parcelas: [] };
+        curr.total_comprado += Number(p.valor_total);
+        curr.total_pago += Number(p.valor_pago);
+        if (p.status === "vencida") curr.total_vencido += Number(p.saldo ?? 0);
+        if (p.status === "pendente") curr.total_pendente += Number(p.saldo ?? 0);
+        curr.parcelas.push(p);
+        map.set(cid, curr);
+      }
+
+      return Array.from(map.entries()).map(([id, v]) => ({ cliente_id: id, ...v })).sort((a, b) => b.total_comprado - a.total_comprado);
+    },
+  });
+}
+
 // ─── Lucro por produto (receita - custo) ───
 export function useRelLucroProduto(inicio: string, fim: string) {
   return useQuery({
     queryKey: ["rel_lucro_produto", inicio, fim],
     queryFn: async () => {
-      // Get vendas do periodo
       const { data: vendas, error: vErr } = await supabase
         .from("vendas")
         .select("id")
@@ -112,7 +182,6 @@ export function useRelLucroProduto(inicio: string, fim: string) {
         .in("venda_id", vendaIds);
       if (iErr) throw iErr;
 
-      // Get custos dos produtos
       const prodIds = [...new Set((itens ?? []).map((i) => i.produto_id))];
       const { data: produtos, error: pErr } = await supabase
         .from("produtos")
@@ -163,7 +232,6 @@ export function useRelCurvaABC(inicio: string, fim: string) {
         .in("venda_id", vendaIds);
       if (iErr) throw iErr;
 
-      // Agrupar
       const map = new Map<string, { nome: string; receita: number }>();
       for (const item of itens ?? []) {
         const curr = map.get(item.produto_id) ?? { nome: item.nome_produto, receita: 0 };
@@ -184,6 +252,95 @@ export function useRelCurvaABC(inicio: string, fim: string) {
         const classe = pctAcumulado <= 80 ? "A" : pctAcumulado <= 95 ? "B" : "C";
         return { ...item, pct: totalReceita > 0 ? (item.receita / totalReceita) * 100 : 0, pctAcumulado, classe };
       });
+    },
+  });
+}
+
+// ─── Vendedores (profiles) ───
+export function useRelVendedores() {
+  return useQuery({
+    queryKey: ["rel_vendedores"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("user_id, nome, email");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// ─── Clientes ───
+export function useRelClientes() {
+  return useQuery({
+    queryKey: ["rel_clientes_list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// ─── Estoque atual ───
+export function useRelEstoqueAtual() {
+  return useQuery({
+    queryKey: ["rel_estoque_atual"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("estoque")
+        .select("id, produto_id, vendedor_id, quantidade, produtos(nome, codigo)")
+        .order("quantidade", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// ─── Movimentação de estoque ───
+export function useRelMovimentacaoEstoque(inicio: string, fim: string) {
+  return useQuery({
+    queryKey: ["rel_movimentacao_estoque", inicio, fim],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("movimentos_estoque")
+        .select("id, produto_id, vendedor_id, tipo, quantidade, data, observacoes, produtos(nome)")
+        .gte("data", inicio)
+        .lte("data", fim + "T23:59:59")
+        .order("data", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// ─── Metas de vendedores ───
+export function useRelMetasVendedores(mes: number, ano: number) {
+  return useQuery({
+    queryKey: ["rel_metas_vendedores", mes, ano],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("metas_vendedor")
+        .select("*")
+        .eq("mes", mes)
+        .eq("ano", ano);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+// ─── Romaneios ───
+export function useRelRomaneios(inicio: string, fim: string) {
+  return useQuery({
+    queryKey: ["rel_romaneios", inicio, fim],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("romaneios")
+        .select("*, romaneio_vendas(venda_id, vendas(id, total, data_venda, clientes(nome)))")
+        .gte("data", inicio)
+        .lte("data", fim)
+        .order("data", { ascending: false });
+      if (error) throw error;
+      return data;
     },
   });
 }
