@@ -51,7 +51,7 @@ const App = () => (
               <Route path="/login" element={<LoginPage />} />
               
               <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
-              <Route path="/documentacao" element={<DocumentacaoPage />} />
+              <Route path="/documentacao" element={<ProtectedRoute><DocumentacaoPage /></ProtectedRoute>} />
               {/* Public catalog routes */}
               <Route path="/catalogo" element={<CatalogoPublicoPage />} />
               <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
@@ -67,17 +67,17 @@ const App = () => (
                 <Route path="/romaneio" element={<RomaneioPage />} />
                 <Route path="/financeiro" element={<FinanceiroPage />} />
                 <Route path="/relatorios" element={<RelatoriosPage />} />
-                <Route path="/usuarios" element={<UsuariosPage />} />
-                <Route path="/empresas" element={<EmpresasPage />} />
+                <Route path="/usuarios" element={<ProtectedRoute requiredRole="admin"><UsuariosPage /></ProtectedRoute>} />
+                <Route path="/empresas" element={<ProtectedRoute requiredRole="admin"><EmpresasPage /></ProtectedRoute>} />
                 <Route path="/notificacoes" element={<NotificacoesPage />} />
                 <Route path="/sync" element={<SyncPage />} />
-                <Route path="/backup" element={<BackupPage />} />
+                <Route path="/backup" element={<ProtectedRoute requiredRole="admin"><BackupPage /></ProtectedRoute>} />
                 <Route path="/audit" element={<ProtectedRoute requiredRole="admin"><AuditPage /></ProtectedRoute>} />
                 <Route path="/mapa-clientes" element={<MapaClientesPage />} />
                 <Route path="/metas" element={<MetasComissoesPage />} />
                 <Route path="/previsao-estoque" element={<PrevisaoEstoquePage />} />
                 <Route path="/alertas" element={<AlertasPage />} />
-                <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+                <Route path="/configuracoes" element={<ProtectedRoute requiredRole="admin"><ConfiguracoesPage /></ProtectedRoute>} />
                 <Route path="/mais" element={<MaisPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />

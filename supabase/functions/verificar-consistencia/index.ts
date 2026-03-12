@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface Inconsistencia {
@@ -19,10 +19,53 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // ─── AUTH: Validate caller JWT ───
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Verify caller JWT
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check admin role
+    const { data: isAdminResult } = await callerClient.rpc("is_admin");
+    if (!isAdminResult) {
+      return new Response(
+        JSON.stringify({ error: "Apenas administradores podem executar verificação de consistência" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get caller empresa_id for scoped operations
+    const { data: empresaId } = await callerClient.rpc("get_my_empresa_id");
+    if (!empresaId) {
+      return new Response(
+        JSON.stringify({ error: "Empresa não encontrada" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ─── Use service role for data checks (bypasses RLS for cross-table integrity) ───
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const inconsistencias: Inconsistencia[] = [];
 
@@ -118,12 +161,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Se encontrou inconsistências, notificar admins de cada empresa
+    // Se encontrou inconsistências, notificar admins da empresa do caller
     if (inconsistencias.length > 0) {
       const { data: admins } = await supabase
         .from("user_roles")
         .select("user_id, empresa_id")
-        .eq("role", "admin");
+        .eq("role", "admin")
+        .eq("empresa_id", empresaId);
 
       if (admins && admins.length > 0) {
         const mensagem = inconsistencias
@@ -154,8 +198,9 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    console.error("Internal error:", error);
     return new Response(
-      JSON.stringify({ ok: false, error: error.message }),
+      JSON.stringify({ ok: false, error: "Erro interno do servidor" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
