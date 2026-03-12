@@ -57,9 +57,11 @@ export function useSecurityLogs(limit = 100) {
 export function useLogSecurityEvent() {
   return useMutation({
     mutationFn: async (event: { empresa_id: string; evento: string; detalhes?: Record<string, unknown> }) => {
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) throw new Error("Usuário não autenticado");
       const { error } = await (supabase as any).from("security_logs").insert({
         empresa_id: event.empresa_id,
-        usuario_id: (await supabase.auth.getUser()).data.user?.id,
+        usuario_id: userId,
         evento: event.evento,
         detalhes: event.detalhes ?? {},
       });
