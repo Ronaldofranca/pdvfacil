@@ -1,6 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const clienteSchema = z.object({
+  id: z.string().uuid().optional(),
+  empresa_id: z.string().uuid(),
+  nome: z.string().trim().min(1, "Nome é obrigatório").max(200),
+  telefone: z.string().max(30).optional(),
+  email: z.string().email("Email inválido").max(255).optional().or(z.literal("")),
+  cpf_cnpj: z.string().max(20).optional(),
+  tipo: z.enum(["pf", "pj"]).optional(),
+  cidade: z.string().max(100).optional(),
+  rua: z.string().max(200).optional(),
+  estado: z.string().max(2).optional(),
+  cep: z.string().max(10).optional(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  observacoes: z.string().max(1000).optional(),
+  ativo: z.boolean().optional(),
+});
 
 export interface ClienteInput {
   id?: string;
@@ -53,7 +72,8 @@ export function useCliente(id: string | null) {
 export function useUpsertCliente() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (c: ClienteInput) => {
+    mutationFn: async (raw: ClienteInput) => {
+      const c = clienteSchema.parse(raw);
       const payload = {
         nome: c.nome,
         telefone: c.telefone ?? "",

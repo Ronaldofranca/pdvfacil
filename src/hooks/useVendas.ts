@@ -1,6 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const cartItemSchema = z.object({
+  produto_id: z.string().uuid(),
+  nome: z.string().min(1).max(200),
+  quantidade: z.number().int().min(1),
+  preco_original: z.number().min(0),
+  preco_vendido: z.number().min(0),
+  desconto: z.number().min(0),
+  bonus: z.boolean(),
+  subtotal: z.number().min(0),
+});
+
+const pagamentoSchema = z.object({
+  forma: z.string().min(1).max(50),
+  valor: z.number().min(0),
+});
+
+const vendaInputSchema = z.object({
+  empresa_id: z.string().uuid(),
+  cliente_id: z.string().uuid().nullable().optional(),
+  vendedor_id: z.string().uuid(),
+  itens: z.array(cartItemSchema).min(1, "Venda precisa de pelo menos 1 item"),
+  pagamentos: z.array(pagamentoSchema).min(1, "Informe pelo menos 1 pagamento"),
+  desconto_total: z.number().min(0),
+  observacoes: z.string().max(1000).optional(),
+});
 
 // ─── Types ───
 export interface CartItem {
@@ -65,7 +92,8 @@ export function useVendaItens(vendaId: string | null) {
 export function useFinalizarVenda() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (v: VendaInput) => {
+    mutationFn: async (raw: VendaInput) => {
+      const v = vendaInputSchema.parse(raw);
       const subtotalBruto = v.itens.reduce((s, i) => s + i.quantidade * i.preco_original, 0);
       const total = v.itens.reduce((s, i) => s + i.subtotal, 0);
 
