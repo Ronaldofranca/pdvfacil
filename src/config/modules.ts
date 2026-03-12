@@ -18,6 +18,7 @@ import {
   Target,
   PackageSearch,
   BellRing,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/types/modules";
