@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useCategorias, useUpsertProduto, type ProdutoInput } from "@/hooks/useProdutos";
 import { useAuth } from "@/contexts/AuthContext";
+import { ImageUpload } from "./ImageUpload";
 
 interface Props {
   open: boolean;
@@ -29,6 +30,7 @@ export function ProdutoForm({ open, onOpenChange, produto }: Props) {
     custo: "",
     unidade: "un",
     ativo: true,
+    imagem_url: "" as string | null,
   });
 
   useEffect(() => {
@@ -42,9 +44,10 @@ export function ProdutoForm({ open, onOpenChange, produto }: Props) {
         custo: String(produto.custo ?? 0),
         unidade: produto.unidade ?? "un",
         ativo: produto.ativo ?? true,
+        imagem_url: produto.imagem_url ?? null,
       });
     } else {
-      setForm({ nome: "", descricao: "", codigo: "", categoria_id: "", preco: "", custo: "", unidade: "un", ativo: true });
+      setForm({ nome: "", descricao: "", codigo: "", categoria_id: "", preco: "", custo: "", unidade: "un", ativo: true, imagem_url: null });
     }
   }, [produto, open]);
 
@@ -62,17 +65,33 @@ export function ProdutoForm({ open, onOpenChange, produto }: Props) {
       custo: parseFloat(form.custo) || 0,
       unidade: form.unidade,
       ativo: form.ativo,
+      imagem_url: form.imagem_url,
     };
     upsert.mutate(payload, { onSuccess: () => onOpenChange(false) });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{produto ? "Editar Produto" : "Novo Produto"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Image upload */}
+          <div>
+            <Label>Imagem do produto</Label>
+            <div className="mt-1.5">
+              <ImageUpload
+                currentImageUrl={form.imagem_url}
+                onImageUploaded={(urls) => {
+                  // Store medium as main URL (good balance)
+                  setForm({ ...form, imagem_url: urls.medium });
+                }}
+                onImageRemoved={() => setForm({ ...form, imagem_url: null })}
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label>Nome *</Label>
