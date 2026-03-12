@@ -35,6 +35,7 @@ export function GerarParcelasForm({ open, onOpenChange, vendaId, clienteId, valo
     num_parcelas: "1",
     primeiro_vencimento: new Date().toISOString().split("T")[0],
     forma_pagamento: "boleto",
+    descricao: "",
   });
 
   const set = (f: string, v: string) => setForm((prev) => ({ ...prev, [f]: v }));
