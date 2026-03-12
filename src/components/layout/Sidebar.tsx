@@ -1,14 +1,19 @@
 import { NavLink } from "react-router-dom";
 import { moduleGroups } from "@/config/modules";
 import { cn } from "@/lib/utils";
-import { Zap } from "lucide-react";
+import { Zap, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  onLogout: () => void;
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({ open, onClose, onLogout }: SidebarProps) {
+  const { profile } = useAuth();
+
   return (
     <aside
       className={cn(
@@ -56,9 +61,31 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-sidebar-border px-4 py-3">
-        <p className="text-xs text-muted-foreground">VendaForce v1.0</p>
+      {/* Footer with user info and logout */}
+      <div className="border-t border-sidebar-border px-4 py-3 space-y-2">
+        {profile && (
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-foreground shrink-0">
+              {profile.nome?.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium truncate text-foreground">{profile.nome}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{profile.email}</p>
+            </div>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive"
+          onClick={() => {
+            onClose();
+            onLogout();
+          }}
+        >
+          <LogOut className="w-4 h-4" />
+          Sair
+        </Button>
       </div>
     </aside>
   );
