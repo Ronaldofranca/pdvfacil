@@ -126,6 +126,7 @@ export default function MapaClientesPage() {
           <SelectContent>
             <SelectItem value="todos">Todos</SelectItem>
             <SelectItem value="proximos">Próximos (10km)</SelectItem>
+            <SelectItem value="pedidos_pendentes">Com Pedidos Pendentes</SelectItem>
             <SelectItem value="vencidas">Com Parcelas Vencidas</SelectItem>
             <SelectItem value="inativos">Inativos</SelectItem>
             <SelectItem value="vip">VIP</SelectItem>
