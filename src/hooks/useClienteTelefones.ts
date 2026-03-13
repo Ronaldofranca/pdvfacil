@@ -53,13 +53,14 @@ export function useSaveClienteTelefones() {
         .delete()
         .eq("cliente_id", clienteId);
 
-      // Insert new phones
+      // Insert new phones (telefone_normalizado is auto-computed by DB trigger)
       const toInsert = telefones
         .filter(t => normalizeTelefone(t.telefone).length > 0)
         .map(t => ({
           empresa_id: empresaId,
           cliente_id: clienteId,
           telefone: normalizeTelefone(t.telefone),
+          telefone_normalizado: normalizeTelefone(t.telefone),
           tipo: t.tipo,
           principal: t.principal,
         }));
