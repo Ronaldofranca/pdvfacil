@@ -70,8 +70,7 @@ Deno.serve(async (req) => {
     const inconsistencias: Inconsistencia[] = [];
 
     // 1) Vendas com total diferente da soma dos itens
-    const { data: vendasIncorretas } = await supabase.rpc("check_vendas_total");
-
+    const { data: vendasIncorretas } = await supabase.rpc("check_vendas_total", { _empresa_id: empresaId });
     if (vendasIncorretas && vendasIncorretas.length > 0) {
       inconsistencias.push({
         tipo: "VENDA_TOTAL_INCORRETO",
