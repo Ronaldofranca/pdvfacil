@@ -61,6 +61,128 @@ export type Database = {
           },
         ]
       }
+      caixa_diario: {
+        Row: {
+          aberto_em: string
+          created_at: string
+          data: string
+          diferenca: number | null
+          empresa_id: string
+          fechado_em: string | null
+          id: string
+          observacao_abertura: string
+          observacao_fechamento: string
+          saldo_teorico: number
+          status: string
+          total_entradas: number
+          total_sangrias: number
+          total_suprimentos: number
+          updated_at: string
+          usuario_id: string
+          valor_contado: number | null
+          valor_inicial: number
+        }
+        Insert: {
+          aberto_em?: string
+          created_at?: string
+          data?: string
+          diferenca?: number | null
+          empresa_id: string
+          fechado_em?: string | null
+          id?: string
+          observacao_abertura?: string
+          observacao_fechamento?: string
+          saldo_teorico?: number
+          status?: string
+          total_entradas?: number
+          total_sangrias?: number
+          total_suprimentos?: number
+          updated_at?: string
+          usuario_id: string
+          valor_contado?: number | null
+          valor_inicial?: number
+        }
+        Update: {
+          aberto_em?: string
+          created_at?: string
+          data?: string
+          diferenca?: number | null
+          empresa_id?: string
+          fechado_em?: string | null
+          id?: string
+          observacao_abertura?: string
+          observacao_fechamento?: string
+          saldo_teorico?: number
+          status?: string
+          total_entradas?: number
+          total_sangrias?: number
+          total_suprimentos?: number
+          updated_at?: string
+          usuario_id?: string
+          valor_contado?: number | null
+          valor_inicial?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixa_diario_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caixa_movimentacoes: {
+        Row: {
+          caixa_id: string
+          created_at: string
+          descricao: string
+          empresa_id: string
+          id: string
+          referencia_id: string | null
+          tipo: string
+          usuario_id: string
+          valor: number
+        }
+        Insert: {
+          caixa_id: string
+          created_at?: string
+          descricao?: string
+          empresa_id: string
+          id?: string
+          referencia_id?: string | null
+          tipo: string
+          usuario_id: string
+          valor: number
+        }
+        Update: {
+          caixa_id?: string
+          created_at?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          referencia_id?: string | null
+          tipo?: string
+          usuario_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixa_movimentacoes_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixa_diario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixa_movimentacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalogo_config: {
         Row: {
           banner_url: string | null
