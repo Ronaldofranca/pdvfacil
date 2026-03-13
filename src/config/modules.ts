@@ -21,6 +21,7 @@ import {
   Settings,
   MessageSquare,
   Landmark,
+  Upload,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/types/modules";
@@ -59,6 +60,7 @@ export const modules: ModuleConfig[] = [
   { key: "notificacoes", label: "Notificações", icon: Bell, path: "/notificacoes", group: "sistema", description: "Centro de notificações" },
   { key: "sync", label: "Sincronização", icon: RefreshCw, path: "/sync", group: "sistema", description: "Sincronização offline/online" },
   { key: "backup", label: "Backup", icon: HardDrive, path: "/backup", group: "sistema", description: "Backup de dados" },
+  { key: "importacao", label: "Importação", icon: Upload, path: "/importacao", group: "sistema", description: "Importação em massa" },
   { key: "audit", label: "Auditoria", icon: Shield, path: "/audit", group: "sistema", description: "Logs de auditoria" },
   { key: "configuracoes", label: "Configurações", icon: Settings, path: "/configuracoes", group: "sistema", description: "Configurações do sistema" },
 ];

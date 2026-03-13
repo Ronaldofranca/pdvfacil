@@ -132,4 +132,5 @@ export type ModuleKey =
   | "previsao"
   | "alertas"
   | "caixa"
+  | "importacao"
   | "configuracoes";

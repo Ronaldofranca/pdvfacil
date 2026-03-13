@@ -37,6 +37,7 @@ import ConfiguracoesPage from "./pages/Configuracoes";
 import DocumentacaoPage from "./pages/Documentacao";
 import CobrancasPage from "./pages/Cobrancas";
 import CaixaPage from "./pages/Caixa";
+import ImportacaoPage from "./pages/ImportacaoMassa";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="/notificacoes" element={<NotificacoesPage />} />
                 <Route path="/sync" element={<SyncPage />} />
                 <Route path="/backup" element={<ProtectedRoute requiredRole="admin"><BackupPage /></ProtectedRoute>} />
+                <Route path="/importacao" element={<ProtectedRoute requiredRole="admin"><ImportacaoPage /></ProtectedRoute>} />
                 <Route path="/audit" element={<ProtectedRoute requiredRole="admin"><AuditPage /></ProtectedRoute>} />
                 <Route path="/mapa-clientes" element={<MapaClientesPage />} />
                 <Route path="/metas" element={<MetasComissoesPage />} />
