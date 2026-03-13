@@ -792,6 +792,11 @@ export default function RelatoriosPage() {
           </TableBody></Table></Card>
         </TabsContent>
 
+        {/* ═══ PEDIDOS ═══ */}
+        <TabsContent value="pedidos" className="space-y-4">
+          <PedidosReportTab pedidos={pedidosRel} isLoading={lPed} vendedorMap={vendedorMap} doExportCSV={doExportCSV} doExportPDF={doExportPDF} />
+        </TabsContent>
+
         {/* ═══ RANKING INDICAÇÕES ═══ */}
         <TabsContent value="ranking" className="space-y-4">
           <RankingIndicacoesTab doExportCSV={doExportCSV} doExportPDF={doExportPDF} />
