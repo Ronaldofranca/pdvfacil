@@ -70,6 +70,7 @@ export default function ConciliacaoPage() {
     <ModulePage
       title="Conciliação Financeira"
       description="Verificação automática de consistência entre vendas, parcelas, pagamentos e caixa"
+      icon={Scale}
     >
       <Tabs defaultValue="executar" className="space-y-4">
         <TabsList>
