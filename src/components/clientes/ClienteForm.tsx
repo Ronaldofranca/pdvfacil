@@ -110,8 +110,9 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
       setForm(f => ({
         ...f,
         rua: result.logradouro || f.rua,
+        bairro: result.bairro || f.bairro,
         cidade: result.localidade || f.cidade,
-        estado: result.uf || f.estado,
+        uf: (result.uf || f.uf || "").toUpperCase(),
       }));
       toast.success("Endereço preenchido pelo CEP!");
     } else {
