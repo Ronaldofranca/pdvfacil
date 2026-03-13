@@ -102,6 +102,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const { data: maisVendidos } = useProdutosMaisVendidos();
   const { data: recentes } = useProdutosRecentes();
   const { data: niveis } = useNiveisRecompensa();
+  const clienteScore = useClienteScoreById(clienteId || null);
 
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
   const [clienteId, setClienteId] = useState(initialClienteId ?? "");
