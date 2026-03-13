@@ -40,11 +40,10 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
   const [searchIndicador, setSearchIndicador] = useState("");
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
-  const [telefones, setTelefones] = useState<TelefoneLocal[]>([
-    { telefone: "", tipo: "celular", principal: true },
-  ]);
+  const isEditing = !!cliente;
+  const draftKey = isEditing ? `cliente_edit_${cliente.id}` : "cliente_new";
 
-  const [form, setForm] = useState({
+  const defaultForm = {
     nome: "",
     email: "",
     cpf_cnpj: "",
@@ -58,7 +57,41 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
     observacoes: "",
     ativo: true,
     cliente_indicador_id: "",
-  });
+  };
+
+  const { data: form, setData: setForm, setField: set, clear: clearDraft, hasDraft } = useFormPersistence(
+    draftKey,
+    defaultForm,
+    open && !isEditing // only persist for new clients
+  );
+
+  const [telefones, setTelefones] = useState<TelefoneLocal[]>([
+    { telefone: "", tipo: "celular", principal: true },
+  ]);
+
+  // Navigation guard
+  const hasChanges = open && (form.nome !== "" || telefones.some(t => t.telefone !== ""));
+  useNavigationGuard(hasChanges && !isEditing);
+
+  // Persist telefones alongside form
+  const telefonesKey = `draft:${draftKey}_telefones`;
+  const telefonesInitRef = useRef(false);
+  useEffect(() => {
+    if (open && !isEditing && !telefonesInitRef.current) {
+      telefonesInitRef.current = true;
+      try {
+        const stored = localStorage.getItem(telefonesKey);
+        if (stored) setTelefones(JSON.parse(stored));
+      } catch {}
+    }
+    if (!open) telefonesInitRef.current = false;
+  }, [open, isEditing, telefonesKey]);
+
+  useEffect(() => {
+    if (open && !isEditing && telefones.some(t => t.telefone)) {
+      try { localStorage.setItem(telefonesKey, JSON.stringify(telefones)); } catch {}
+    }
+  }, [telefones, open, isEditing, telefonesKey]);
 
   useEffect(() => {
     if (!open) return;
@@ -93,8 +126,9 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
           principal: true,
         }]);
       }
-    } else {
-      setForm({ nome: "", email: "", cpf_cnpj: "", cidade: "", rua: "", bairro: "", uf: "", cep: "", latitude: "", longitude: "", observacoes: "", ativo: true, cliente_indicador_id: "" });
+    } else if (!hasDraft) {
+      // Only reset if no draft was restored
+      setForm(defaultForm);
       setTelefones([{ telefone: "", tipo: "celular", principal: true }]);
     }
     setSearchIndicador("");
