@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Landmark,
   Upload,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/types/modules";
