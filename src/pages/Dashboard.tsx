@@ -24,6 +24,7 @@ import { useLembretesContagem } from "@/hooks/useCobrancas";
 import { useTopIndicadores } from "@/hooks/useIndicacoes";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePedidosDashboard } from "@/hooks/usePedidos";
 import { exportPDF, fmtR } from "@/lib/reportExport";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
