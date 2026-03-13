@@ -430,6 +430,8 @@ export type Database = {
           total_indicacoes: number
           uf: string
           updated_at: string
+          user_id: string | null
+          vendedor_id: string | null
         }
         Insert: {
           ativo?: boolean
@@ -455,6 +457,8 @@ export type Database = {
           total_indicacoes?: number
           uf?: string
           updated_at?: string
+          user_id?: string | null
+          vendedor_id?: string | null
         }
         Update: {
           ativo?: boolean
@@ -480,6 +484,8 @@ export type Database = {
           total_indicacoes?: number
           uf?: string
           updated_at?: string
+          user_id?: string | null
+          vendedor_id?: string | null
         }
         Relationships: [
           {
@@ -644,6 +650,8 @@ export type Database = {
           permitir_brinde: boolean
           permitir_desconto: boolean
           permitir_venda_sem_estoque: boolean
+          pix_chave: string
+          pix_tipo: string
           pontos_por_indicacao: number
           sessao_expiracao_horas: number
           updated_at: string
@@ -672,6 +680,8 @@ export type Database = {
           permitir_brinde?: boolean
           permitir_desconto?: boolean
           permitir_venda_sem_estoque?: boolean
+          pix_chave?: string
+          pix_tipo?: string
           pontos_por_indicacao?: number
           sessao_expiracao_horas?: number
           updated_at?: string
@@ -700,6 +710,8 @@ export type Database = {
           permitir_brinde?: boolean
           permitir_desconto?: boolean
           permitir_venda_sem_estoque?: boolean
+          pix_chave?: string
+          pix_tipo?: string
           pontos_por_indicacao?: number
           sessao_expiracao_horas?: number
           updated_at?: string
