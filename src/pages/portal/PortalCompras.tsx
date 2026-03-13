@@ -68,9 +68,6 @@ export default function PortalComprasPage() {
                     <Badge variant="outline" className="text-[10px]">
                       {v.status === "finalizada" ? "Finalizada" : v.status}
                     </Badge>
-                    {v.forma_pagamento && (
-                      <span className="text-xs text-muted-foreground">{v.forma_pagamento}</span>
-                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
