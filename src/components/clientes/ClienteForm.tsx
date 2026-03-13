@@ -272,9 +272,8 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
     });
   };
 
-  // Alias for template compatibility - `set` is used throughout the JSX
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const setFieldAlias = set; // `set` from useFormPersistence's setField is already aliased
+
+
 
   const tipoOptions = [
     { value: "celular", label: "Celular" },
