@@ -294,6 +294,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     setSearchCliente("");
     setStep("cliente");
     setEditingItem(null);
+    pdvPersistence.clear();
   };
 
   const filteredProdutos = useMemo(
