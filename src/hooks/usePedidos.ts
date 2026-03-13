@@ -15,10 +15,14 @@ export interface Pedido {
   horario_entrega: string;
   status: StatusPedido;
   subtotal: number;
-  desconto: number;
+  desconto_total: number;
   valor_total: number;
   observacoes: string;
   venda_id: string | null;
+  entregue_em: string | null;
+  em_rota_em: string | null;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
   updated_at: string;
   clientes?: { nome: string; telefone: string; cidade: string; bairro: string; estado: string; latitude: number | null; longitude: number | null; rua: string; cep: string };
