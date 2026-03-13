@@ -344,3 +344,20 @@ export function useRelRomaneios(inicio: string, fim: string) {
     },
   });
 }
+
+// ─── Pedidos por período ───
+export function useRelPedidos(inicio: string, fim: string) {
+  return useQuery({
+    queryKey: ["rel_pedidos", inicio, fim],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("pedidos")
+        .select("id, empresa_id, cliente_id, vendedor_id, data_pedido, data_prevista_entrega, status, subtotal, desconto_total, valor_total, venda_id, created_at, clientes(nome)")
+        .gte("data_pedido", inicio)
+        .lte("data_pedido", fim + "T23:59:59")
+        .order("data_pedido", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+}

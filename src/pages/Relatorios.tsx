@@ -25,6 +25,7 @@ import {
   useRelParcelasPorCliente, useRelLucroProduto, useRelCurvaABC,
   useRelVendedores, useRelClientes, useRelEstoqueAtual,
   useRelMovimentacaoEstoque, useRelMetasVendedores, useRelRomaneios,
+  useRelPedidos,
 } from "@/hooks/useRelatorios";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useTopIndicadores } from "@/hooks/useIndicacoes";
