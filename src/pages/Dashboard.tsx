@@ -494,11 +494,12 @@ export default function DashboardPage() {
         </Card>
       )}
       {/* Quick Actions */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-2">
         {[
+          { label: "Pedidos", icon: ClipboardList, path: "/pedidos", color: "text-primary" },
+          { label: "Entregas", icon: Truck, path: "/agenda-entregas", color: (pedidosDash?.atrasados ?? 0) > 0 ? "text-destructive" : "text-primary" },
           { label: "Mapa", icon: MapPin, path: "/mapa-clientes", color: "text-primary" },
           { label: "Metas", icon: Target, path: "/metas", color: "text-primary" },
-          { label: "Previsão", icon: PackageSearch, path: "/previsao-estoque", color: "text-primary" },
           { label: "Alertas", icon: BellRing, path: "/alertas", color: alertasAltos > 0 ? "text-destructive" : "text-primary" },
         ].map((item) => (
           <Link key={item.path} to={item.path}>

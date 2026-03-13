@@ -15,6 +15,7 @@ type Filtro = "todos" | "proximos" | "vencidas" | "inativos" | "vip" | "pedidos_
 export default function MapaClientesPage() {
   const { data: clientes, isLoading } = useClientes();
   const { data: scores } = useClienteScores();
+  const { data: pedidosPendentes } = usePedidos({ status: undefined });
   const navigate = useNavigate();
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [busca, setBusca] = useState("");
