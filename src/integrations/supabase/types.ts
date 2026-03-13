@@ -232,6 +232,54 @@ export type Database = {
           },
         ]
       }
+      cliente_telefones: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          empresa_id: string
+          id: string
+          principal: boolean
+          telefone: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          principal?: boolean
+          telefone?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          principal?: boolean
+          telefone?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_telefones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_telefones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           ativo: boolean
