@@ -327,6 +327,7 @@ export function EntradaLoteForm({ open, onOpenChange }: Props) {
                           </TableCell>
                           <TableCell className="text-right">
                             <Input
+                              ref={(el) => { if (el) inputRefs.current.set(p.id, el); else inputRefs.current.delete(p.id); }}
                               type="number"
                               min="0"
                               step="1"
@@ -334,6 +335,8 @@ export function EntradaLoteForm({ open, onOpenChange }: Props) {
                               className="w-[100px] ml-auto text-right"
                               value={val}
                               onChange={(e) => setQtd(p.id, e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, p.id)}
+                              onPaste={(e) => handlePaste(e, p.id)}
                             />
                           </TableCell>
                         </TableRow>
