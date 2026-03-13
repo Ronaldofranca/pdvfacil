@@ -15,10 +15,14 @@ export interface Pedido {
   horario_entrega: string;
   status: StatusPedido;
   subtotal: number;
-  desconto: number;
+  desconto_total: number;
   valor_total: number;
   observacoes: string;
   venda_id: string | null;
+  entregue_em: string | null;
+  em_rota_em: string | null;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
   updated_at: string;
   clientes?: { nome: string; telefone: string; cidade: string; bairro: string; estado: string; latitude: number | null; longitude: number | null; rua: string; cep: string };
@@ -26,6 +30,7 @@ export interface Pedido {
 
 export interface ItemPedido {
   id: string;
+  empresa_id: string;
   pedido_id: string;
   produto_id: string;
   nome_produto: string;
@@ -35,6 +40,8 @@ export interface ItemPedido {
   desconto: number;
   bonus: boolean;
   subtotal: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PedidoInput {
@@ -145,7 +152,7 @@ export function useCriarPedido() {
           horario_entrega: input.horario_entrega ?? "",
           status: "rascunho",
           subtotal: subtotalBruto,
-          desconto: input.desconto,
+          desconto_total: input.desconto,
           valor_total: total,
           observacoes: input.observacoes ?? "",
         })
@@ -155,6 +162,7 @@ export function useCriarPedido() {
 
       const itensPayload = input.itens.map((i) => ({
         pedido_id: pedido.id,
+        empresa_id: input.empresa_id,
         produto_id: i.produto_id,
         nome_produto: i.nome,
         quantidade: i.quantidade,

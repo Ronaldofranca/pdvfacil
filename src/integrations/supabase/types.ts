@@ -1121,6 +1121,7 @@ export type Database = {
           bonus: boolean
           created_at: string
           desconto: number
+          empresa_id: string
           id: string
           nome_produto: string
           pedido_id: string
@@ -1129,11 +1130,13 @@ export type Database = {
           produto_id: string
           quantidade: number
           subtotal: number
+          updated_at: string
         }
         Insert: {
           bonus?: boolean
           created_at?: string
           desconto?: number
+          empresa_id: string
           id?: string
           nome_produto: string
           pedido_id: string
@@ -1142,11 +1145,13 @@ export type Database = {
           produto_id: string
           quantidade?: number
           subtotal?: number
+          updated_at?: string
         }
         Update: {
           bonus?: boolean
           created_at?: string
           desconto?: number
+          empresa_id?: string
           id?: string
           nome_produto?: string
           pedido_id?: string
@@ -1155,8 +1160,16 @@ export type Database = {
           produto_id?: string
           quantidade?: number
           subtotal?: number
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "itens_pedido_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "itens_pedido_pedido_id_fkey"
             columns: ["pedido_id"]
@@ -1690,10 +1703,14 @@ export type Database = {
           created_at: string
           data_pedido: string
           data_prevista_entrega: string
-          desconto: number
+          desconto_total: number
+          em_rota_em: string | null
           empresa_id: string
+          entregue_em: string | null
           horario_entrega: string
           id: string
+          latitude: number | null
+          longitude: number | null
           observacoes: string
           status: Database["public"]["Enums"]["status_pedido"]
           subtotal: number
@@ -1707,10 +1724,14 @@ export type Database = {
           created_at?: string
           data_pedido?: string
           data_prevista_entrega: string
-          desconto?: number
+          desconto_total?: number
+          em_rota_em?: string | null
           empresa_id: string
+          entregue_em?: string | null
           horario_entrega?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           observacoes?: string
           status?: Database["public"]["Enums"]["status_pedido"]
           subtotal?: number
@@ -1724,10 +1745,14 @@ export type Database = {
           created_at?: string
           data_pedido?: string
           data_prevista_entrega?: string
-          desconto?: number
+          desconto_total?: number
+          em_rota_em?: string | null
           empresa_id?: string
+          entregue_em?: string | null
           horario_entrega?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           observacoes?: string
           status?: Database["public"]["Enums"]["status_pedido"]
           subtotal?: number
