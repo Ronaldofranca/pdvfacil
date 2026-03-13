@@ -22,6 +22,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
+import { usePDVPersistence } from "@/hooks/useFormPersistence";
+import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { toast } from "sonner";
 
 const FORMAS_PAGAMENTO = [
