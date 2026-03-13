@@ -103,11 +103,11 @@ export default function DashboardPage() {
       <div>
         <h2 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Resumo de Hoje</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KPICard icon={ShoppingCart} label="Vendas" value={data ? `${data.qtdVendasDia}` : "—"} sub={data ? fmtR(data.totalVendasDia) : ""} color="text-primary" loading={isLoading} />
+          <KPICard icon={ShoppingCart} label="Vendas" value={data ? fmtR(data.totalVendasDia) : "—"} sub={data ? `${data.qtdVendasDia} venda(s)` : ""} color="text-primary" loading={isLoading} />
           <KPICard icon={DollarSign} label="Recebido Hoje" value={data ? fmtR(data.recebidoHoje) : "—"} color="text-primary" loading={isLoading} />
           <KPICard icon={TrendingUp} label="Lucro Estimado" value={data ? fmtR(data.lucroDia) : "—"} color="text-primary" loading={isLoading} />
           <KPICard icon={CreditCard} label="Contas a Receber" value={data ? fmtR(data.totalAReceber) : "—"} sub={data ? `${data.qtdPendentes} parcelas` : ""} loading={isLoading} />
-          <KPICard icon={AlertTriangle} label="Parcelas Vencidas" value={data ? `${data.qtdVencidas}` : "—"} sub={data ? fmtR(data.totalVencido) : ""} color="text-destructive" loading={isLoading} />
+          <KPICard icon={AlertTriangle} label="Parcelas Vencidas" value={data ? fmtR(data.totalVencido) : "—"} sub={data ? `${data.qtdVencidas} parcela(s)` : ""} color="text-destructive" loading={isLoading} />
         </div>
       </div>
 
@@ -196,7 +196,7 @@ export default function DashboardPage() {
 
       {/* Period KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KPICard icon={ShoppingCart} label={`Vendas (${PERIODOS.find(p=>p.value===periodo)?.label})`} value={pd ? `${pd.qtdVendas}` : "—"} sub={pd ? fmtR(pd.totalVendas) : ""} color="text-primary" loading={lPd} />
+        <KPICard icon={ShoppingCart} label={`Vendas (${PERIODOS.find(p=>p.value===periodo)?.label})`} value={pd ? fmtR(pd.totalVendas) : "—"} sub={pd ? `${pd.qtdVendas} venda(s)` : ""} color="text-primary" loading={lPd} />
         <KPICard icon={DollarSign} label="Recebido" value={pd ? fmtR(pd.totalRecebido) : "—"} color="text-primary" loading={lPd} />
         <KPICard icon={TrendingUp} label="Lucro Estimado" value={pd ? fmtR(pd.lucroPeriodo) : "—"} color="text-primary" loading={lPd} />
         <KPICard icon={PackageX} label="Estoque Baixo" value={data ? `${data.estoqueBaixo.length}` : "—"} sub={`${data?.estoqueSemEstoque ?? 0} sem estoque`} color="text-destructive" loading={isLoading} />
