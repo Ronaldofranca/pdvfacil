@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEmpresas } from "@/hooks/useEmpresas";
 
 interface TopBarProps {
   onMenuToggle: () => void;
