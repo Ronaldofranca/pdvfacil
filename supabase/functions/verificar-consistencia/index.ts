@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     }
 
     // 2) Parcelas com valor_pago diferente da soma dos pagamentos
-    const { data: parcelasIncorretas } = await supabase.rpc("check_parcelas_pagamentos");
+    const { data: parcelasIncorretas } = await supabase.rpc("check_parcelas_pagamentos", { _empresa_id: empresaId });
 
     if (parcelasIncorretas && parcelasIncorretas.length > 0) {
       inconsistencias.push({
