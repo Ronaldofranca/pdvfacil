@@ -86,7 +86,7 @@ export function useSaveClienteTelefones() {
       qc.invalidateQueries({ queryKey: ["clientes"] });
     },
     onError: (e: Error) => {
-      if (e.message.includes("idx_cliente_telefones_empresa_telefone")) {
+      if (e.message.includes("idx_cliente_telefones_empresa_tel_norm") || e.message.toLowerCase().includes("duplicate key value")) {
         toast.error("Este telefone já está cadastrado para outro cliente.");
       } else {
         toast.error(e.message);
