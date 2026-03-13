@@ -9,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { useCategorias, useUpsertProduto, type ProdutoInput } from "@/hooks/useProdutos";
 import { useAuth } from "@/contexts/AuthContext";
 import { ImageUpload } from "./ImageUpload";
+import { useFormPersistence } from "@/hooks/useFormPersistence";
+import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 
 interface Props {
   open: boolean;
@@ -20,8 +22,10 @@ export function ProdutoForm({ open, onOpenChange, produto }: Props) {
   const { profile } = useAuth();
   const { data: categorias } = useCategorias();
   const upsert = useUpsertProduto();
+  const isEditing = !!produto;
+  const draftKey = isEditing ? `produto_edit_${produto.id}` : "produto_new";
 
-  const [form, setForm] = useState({
+  const defaultForm = {
     nome: "",
     descricao: "",
     codigo: "",
@@ -31,7 +35,15 @@ export function ProdutoForm({ open, onOpenChange, produto }: Props) {
     unidade: "un",
     ativo: true,
     imagem_url: "" as string | null,
-  });
+  };
+
+  const { data: form, setData: setForm, clear: clearDraft, hasDraft } = useFormPersistence(
+    draftKey,
+    defaultForm,
+    open && !isEditing
+  );
+
+  useNavigationGuard(open && form.nome !== "" && !isEditing);
 
   useEffect(() => {
     if (produto) {
@@ -46,8 +58,8 @@ export function ProdutoForm({ open, onOpenChange, produto }: Props) {
         ativo: produto.ativo ?? true,
         imagem_url: produto.imagem_url ?? null,
       });
-    } else {
-      setForm({ nome: "", descricao: "", codigo: "", categoria_id: "", preco: "", custo: "", unidade: "un", ativo: true, imagem_url: null });
+    } else if (!hasDraft) {
+      setForm(defaultForm);
     }
   }, [produto, open]);
 
@@ -67,7 +79,12 @@ export function ProdutoForm({ open, onOpenChange, produto }: Props) {
       ativo: form.ativo,
       imagem_url: form.imagem_url,
     };
-    upsert.mutate(payload, { onSuccess: () => onOpenChange(false) });
+    upsert.mutate(payload, {
+      onSuccess: () => {
+        clearDraft();
+        onOpenChange(false);
+      },
+    });
   };
 
   return (

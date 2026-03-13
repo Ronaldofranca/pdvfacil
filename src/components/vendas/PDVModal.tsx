@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle } from "lucide-react";
+import { usePDVPersistence } from "@/hooks/useFormPersistence";
+import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,13 +104,9 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const { data: maisVendidos } = useProdutosMaisVendidos();
   const { data: recentes } = useProdutosRecentes();
   const { data: niveis } = useNiveisRecompensa();
+  const pdvPersistence = usePDVPersistence();
 
-  const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
-  const [clienteId, setClienteId] = useState(initialClienteId ?? "");
-  const [observacoes, setObservacoes] = useState("");
-  const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
-  const [searchProd, setSearchProd] = useState("");
-  const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>({
+  const defaultCrediario: CrediarioConfig = {
     entrada: 0,
     num_parcelas: 1,
     primeiro_vencimento: (() => {
@@ -116,17 +114,47 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
       d.setMonth(d.getMonth() + 1);
       return d.toISOString().split("T")[0];
     })(),
-  });
+  };
+
+  const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
+  const [clienteId, setClienteId] = useState(initialClienteId ?? "");
+  const [observacoes, setObservacoes] = useState("");
+  const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
+  const [searchProd, setSearchProd] = useState("");
+  const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>(defaultCrediario);
 
   const hasCrediario = pagamentos.some((p) => p.forma === "crediario");
 
-  // Reset when opening with initial data
+  // Navigation guard for unsaved PDV state
+  useNavigationGuard(cart.length > 0);
+
+  // Restore persisted PDV state on open
+  const restoredRef = useRef(false);
   useEffect(() => {
-    if (open) {
+    if (open && !restoredRef.current) {
+      restoredRef.current = true;
+      if (!initialCart?.length && !initialClienteId) {
+        const saved = pdvPersistence.restore();
+        if (saved && saved.cart?.length > 0) {
+          setCart(saved.cart);
+          setClienteId(saved.clienteId || "");
+          setObservacoes(saved.observacoes || "");
+          setPagamentos(saved.pagamentos?.length ? saved.pagamentos : [{ forma: "dinheiro", valor: 0 }]);
+          if (saved.crediarioConfig) setCrediarioConfig(saved.crediarioConfig);
+        }
+      }
       if (initialCart?.length) setCart(initialCart);
       if (initialClienteId) setClienteId(initialClienteId);
     }
+    if (!open) restoredRef.current = false;
   }, [open, initialCart, initialClienteId]);
+
+  // Auto-save PDV state on changes
+  useEffect(() => {
+    if (cart.length > 0) {
+      pdvPersistence.save({ cart, clienteId, observacoes, pagamentos, crediarioConfig });
+    }
+  }, [cart, clienteId, observacoes, pagamentos, crediarioConfig]);
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const clienteScore = useClienteScoreById(clienteId || null);
@@ -258,6 +286,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
           setClienteId("");
           setObservacoes("");
           setPagamentos([{ forma: "dinheiro", valor: 0 }]);
+          pdvPersistence.clear();
           onOpenChange(false);
         },
       }

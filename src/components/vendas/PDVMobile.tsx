@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
   DollarSign, X, Package, CreditCard, Check, WifiOff,
@@ -22,6 +22,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
+import { usePDVPersistence } from "@/hooks/useFormPersistence";
+import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { toast } from "sonner";
 
 const FORMAS_PAGAMENTO = [
@@ -53,6 +55,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const { isOnline, pendingCount } = useOffline();
   const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
   const { data: niveis } = useNiveisRecompensa();
+  const pdvPersistence = usePDVPersistence();
 
   const [step, setStep] = useState<Step>("cliente");
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
@@ -75,6 +78,9 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
 
   const hasCrediario = pagamentos.some((p) => p.forma === "crediario");
 
+  // Navigation guard
+  useNavigationGuard(cart.length > 0);
+
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
   const clienteScore = useClienteScoreById(clienteId || null);
@@ -87,8 +93,23 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     getCachedClientes().then(setCachedClientes);
   }, [getCachedProdutos, getCachedClientes]);
 
+  // Restore persisted state on open
+  const restoredRef = useRef(false);
   useEffect(() => {
-    if (open) {
+    if (open && !restoredRef.current) {
+      restoredRef.current = true;
+      if (!initialCart?.length && !initialClienteId) {
+        const saved = pdvPersistence.restore();
+        if (saved && saved.cart?.length > 0) {
+          setCart(saved.cart);
+          setClienteId(saved.clienteId || "");
+          setObservacoes(saved.observacoes || "");
+          setPagamentos(saved.pagamentos?.length ? saved.pagamentos : [{ forma: "dinheiro", valor: 0 }]);
+          if (saved.crediarioConfig) setCrediarioConfig(saved.crediarioConfig);
+          if (saved.step) setStep(saved.step as Step);
+          else setStep("carrinho");
+        }
+      }
       if (initialCart?.length) {
         setCart(initialCart);
         setStep("carrinho");
@@ -98,7 +119,15 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
         if (!initialCart?.length) setStep("produtos");
       }
     }
+    if (!open) restoredRef.current = false;
   }, [open, initialCart, initialClienteId]);
+
+  // Auto-save PDV state
+  useEffect(() => {
+    if (cart.length > 0) {
+      pdvPersistence.save({ cart, clienteId, observacoes, pagamentos, crediarioConfig, step });
+    }
+  }, [cart, clienteId, observacoes, pagamentos, crediarioConfig, step]);
 
   const produtos = isOnline && onlineProdutos ? onlineProdutos : cachedProdutos;
   const clientes = isOnline && onlineClientes ? onlineClientes : cachedClientes;
@@ -265,6 +294,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     setSearchCliente("");
     setStep("cliente");
     setEditingItem(null);
+    pdvPersistence.clear();
   };
 
   const filteredProdutos = useMemo(
