@@ -53,7 +53,6 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const { isOnline, pendingCount } = useOffline();
   const { getCachedProdutos, getCachedClientes, finalizarVendaOffline } = useOfflinePDV();
   const { data: niveis } = useNiveisRecompensa();
-  const clienteScore = useClienteScoreById(clienteId || null);
 
   const [step, setStep] = useState<Step>("cliente");
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
