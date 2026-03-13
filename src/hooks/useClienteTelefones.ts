@@ -103,7 +103,7 @@ export async function checkDuplicatePhone(empresaId: string, telefone: string, e
     .from("cliente_telefones")
     .select("cliente_id, clientes(nome)")
     .eq("empresa_id", empresaId)
-    .eq("telefone", normalized)
+    .eq("telefone_normalizado", normalized)
     .limit(1);
 
   if (data && data.length > 0) {
