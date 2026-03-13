@@ -252,10 +252,11 @@ export default function CobrancasPage() {
           />
         </div>
         <Tabs value={filtro} onValueChange={(v) => setFiltro(v as FiltroCobranca)} className="w-full sm:w-auto">
-          <TabsList className="grid grid-cols-4 w-full sm:w-auto">
+          <TabsList className="grid grid-cols-5 w-full sm:w-auto">
             <TabsTrigger value="todas" className="text-xs">Todas</TabsTrigger>
             <TabsTrigger value="vencidas" className="text-xs">Vencidas</TabsTrigger>
             <TabsTrigger value="vencendo_hoje" className="text-xs">Hoje</TabsTrigger>
+            <TabsTrigger value="vencendo_amanha" className="text-xs">Amanhã</TabsTrigger>
             <TabsTrigger value="pendentes" className="text-xs">Pendentes</TabsTrigger>
           </TabsList>
         </Tabs>

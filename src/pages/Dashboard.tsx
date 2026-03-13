@@ -112,19 +112,34 @@ export default function DashboardPage() {
       </div>
 
       {/* ═══ ALERTAS ═══ */}
-      {(alertasAltos > 0 || estoqueCritico > 0 || (data?.qtdVencidas ?? 0) > 0) && (
+      {(alertasAltos > 0 || estoqueCritico > 0 || (data?.qtdVencidas ?? 0) > 0 || (lembretes?.vencendoAmanha ?? 0) > 0) && (
         <Card className="border-destructive/20 bg-destructive/5">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <BellRing className="w-4 h-4 text-destructive" /> Alertas
               </h2>
-              <Link to="/alertas"><Badge variant="destructive" className="text-[10px] cursor-pointer">{alertasAltos + (data?.qtdVencidas ?? 0) + estoqueCritico}</Badge></Link>
+              <Link to="/alertas"><Badge variant="destructive" className="text-[10px] cursor-pointer">{alertasAltos + (data?.qtdVencidas ?? 0) + estoqueCritico + (lembretes?.vencendoAmanha ?? 0)}</Badge></Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
+              {(lembretes?.vencendoAmanha ?? 0) > 0 && (
+                <Link to="/cobrancas" className="flex items-center gap-2 text-yellow-600 hover:underline">
+                  <CalendarClock className="w-3.5 h-3.5" /> {lembretes!.vencendoAmanha} parcela(s) vencem amanhã
+                </Link>
+              )}
+              {(lembretes?.vencendoHoje ?? 0) > 0 && (
+                <Link to="/cobrancas" className="flex items-center gap-2 text-orange-500 hover:underline">
+                  <CalendarIcon className="w-3.5 h-3.5" /> {lembretes!.vencendoHoje} parcela(s) vencem hoje
+                </Link>
+              )}
               {(data?.qtdVencidas ?? 0) > 0 && (
-                <Link to="/financeiro" className="flex items-center gap-2 text-destructive hover:underline">
+                <Link to="/cobrancas" className="flex items-center gap-2 text-destructive hover:underline">
                   <AlertTriangle className="w-3.5 h-3.5" /> {data!.qtdVencidas} parcela(s) vencida(s) — {fmtR(data!.totalVencido)}
+                </Link>
+              )}
+              {(lembretes?.clientesMultiplosAtraso ?? 0) > 0 && (
+                <Link to="/cobrancas" className="flex items-center gap-2 text-destructive hover:underline">
+                  <Users className="w-3.5 h-3.5" /> {lembretes!.clientesMultiplosAtraso} cliente(s) com 2+ parcelas atrasadas
                 </Link>
               )}
               {estoqueCritico > 0 && (
