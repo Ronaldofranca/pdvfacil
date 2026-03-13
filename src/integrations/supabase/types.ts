@@ -240,6 +240,7 @@ export type Database = {
           id: string
           principal: boolean
           telefone: string
+          telefone_normalizado: string
           tipo: string
           updated_at: string
         }
@@ -250,6 +251,7 @@ export type Database = {
           id?: string
           principal?: boolean
           telefone?: string
+          telefone_normalizado?: string
           tipo?: string
           updated_at?: string
         }
@@ -260,6 +262,7 @@ export type Database = {
           id?: string
           principal?: boolean
           telefone?: string
+          telefone_normalizado?: string
           tipo?: string
           updated_at?: string
         }
