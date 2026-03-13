@@ -20,6 +20,7 @@ import {
   BellRing,
   Settings,
   MessageSquare,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/types/modules";
@@ -49,6 +50,7 @@ export const modules: ModuleConfig[] = [
   { key: "alertas", label: "Alertas", icon: BellRing, path: "/alertas", group: "inteligencia", description: "Alertas automáticos" },
   // Gestão
   { key: "financeiro", label: "Financeiro", icon: DollarSign, path: "/financeiro", group: "gestao", description: "Contas e movimentações" },
+  { key: "caixa", label: "Caixa", icon: Landmark, path: "/caixa", group: "gestao", description: "Caixa diário" },
   { key: "cobrancas" as any, label: "Cobranças", icon: MessageSquare, path: "/cobrancas", group: "gestao", description: "Central de cobrança WhatsApp" },
   { key: "relatorios", label: "Relatórios", icon: BarChart3, path: "/relatorios", group: "gestao", description: "Relatórios gerenciais" },
   { key: "usuarios", label: "Usuários", icon: UserCog, path: "/usuarios", group: "gestao", description: "Gerenciar usuários" },
