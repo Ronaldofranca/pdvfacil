@@ -41,7 +41,7 @@ export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
         )}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Building2 className="w-4 h-4" />
-          <span className="font-medium text-foreground">{profile?.cargo || "Empresa"}</span>
+          <span className="font-medium text-foreground truncate max-w-[160px]">{empresaNome}</span>
         </div>
       </div>
       <div className="flex items-center gap-1">
