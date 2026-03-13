@@ -467,19 +467,36 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     )}
                   </div>
                   {ultimaVendaItens && ultimaVendaItens.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 gap-1.5 text-xs rounded-xl"
-                    onClick={() => {
-                      setCart(ultimaVendaItens);
-                      setStep("carrinho");
-                      toast.success("Última venda carregada!");
-                    }}
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Repetir
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-1.5 text-xs rounded-xl"
+                      onClick={() => {
+                        setCart(ultimaVendaItens);
+                        setStep("carrinho");
+                        toast.success("Última venda carregada!");
+                      }}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Repetir
+                    </Button>
+                  )}
+                </div>
+                {/* Score badge */}
+                {clienteScore && (
+                  <div className={`flex items-center gap-2 text-xs mt-1.5 px-2 py-1 rounded-lg ${
+                    clienteScore.classificacao === "Risco" ? "bg-destructive/10" :
+                    clienteScore.classificacao === "Regular" ? "bg-yellow-500/10" :
+                    clienteScore.classificacao === "Bom" ? "bg-blue-500/10" : "bg-primary/10"
+                  }`}>
+                    <span>{clienteScore.emoji}</span>
+                    <span className={`font-semibold ${clienteScore.cor}`}>
+                      Cliente {clienteScore.classificacao}
+                    </span>
+                    {clienteScore.classificacao === "Risco" && (
+                      <span className="text-destructive text-[10px] ml-auto">⚠ Histórico de atraso</span>
+                    )}
+                  </div>
                 )}
               </div>
             )}
