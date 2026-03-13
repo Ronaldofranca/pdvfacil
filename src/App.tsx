@@ -38,6 +38,7 @@ import DocumentacaoPage from "./pages/Documentacao";
 import CobrancasPage from "./pages/Cobrancas";
 import CaixaPage from "./pages/Caixa";
 import ImportacaoPage from "./pages/ImportacaoMassa";
+import ConciliacaoPage from "./pages/Conciliacao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +85,7 @@ const App = () => (
                 <Route path="/previsao-estoque" element={<PrevisaoEstoquePage />} />
                 <Route path="/alertas" element={<AlertasPage />} />
                 <Route path="/configuracoes" element={<ProtectedRoute requiredRole="admin"><ConfiguracoesPage /></ProtectedRoute>} />
+                <Route path="/conciliacao" element={<ConciliacaoPage />} />
                 <Route path="/mais" element={<MaisPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />

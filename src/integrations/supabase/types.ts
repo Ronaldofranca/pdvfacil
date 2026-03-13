@@ -498,6 +498,128 @@ export type Database = {
           },
         ]
       }
+      conciliacao_itens: {
+        Row: {
+          cliente_nome: string
+          conciliacao_id: string
+          created_at: string
+          descricao: string
+          diferenca: number
+          empresa_id: string
+          id: string
+          registro_id: string | null
+          tabela: string
+          tipo: string
+          valor_encontrado: number
+          valor_esperado: number
+        }
+        Insert: {
+          cliente_nome?: string
+          conciliacao_id: string
+          created_at?: string
+          descricao?: string
+          diferenca?: number
+          empresa_id: string
+          id?: string
+          registro_id?: string | null
+          tabela?: string
+          tipo?: string
+          valor_encontrado?: number
+          valor_esperado?: number
+        }
+        Update: {
+          cliente_nome?: string
+          conciliacao_id?: string
+          created_at?: string
+          descricao?: string
+          diferenca?: number
+          empresa_id?: string
+          id?: string
+          registro_id?: string | null
+          tabela?: string
+          tipo?: string
+          valor_encontrado?: number
+          valor_esperado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conciliacao_itens_conciliacao_id_fkey"
+            columns: ["conciliacao_id"]
+            isOneToOne: false
+            referencedRelation: "conciliacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conciliacao_itens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conciliacoes: {
+        Row: {
+          created_at: string
+          data: string
+          empresa_id: string
+          id: string
+          saldo_caixa: number
+          status: string
+          total_crediario: number
+          total_divergencias: number
+          total_pagamentos: number
+          total_parcelas_geradas: number
+          total_recebido: number
+          total_vendas: number
+          updated_at: string
+          usuario_id: string | null
+          valor_divergente: number
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          empresa_id: string
+          id?: string
+          saldo_caixa?: number
+          status?: string
+          total_crediario?: number
+          total_divergencias?: number
+          total_pagamentos?: number
+          total_parcelas_geradas?: number
+          total_recebido?: number
+          total_vendas?: number
+          updated_at?: string
+          usuario_id?: string | null
+          valor_divergente?: number
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          id?: string
+          saldo_caixa?: number
+          status?: string
+          total_crediario?: number
+          total_divergencias?: number
+          total_pagamentos?: number
+          total_parcelas_geradas?: number
+          total_recebido?: number
+          total_vendas?: number
+          updated_at?: string
+          usuario_id?: string | null
+          valor_divergente?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conciliacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracoes: {
         Row: {
           alerta_cliente_inativo: boolean
