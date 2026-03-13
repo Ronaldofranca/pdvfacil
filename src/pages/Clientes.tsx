@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star, ShieldCheck } from "lucide-react";
+import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star, ShieldCheck, ClipboardList, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 import { Plus } from "lucide-react";
 import { useClientes, useDeleteCliente } from "@/hooks/useClientes";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -16,8 +18,12 @@ import { PDVModal } from "@/components/vendas/PDVModal";
 import { useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import { useClienteScores } from "@/hooks/useClienteScore";
+import { usePedidosPendentesCliente, usePedidos } from "@/hooks/usePedidos";
 import type { CartItem } from "@/hooks/useVendas";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { fmtR } from "@/lib/reportExport";
+import { useNavigate } from "react-router-dom";
 
 function ClienteLevelBadge({ pontos, niveis }: { pontos: number; niveis: any[] | undefined }) {
   if (!niveis?.length) return null;
