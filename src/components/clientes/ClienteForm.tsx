@@ -272,7 +272,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
     });
   };
 
-  const set = (field: string, value: string | boolean) => setForm(f => ({ ...f, [field]: value }));
+  const setFormField = (field: string, value: string | boolean) => set(field as any, value);
 
   const tipoOptions = [
     { value: "celular", label: "Celular" },
