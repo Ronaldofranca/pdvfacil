@@ -453,19 +453,20 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
           <div className="flex flex-col h-full">
             {/* Client banner */}
             {clienteSelecionado && (
-              <div className="px-4 py-2 bg-primary/5 border-b flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">{clienteSelecionado.nome?.charAt(0)?.toUpperCase()}</span>
+              <div className="px-4 py-2 bg-primary/5 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-sm font-bold text-primary">{clienteSelecionado.nome?.charAt(0)?.toUpperCase()}</span>
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{clienteSelecionado.nome}</span>
+                    {Number((clienteSelecionado as any).pontos_indicacao) > 0 && (
+                      <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                        <Star className="w-2.5 h-2.5 text-yellow-500" /> {Number((clienteSelecionado as any).pontos_indicacao)} pts
+                      </Badge>
+                    )}
                   </div>
-                  <span className="text-sm font-medium text-foreground">{clienteSelecionado.nome}</span>
-                  {Number((clienteSelecionado as any).pontos_indicacao) > 0 && (
-                    <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
-                      <Star className="w-2.5 h-2.5 text-yellow-500" /> {Number((clienteSelecionado as any).pontos_indicacao)} pts
-                    </Badge>
-                  )}
-                </div>
-                {ultimaVendaItens && ultimaVendaItens.length > 0 && (
+                  {ultimaVendaItens && ultimaVendaItens.length > 0 && (
                   <Button
                     variant="outline"
                     size="sm"

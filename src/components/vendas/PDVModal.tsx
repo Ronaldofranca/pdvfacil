@@ -328,6 +328,25 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                   ))}
                 </SelectContent>
               </Select>
+              {/* Score badge */}
+              {clienteId && clienteScore && (
+                <div className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg ${
+                  clienteScore.classificacao === "Risco" ? "bg-destructive/10" :
+                  clienteScore.classificacao === "Regular" ? "bg-yellow-500/10" :
+                  clienteScore.classificacao === "Bom" ? "bg-blue-500/10" : "bg-primary/10"
+                }`}>
+                  <span>{clienteScore.emoji}</span>
+                  <span className={`font-semibold ${clienteScore.cor}`}>
+                    Cliente {clienteScore.classificacao}
+                  </span>
+                  <span className="text-muted-foreground">({clienteScore.score} pts)</span>
+                  {clienteScore.classificacao === "Risco" && (
+                    <span className="text-destructive flex items-center gap-1 ml-auto">
+                      <AlertTriangle className="w-3 h-3" /> Histórico de atraso
+                    </span>
+                  )}
+                </div>
+              )}
               {clienteId && ultimaVendaItens && ultimaVendaItens.length > 0 && (
                 <Button
                   variant="outline"
