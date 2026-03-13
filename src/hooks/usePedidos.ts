@@ -30,6 +30,7 @@ export interface Pedido {
 
 export interface ItemPedido {
   id: string;
+  empresa_id: string;
   pedido_id: string;
   produto_id: string;
   nome_produto: string;
@@ -39,6 +40,8 @@ export interface ItemPedido {
   desconto: number;
   bonus: boolean;
   subtotal: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PedidoInput {
