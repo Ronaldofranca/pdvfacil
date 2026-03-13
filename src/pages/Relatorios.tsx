@@ -71,7 +71,7 @@ export default function RelatoriosPage() {
   const { data: movimentos, isLoading: lMov } = useRelMovimentacaoEstoque(inicio, fim);
   const { data: metas, isLoading: lMetas } = useRelMetasVendedores(now.getMonth() + 1, now.getFullYear());
   const { data: romaneios, isLoading: lRom } = useRelRomaneios(inicio, fim);
-
+  const { data: pedidosRel, isLoading: lPed } = useRelPedidos(inicio, fim);
   // Vendedor name map
   const vendedorMap = useMemo(() => {
     const m = new Map<string, string>();
