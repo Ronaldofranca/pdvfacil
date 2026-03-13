@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,9 +80,64 @@ export function EntradaLoteForm({ open, onOpenChange }: Props) {
 
   const totalItens = itensPreenchidos.reduce((s, i) => s + i.quantidade, 0);
 
+  const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+
   const setQtd = (produtoId: string, value: string) => {
     setQuantidades((prev) => ({ ...prev, [produtoId]: value }));
   };
+
+  const getVisibleIndex = useCallback((produtoId: string) => {
+    return filtered.findIndex((p) => p.id === produtoId);
+  }, [filtered]);
+
+  const focusInputByIndex = useCallback((index: number) => {
+    if (index < 0 || index >= filtered.length) return;
+    const targetId = filtered[index].id;
+    const el = inputRefs.current.get(targetId);
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }, [filtered]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, produtoId: string) => {
+    const idx = getVisibleIndex(produtoId);
+    if (e.key === "ArrowDown" || (e.key === "Enter" && !e.shiftKey)) {
+      e.preventDefault();
+      focusInputByIndex(idx + 1);
+    } else if (e.key === "ArrowUp" || (e.key === "Enter" && e.shiftKey)) {
+      e.preventDefault();
+      focusInputByIndex(idx - 1);
+    }
+  }, [getVisibleIndex, focusInputByIndex]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>, produtoId: string) => {
+    const text = e.clipboardData.getData("text");
+    // Detect multi-line or tab-separated paste (table format)
+    const lines = text.split(/[\n\r]+/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length <= 1 && !text.includes("\t")) return; // single value, let default handle
+
+    e.preventDefault();
+    const startIdx = getVisibleIndex(produtoId);
+    const updates: Record<string, string> = {};
+
+    lines.forEach((line, i) => {
+      const targetIdx = startIdx + i;
+      if (targetIdx >= filtered.length) return;
+      const target = filtered[targetIdx];
+      // Take last column if tab-separated (e.g. "ProductName\t10")
+      const cols = line.split("\t");
+      const raw = cols[cols.length - 1].trim();
+      const num = parseFloat(raw);
+      if (!isNaN(num) && num >= 0) {
+        updates[target.id] = String(num);
+      }
+    });
+
+    if (Object.keys(updates).length > 0) {
+      setQuantidades((prev) => ({ ...prev, ...updates }));
+    }
+  }, [getVisibleIndex, filtered]);
 
   const handleConfirm = () => {
     if (!profile || !user) return;
@@ -272,6 +327,7 @@ export function EntradaLoteForm({ open, onOpenChange }: Props) {
                           </TableCell>
                           <TableCell className="text-right">
                             <Input
+                              ref={(el) => { if (el) inputRefs.current.set(p.id, el); else inputRefs.current.delete(p.id); }}
                               type="number"
                               min="0"
                               step="1"
@@ -279,6 +335,8 @@ export function EntradaLoteForm({ open, onOpenChange }: Props) {
                               className="w-[100px] ml-auto text-right"
                               value={val}
                               onChange={(e) => setQtd(p.id, e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(e, p.id)}
+                              onPaste={(e) => handlePaste(e, p.id)}
                             />
                           </TableCell>
                         </TableRow>
