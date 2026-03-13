@@ -2640,6 +2640,7 @@ export type Database = {
               total: number
             }[]
           }
+      get_my_cliente_id: { Args: never; Returns: string }
       get_my_empresa_id: { Args: never; Returns: string }
       get_public_empresa_id: { Args: never; Returns: string }
       has_permission: { Args: { _permission_name: string }; Returns: boolean }
@@ -2651,6 +2652,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_cliente: { Args: never; Returns: boolean }
       is_gerente: { Args: never; Returns: boolean }
       reset_login_attempts: { Args: { _email: string }; Returns: undefined }
     }
