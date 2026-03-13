@@ -58,9 +58,14 @@ export default function EstoquePage() {
             <p className="text-sm text-muted-foreground">Controle de estoque por vendedor</p>
           </div>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setMovOpen(true)}>
-          <Plus className="w-4 h-4" /> Novo Movimento
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setLoteOpen(true)}>
+            <PackagePlus className="w-4 h-4" /> Entrada em Lote
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setMovOpen(true)}>
+            <Plus className="w-4 h-4" /> Novo Movimento
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
