@@ -20,6 +20,7 @@ import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/u
 import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
+import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { toast } from "sonner";
 
@@ -76,6 +77,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
+  const clienteScore = useClienteScoreById(clienteId || null);
 
   const [cachedProdutos, setCachedProdutos] = useState<CachedProduto[]>([]);
   const [cachedClientes, setCachedClientes] = useState<CachedCliente[]>([]);
@@ -451,32 +453,50 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
           <div className="flex flex-col h-full">
             {/* Client banner */}
             {clienteSelecionado && (
-              <div className="px-4 py-2 bg-primary/5 border-b flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">{clienteSelecionado.nome?.charAt(0)?.toUpperCase()}</span>
+              <div className="px-4 py-2 bg-primary/5 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-sm font-bold text-primary">{clienteSelecionado.nome?.charAt(0)?.toUpperCase()}</span>
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{clienteSelecionado.nome}</span>
+                    {Number((clienteSelecionado as any).pontos_indicacao) > 0 && (
+                      <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                        <Star className="w-2.5 h-2.5 text-yellow-500" /> {Number((clienteSelecionado as any).pontos_indicacao)} pts
+                      </Badge>
+                    )}
                   </div>
-                  <span className="text-sm font-medium text-foreground">{clienteSelecionado.nome}</span>
-                  {Number((clienteSelecionado as any).pontos_indicacao) > 0 && (
-                    <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
-                      <Star className="w-2.5 h-2.5 text-yellow-500" /> {Number((clienteSelecionado as any).pontos_indicacao)} pts
-                    </Badge>
+                  {ultimaVendaItens && ultimaVendaItens.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-1.5 text-xs rounded-xl"
+                      onClick={() => {
+                        setCart(ultimaVendaItens);
+                        setStep("carrinho");
+                        toast.success("Última venda carregada!");
+                      }}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Repetir
+                    </Button>
                   )}
                 </div>
-                {ultimaVendaItens && ultimaVendaItens.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 gap-1.5 text-xs rounded-xl"
-                    onClick={() => {
-                      setCart(ultimaVendaItens);
-                      setStep("carrinho");
-                      toast.success("Última venda carregada!");
-                    }}
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Repetir
-                  </Button>
+                {/* Score badge */}
+                {clienteScore && (
+                  <div className={`flex items-center gap-2 text-xs mt-1.5 px-2 py-1 rounded-lg ${
+                    clienteScore.classificacao === "Risco" ? "bg-destructive/10" :
+                    clienteScore.classificacao === "Regular" ? "bg-yellow-500/10" :
+                    clienteScore.classificacao === "Bom" ? "bg-blue-500/10" : "bg-primary/10"
+                  }`}>
+                    <span>{clienteScore.emoji}</span>
+                    <span className={`font-semibold ${clienteScore.cor}`}>
+                      Cliente {clienteScore.classificacao}
+                    </span>
+                    {clienteScore.classificacao === "Risco" && (
+                      <span className="text-destructive text-[10px] ml-auto">⚠ Histórico de atraso</span>
+                    )}
+                  </div>
                 )}
               </div>
             )}

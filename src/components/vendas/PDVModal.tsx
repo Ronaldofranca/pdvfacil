@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, use
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
+import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { PDVMobile } from "./PDVMobile";
 import { toast } from "sonner";
@@ -128,6 +129,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   }, [open, initialCart, initialClienteId]);
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
+  const clienteScore = useClienteScoreById(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -326,6 +328,25 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                   ))}
                 </SelectContent>
               </Select>
+              {/* Score badge */}
+              {clienteId && clienteScore && (
+                <div className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg ${
+                  clienteScore.classificacao === "Risco" ? "bg-destructive/10" :
+                  clienteScore.classificacao === "Regular" ? "bg-yellow-500/10" :
+                  clienteScore.classificacao === "Bom" ? "bg-blue-500/10" : "bg-primary/10"
+                }`}>
+                  <span>{clienteScore.emoji}</span>
+                  <span className={`font-semibold ${clienteScore.cor}`}>
+                    Cliente {clienteScore.classificacao}
+                  </span>
+                  <span className="text-muted-foreground">({clienteScore.score} pts)</span>
+                  {clienteScore.classificacao === "Risco" && (
+                    <span className="text-destructive flex items-center gap-1 ml-auto">
+                      <AlertTriangle className="w-3 h-3" /> Histórico de atraso
+                    </span>
+                  )}
+                </div>
+              )}
               {clienteId && ultimaVendaItens && ultimaVendaItens.length > 0 && (
                 <Button
                   variant="outline"

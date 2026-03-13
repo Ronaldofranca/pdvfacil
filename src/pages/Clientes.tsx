@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star } from "lucide-react";
+import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { IndicacoesCliente } from "@/components/clientes/IndicacoesCliente";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
+import { useClienteScores } from "@/hooks/useClienteScore";
 import type { CartItem } from "@/hooks/useVendas";
 import { toast } from "sonner";
 
@@ -34,6 +35,7 @@ export default function ClientesPage() {
   const { data: clientes, isLoading } = useClientes();
   const deleteCliente = useDeleteCliente();
   const { data: niveis } = useNiveisRecompensa();
+  const { data: scores } = useClienteScores();
 
   const [search, setSearch] = useState("");
   const [formState, setFormState] = useState<{ open: boolean; data?: any }>({ open: false });
@@ -82,17 +84,19 @@ export default function ClientesPage() {
               <TableHead>Nome</TableHead>
               <TableHead>Telefone</TableHead>
               <TableHead>Cidade</TableHead>
+              <TableHead>Score</TableHead>
               <TableHead>Nível</TableHead>
               <TableHead>Pontos</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-36" />
               <TableHead className="w-36" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
             ) : !filtered?.length ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado</TableCell></TableRow>
             ) : (
               filtered.map((c) => (
                 <TableRow key={c.id}>
@@ -111,6 +115,17 @@ export default function ClientesPage() {
                     ) : "—"}
                   </TableCell>
                   <TableCell className="text-sm">{c.cidade || "—"}{c.estado ? ` / ${c.estado}` : ""}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const s = scores?.find((sc) => sc.clienteId === c.id);
+                      if (!s) return <span className="text-xs text-muted-foreground">—</span>;
+                      return (
+                        <Badge variant="outline" className={`gap-1 text-[10px] ${s.cor}`}>
+                          <ShieldCheck className="w-3 h-3" /> {s.classificacao} ({s.score})
+                        </Badge>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell>
                     <ClienteLevelBadge pontos={Number(c.pontos_indicacao)} niveis={niveis} />
                   </TableCell>
