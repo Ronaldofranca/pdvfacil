@@ -2510,12 +2510,19 @@ export type Database = {
       }
     }
     Functions: {
-      check_itens_orfaos: {
-        Args: never
-        Returns: {
-          qtd: number
-        }[]
-      }
+      check_itens_orfaos:
+        | {
+            Args: never
+            Returns: {
+              qtd: number
+            }[]
+          }
+        | {
+            Args: { _empresa_id?: string }
+            Returns: {
+              qtd: number
+            }[]
+          }
       check_login_attempt: {
         Args: {
           _block_minutes?: number
@@ -2526,51 +2533,101 @@ export type Database = {
         }
         Returns: Json
       }
-      check_parcelas_pagamentos: {
-        Args: never
-        Returns: {
-          empresa_id: string
-          id: string
-          numero: number
-          soma_pagamentos: number
-          valor_pago: number
-        }[]
-      }
-      check_parcelas_vencidas: {
-        Args: never
-        Returns: {
-          empresa_id: string
-          id: string
-          numero: number
-          vencimento: string
-        }[]
-      }
-      check_resumo_financeiro: {
-        Args: never
-        Returns: {
-          total_parcelas_valor: number
-          total_recebido: number
-          total_vendas: number
-        }[]
-      }
-      check_saldo_negativo: {
-        Args: never
-        Returns: {
-          empresa_id: string
-          id: string
-          numero: number
-          saldo: number
-        }[]
-      }
-      check_vendas_total: {
-        Args: never
-        Returns: {
-          empresa_id: string
-          id: string
-          soma_itens: number
-          total: number
-        }[]
-      }
+      check_parcelas_pagamentos:
+        | {
+            Args: never
+            Returns: {
+              empresa_id: string
+              id: string
+              numero: number
+              soma_pagamentos: number
+              valor_pago: number
+            }[]
+          }
+        | {
+            Args: { _empresa_id?: string }
+            Returns: {
+              empresa_id: string
+              id: string
+              numero: number
+              soma_pagamentos: number
+              valor_pago: number
+            }[]
+          }
+      check_parcelas_vencidas:
+        | {
+            Args: never
+            Returns: {
+              empresa_id: string
+              id: string
+              numero: number
+              vencimento: string
+            }[]
+          }
+        | {
+            Args: { _empresa_id?: string }
+            Returns: {
+              empresa_id: string
+              id: string
+              numero: number
+              vencimento: string
+            }[]
+          }
+      check_resumo_financeiro:
+        | {
+            Args: never
+            Returns: {
+              total_parcelas_valor: number
+              total_recebido: number
+              total_vendas: number
+            }[]
+          }
+        | {
+            Args: { _empresa_id?: string }
+            Returns: {
+              total_parcelas_valor: number
+              total_recebido: number
+              total_vendas: number
+            }[]
+          }
+      check_saldo_negativo:
+        | {
+            Args: never
+            Returns: {
+              empresa_id: string
+              id: string
+              numero: number
+              saldo: number
+            }[]
+          }
+        | {
+            Args: { _empresa_id?: string }
+            Returns: {
+              empresa_id: string
+              id: string
+              numero: number
+              saldo: number
+            }[]
+          }
+      check_vendas_total:
+        | {
+            Args: never
+            Returns: {
+              empresa_id: string
+              id: string
+              soma_itens: number
+              total: number
+            }[]
+          }
+        | {
+            Args: { _empresa_id?: string }
+            Returns: {
+              empresa_id: string
+              id: string
+              soma_itens: number
+              total: number
+            }[]
+          }
       get_my_empresa_id: { Args: never; Returns: string }
       get_public_empresa_id: { Args: never; Returns: string }
       has_permission: { Args: { _permission_name: string }; Returns: boolean }

@@ -70,8 +70,7 @@ Deno.serve(async (req) => {
     const inconsistencias: Inconsistencia[] = [];
 
     // 1) Vendas com total diferente da soma dos itens
-    const { data: vendasIncorretas } = await supabase.rpc("check_vendas_total");
-
+    const { data: vendasIncorretas } = await supabase.rpc("check_vendas_total", { _empresa_id: empresaId });
     if (vendasIncorretas && vendasIncorretas.length > 0) {
       inconsistencias.push({
         tipo: "VENDA_TOTAL_INCORRETO",
@@ -85,7 +84,7 @@ Deno.serve(async (req) => {
     }
 
     // 2) Parcelas com valor_pago diferente da soma dos pagamentos
-    const { data: parcelasIncorretas } = await supabase.rpc("check_parcelas_pagamentos");
+    const { data: parcelasIncorretas } = await supabase.rpc("check_parcelas_pagamentos", { _empresa_id: empresaId });
 
     if (parcelasIncorretas && parcelasIncorretas.length > 0) {
       inconsistencias.push({
@@ -100,7 +99,7 @@ Deno.serve(async (req) => {
     }
 
     // 3) Parcelas vencidas ainda com status pendente
-    const { data: parcelasVencidas } = await supabase.rpc("check_parcelas_vencidas");
+    const { data: parcelasVencidas } = await supabase.rpc("check_parcelas_vencidas", { _empresa_id: empresaId });
 
     if (parcelasVencidas && parcelasVencidas.length > 0) {
       inconsistencias.push({
@@ -119,7 +118,7 @@ Deno.serve(async (req) => {
     }
 
     // 4) Parcelas com saldo negativo
-    const { data: saldoNegativo } = await supabase.rpc("check_saldo_negativo");
+    const { data: saldoNegativo } = await supabase.rpc("check_saldo_negativo", { _empresa_id: empresaId });
 
     if (saldoNegativo && saldoNegativo.length > 0) {
       inconsistencias.push({
@@ -134,7 +133,7 @@ Deno.serve(async (req) => {
     }
 
     // 5) Itens de venda órfãos
-    const { data: itensOrfaos } = await supabase.rpc("check_itens_orfaos");
+    const { data: itensOrfaos } = await supabase.rpc("check_itens_orfaos", { _empresa_id: empresaId });
 
     if (itensOrfaos && itensOrfaos.length > 0 && itensOrfaos[0].qtd > 0) {
       inconsistencias.push({
@@ -145,7 +144,7 @@ Deno.serve(async (req) => {
     }
 
     // 6) Resumo financeiro para validação cruzada
-    const { data: resumo } = await supabase.rpc("check_resumo_financeiro");
+    const { data: resumo } = await supabase.rpc("check_resumo_financeiro", { _empresa_id: empresaId });
 
     if (resumo && resumo.length > 0) {
       const r = resumo[0];
