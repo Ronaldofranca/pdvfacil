@@ -196,7 +196,7 @@ export default function DashboardPage() {
 
       {/* Period KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KPICard icon={ShoppingCart} label={`Vendas (${PERIODOS.find(p=>p.value===periodo)?.label})`} value={pd ? `${pd.qtdVendas}` : "—"} sub={pd ? fmtR(pd.totalVendas) : ""} color="text-primary" loading={lPd} />
+        <KPICard icon={ShoppingCart} label={`Vendas (${PERIODOS.find(p=>p.value===periodo)?.label})`} value={pd ? fmtR(pd.totalVendas) : "—"} sub={pd ? `${pd.qtdVendas} venda(s)` : ""} color="text-primary" loading={lPd} />
         <KPICard icon={DollarSign} label="Recebido" value={pd ? fmtR(pd.totalRecebido) : "—"} color="text-primary" loading={lPd} />
         <KPICard icon={TrendingUp} label="Lucro Estimado" value={pd ? fmtR(pd.lucroPeriodo) : "—"} color="text-primary" loading={lPd} />
         <KPICard icon={PackageX} label="Estoque Baixo" value={data ? `${data.estoqueBaixo.length}` : "—"} sub={`${data?.estoqueSemEstoque ?? 0} sem estoque`} color="text-destructive" loading={isLoading} />
