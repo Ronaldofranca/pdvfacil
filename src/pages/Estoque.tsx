@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Warehouse, Search, Plus, ArrowDownUp, TrendingUp, TrendingDown, AlertTriangle, Wrench } from "lucide-react";
+import { Warehouse, Search, Plus, ArrowDownUp, TrendingUp, TrendingDown, AlertTriangle, Wrench, PackagePlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useEstoque, useMovimentos, useVendedores } from "@/hooks/useEstoque";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { MovimentoForm } from "@/components/estoque/MovimentoForm";
+import { EntradaLoteForm } from "@/components/estoque/EntradaLoteForm";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
