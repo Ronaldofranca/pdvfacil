@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     }
 
     // 3) Parcelas vencidas ainda com status pendente
-    const { data: parcelasVencidas } = await supabase.rpc("check_parcelas_vencidas");
+    const { data: parcelasVencidas } = await supabase.rpc("check_parcelas_vencidas", { _empresa_id: empresaId });
 
     if (parcelasVencidas && parcelasVencidas.length > 0) {
       inconsistencias.push({
