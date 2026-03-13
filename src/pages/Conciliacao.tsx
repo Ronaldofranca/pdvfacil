@@ -229,7 +229,7 @@ export default function ConciliacaoPage() {
             />
           ) : (
             <div className="flex flex-col items-center gap-2 py-8">
-              <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+              <CheckCircle2 className="h-12 w-12 text-primary" />
               <p className="text-muted-foreground">Nenhuma divergência encontrada nesta conciliação.</p>
             </div>
           )}

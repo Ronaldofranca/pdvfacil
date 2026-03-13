@@ -55,6 +55,7 @@ export const modules: ModuleConfig[] = [
   { key: "caixa", label: "Caixa", icon: Landmark, path: "/caixa", group: "gestao", description: "Caixa diário" },
   { key: "cobrancas" as any, label: "Cobranças", icon: MessageSquare, path: "/cobrancas", group: "gestao", description: "Central de cobrança WhatsApp" },
   { key: "relatorios", label: "Relatórios", icon: BarChart3, path: "/relatorios", group: "gestao", description: "Relatórios gerenciais" },
+  { key: "conciliacao", label: "Conciliação", icon: Scale, path: "/conciliacao", group: "gestao", description: "Conciliação financeira diária" },
   { key: "usuarios", label: "Usuários", icon: UserCog, path: "/usuarios", group: "gestao", description: "Gerenciar usuários" },
   { key: "empresas", label: "Empresas", icon: Building2, path: "/empresas", group: "gestao", description: "Gestão multiempresa" },
   // Sistema

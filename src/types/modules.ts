@@ -133,4 +133,5 @@ export type ModuleKey =
   | "alertas"
   | "caixa"
   | "importacao"
-  | "configuracoes";
+  | "configuracoes"
+  | "conciliacao";
