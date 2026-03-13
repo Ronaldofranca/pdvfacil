@@ -15,6 +15,7 @@ import { IndicacoesCliente } from "@/components/clientes/IndicacoesCliente";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
+import { useClienteScores } from "@/hooks/useClienteScore";
 import type { CartItem } from "@/hooks/useVendas";
 import { toast } from "sonner";
 
