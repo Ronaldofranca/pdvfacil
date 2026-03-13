@@ -35,6 +35,7 @@ export default function ClientesPage() {
   const { data: clientes, isLoading } = useClientes();
   const deleteCliente = useDeleteCliente();
   const { data: niveis } = useNiveisRecompensa();
+  const { data: scores } = useClienteScores();
 
   const [search, setSearch] = useState("");
   const [formState, setFormState] = useState<{ open: boolean; data?: any }>({ open: false });
