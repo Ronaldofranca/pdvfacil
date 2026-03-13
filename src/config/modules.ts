@@ -20,6 +20,7 @@ import {
   BellRing,
   Settings,
   MessageSquare,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/types/modules";
