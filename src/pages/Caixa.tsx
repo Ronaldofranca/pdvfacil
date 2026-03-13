@@ -139,10 +139,10 @@ export default function CaixaPage() {
     filtroStatus === "todos" || c.status === filtroStatus
   ) ?? [];
 
-  if (isLoading) return <ModulePage title="Caixa" icon={DollarSign}><p className="text-muted-foreground">Carregando...</p></ModulePage>;
+  if (isLoading) return <ModulePage title="Caixa" description="Controle diário de caixa" icon={DollarSign}><p className="text-muted-foreground">Carregando...</p></ModulePage>;
 
   return (
-    <ModulePage title="Caixa Diário" icon={DollarSign}>
+    <ModulePage title="Caixa Diário" description="Controle de abertura, sangrias, suprimentos e fechamento" icon={DollarSign}>
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-4">
           <TabsTrigger value="caixa">Caixa Atual</TabsTrigger>
