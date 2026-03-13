@@ -47,6 +47,10 @@ export default function MapaClientesPage() {
   const scoreMap = new Map<string, ClienteScore>();
   (scores || []).forEach((s) => scoreMap.set(s.clienteId, s));
 
+  const pedidosPendentesMap = new Map<string, number>();
+  (pedidosPendentes ?? []).filter((p: any) => ["rascunho", "aguardando_entrega", "em_rota"].includes(p.status))
+    .forEach((p: any) => pedidosPendentesMap.set(p.cliente_id, (pedidosPendentesMap.get(p.cliente_id) ?? 0) + 1));
+
   const clientesComGeo = (clientes || []).filter((c: any) => c.latitude && c.longitude);
   const clientesFiltrados = clientesComGeo
     .map((c: any) => {
@@ -54,7 +58,8 @@ export default function MapaClientesPage() {
       const distancia = userLocation
         ? haversine(userLocation.lat, userLocation.lng, c.latitude!, c.longitude!)
         : null;
-      return { ...c, score, distancia };
+      const pedidosPend = pedidosPendentesMap.get(c.id) ?? 0;
+      return { ...c, score, distancia, pedidosPend };
     })
     .filter((c: any) => {
       if (busca && !c.nome.toLowerCase().includes(busca.toLowerCase())) return false;
@@ -62,6 +67,7 @@ export default function MapaClientesPage() {
       if (filtro === "proximos") return c.distancia !== null && c.distancia <= 10;
       if (filtro === "inativos") return c.score?.classificacao === "Risco" || c.score?.classificacao === "Comum";
       if (filtro === "vencidas") return (c.score?.parcelasVencidas ?? 0) > 0;
+      if (filtro === "pedidos_pendentes") return c.pedidosPend > 0;
       return true;
     })
     .sort((a: any, b: any) => {
