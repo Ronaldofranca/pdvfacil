@@ -347,8 +347,8 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
               <Input value={form.cidade} onChange={(e) => set("cidade", e.target.value)} />
             </div>
             <div>
-              <Label>Estado</Label>
-              <Input value={form.estado} onChange={(e) => set("estado", e.target.value)} placeholder="UF" maxLength={2} />
+              <Label>UF</Label>
+              <Input value={form.uf} onChange={(e) => set("uf", e.target.value.toUpperCase())} placeholder="UF" maxLength={2} />
             </div>
 
             {/* GPS */}
