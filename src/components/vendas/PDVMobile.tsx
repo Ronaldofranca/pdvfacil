@@ -77,6 +77,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
 
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
+  const clienteScore = useClienteScoreById(clienteId || null);
 
   const [cachedProdutos, setCachedProdutos] = useState<CachedProduto[]>([]);
   const [cachedClientes, setCachedClientes] = useState<CachedCliente[]>([]);
