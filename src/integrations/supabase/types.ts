@@ -2407,6 +2407,7 @@ export type Database = {
         }[]
       }
       get_my_empresa_id: { Args: never; Returns: string }
+      get_public_empresa_id: { Args: never; Returns: string }
       has_permission: { Args: { _permission_name: string }; Returns: boolean }
       has_role: {
         Args: {
