@@ -245,6 +245,7 @@ export default function RelatoriosPage() {
           <TabsTrigger value="clientes" className="gap-1 text-xs"><UserCheck className="w-3.5 h-3.5" />Clientes</TabsTrigger>
           <TabsTrigger value="romaneio" className="gap-1 text-xs"><Truck className="w-3.5 h-3.5" />Romaneio</TabsTrigger>
           <TabsTrigger value="abc" className="gap-1 text-xs"><BarChart className="w-3.5 h-3.5" />ABC</TabsTrigger>
+          <TabsTrigger value="pedidos" className="gap-1 text-xs"><ClipboardList className="w-3.5 h-3.5" />Pedidos</TabsTrigger>
           <TabsTrigger value="ranking" className="gap-1 text-xs"><Award className="w-3.5 h-3.5" />Ranking</TabsTrigger>
         </TabsList>
 
