@@ -1116,6 +1116,70 @@ export type Database = {
           },
         ]
       }
+      itens_pedido: {
+        Row: {
+          bonus: boolean
+          created_at: string
+          desconto: number
+          id: string
+          nome_produto: string
+          pedido_id: string
+          preco_original: number
+          preco_pedido: number
+          produto_id: string
+          quantidade: number
+          subtotal: number
+        }
+        Insert: {
+          bonus?: boolean
+          created_at?: string
+          desconto?: number
+          id?: string
+          nome_produto: string
+          pedido_id: string
+          preco_original?: number
+          preco_pedido?: number
+          produto_id: string
+          quantidade?: number
+          subtotal?: number
+        }
+        Update: {
+          bonus?: boolean
+          created_at?: string
+          desconto?: number
+          id?: string
+          nome_produto?: string
+          pedido_id?: string
+          preco_original?: number
+          preco_pedido?: number
+          produto_id?: string
+          quantidade?: number
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_pedido_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_pedido_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_pedido_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       itens_venda: {
         Row: {
           bonus: boolean
@@ -1613,6 +1677,82 @@ export type Database = {
           },
           {
             foreignKeyName: "parcelas_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          data_pedido: string
+          data_prevista_entrega: string
+          desconto: number
+          empresa_id: string
+          horario_entrega: string
+          id: string
+          observacoes: string
+          status: Database["public"]["Enums"]["status_pedido"]
+          subtotal: number
+          updated_at: string
+          valor_total: number
+          venda_id: string | null
+          vendedor_id: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          data_pedido?: string
+          data_prevista_entrega: string
+          desconto?: number
+          empresa_id: string
+          horario_entrega?: string
+          id?: string
+          observacoes?: string
+          status?: Database["public"]["Enums"]["status_pedido"]
+          subtotal?: number
+          updated_at?: string
+          valor_total?: number
+          venda_id?: string | null
+          vendedor_id: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          data_pedido?: string
+          data_prevista_entrega?: string
+          desconto?: number
+          empresa_id?: string
+          horario_entrega?: string
+          id?: string
+          observacoes?: string
+          status?: Database["public"]["Enums"]["status_pedido"]
+          subtotal?: number
+          updated_at?: string
+          valor_total?: number
+          venda_id?: string | null
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_venda_id_fkey"
             columns: ["venda_id"]
             isOneToOne: false
             referencedRelation: "vendas"
@@ -2431,6 +2571,13 @@ export type Database = {
         | "transferencia"
         | "outro"
       status_parcela: "pendente" | "paga" | "vencida" | "parcial"
+      status_pedido:
+        | "rascunho"
+        | "aguardando_entrega"
+        | "em_rota"
+        | "entregue"
+        | "cancelado"
+        | "convertido_em_venda"
       status_venda: "rascunho" | "pendente" | "finalizada" | "cancelada"
       tipo_movimento: "venda" | "reposicao" | "dano" | "ajuste"
     }
@@ -2571,6 +2718,14 @@ export const Constants = {
         "outro",
       ],
       status_parcela: ["pendente", "paga", "vencida", "parcial"],
+      status_pedido: [
+        "rascunho",
+        "aguardando_entrega",
+        "em_rota",
+        "entregue",
+        "cancelado",
+        "convertido_em_venda",
+      ],
       status_venda: ["rascunho", "pendente", "finalizada", "cancelada"],
       tipo_movimento: ["venda", "reposicao", "dano", "ajuste"],
     },
