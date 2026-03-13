@@ -249,8 +249,8 @@ export default function PedidosPage() {
               <Separator />
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{fmtR(Number(pedidoDetail.subtotal))}</span></div>
-                {Number(pedidoDetail.desconto) > 0 && (
-                  <div className="flex justify-between text-destructive"><span>Descontos</span><span>-{fmtR(Number(pedidoDetail.desconto))}</span></div>
+                {Number(pedidoDetail.desconto_total) > 0 && (
+                  <div className="flex justify-between text-destructive"><span>Descontos</span><span>-{fmtR(Number(pedidoDetail.desconto_total))}</span></div>
                 )}
                 <div className="flex justify-between font-bold text-lg"><span>Total</span><span className="text-primary">{fmtR(Number(pedidoDetail.valor_total))}</span></div>
               </div>
