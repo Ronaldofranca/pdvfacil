@@ -16,6 +16,7 @@ import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, use
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
+import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { PDVMobile } from "./PDVMobile";
 import { toast } from "sonner";
