@@ -38,6 +38,7 @@ import DocumentacaoPage from "./pages/Documentacao";
 import CobrancasPage from "./pages/Cobrancas";
 import CaixaPage from "./pages/Caixa";
 import ImportacaoPage from "./pages/ImportacaoMassa";
+import ConciliacaoPage from "./pages/Conciliacao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
