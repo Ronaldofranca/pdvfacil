@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     }
 
     // 4) Parcelas com saldo negativo
-    const { data: saldoNegativo } = await supabase.rpc("check_saldo_negativo");
+    const { data: saldoNegativo } = await supabase.rpc("check_saldo_negativo", { _empresa_id: empresaId });
 
     if (saldoNegativo && saldoNegativo.length > 0) {
       inconsistencias.push({
