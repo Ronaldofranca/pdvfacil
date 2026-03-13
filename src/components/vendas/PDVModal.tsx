@@ -286,6 +286,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
           setClienteId("");
           setObservacoes("");
           setPagamentos([{ forma: "dinheiro", valor: 0 }]);
+          pdvPersistence.clear();
           onOpenChange(false);
         },
       }
