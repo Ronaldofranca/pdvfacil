@@ -21,7 +21,7 @@ export default function PortalComprasPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("vendas")
-        .select("id, data_venda, total, status, forma_pagamento, observacoes")
+        .select("id, data_venda, total, status, observacoes")
         .eq("cliente_id", cliente!.id)
         .order("data_venda", { ascending: false })
         .limit(50);
