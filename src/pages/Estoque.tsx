@@ -30,6 +30,7 @@ export default function EstoquePage() {
   const [vendedorFilter, setVendedorFilter] = useState<string>(canViewAll ? "todos" : (user?.id ?? ""));
   const [search, setSearch] = useState("");
   const [movOpen, setMovOpen] = useState(false);
+  const [loteOpen, setLoteOpen] = useState(false);
 
   const effectiveVendedor = vendedorFilter === "todos" ? undefined : vendedorFilter;
   const { data: estoque, isLoading: loadingEstoque } = useEstoque(effectiveVendedor);
