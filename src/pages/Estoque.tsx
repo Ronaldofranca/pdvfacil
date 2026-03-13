@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Warehouse, Search, Plus, ArrowDownUp, TrendingUp, TrendingDown, AlertTriangle, Wrench } from "lucide-react";
+import { Warehouse, Search, Plus, ArrowDownUp, TrendingUp, TrendingDown, AlertTriangle, Wrench, PackagePlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useEstoque, useMovimentos, useVendedores } from "@/hooks/useEstoque";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { MovimentoForm } from "@/components/estoque/MovimentoForm";
+import { EntradaLoteForm } from "@/components/estoque/EntradaLoteForm";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -29,6 +30,7 @@ export default function EstoquePage() {
   const [vendedorFilter, setVendedorFilter] = useState<string>(canViewAll ? "todos" : (user?.id ?? ""));
   const [search, setSearch] = useState("");
   const [movOpen, setMovOpen] = useState(false);
+  const [loteOpen, setLoteOpen] = useState(false);
 
   const effectiveVendedor = vendedorFilter === "todos" ? undefined : vendedorFilter;
   const { data: estoque, isLoading: loadingEstoque } = useEstoque(effectiveVendedor);
@@ -56,9 +58,14 @@ export default function EstoquePage() {
             <p className="text-sm text-muted-foreground">Controle de estoque por vendedor</p>
           </div>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setMovOpen(true)}>
-          <Plus className="w-4 h-4" /> Novo Movimento
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setLoteOpen(true)}>
+            <PackagePlus className="w-4 h-4" /> Entrada em Lote
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setMovOpen(true)}>
+            <Plus className="w-4 h-4" /> Novo Movimento
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -177,6 +184,7 @@ export default function EstoquePage() {
       </Tabs>
 
       <MovimentoForm open={movOpen} onOpenChange={setMovOpen} />
+      <EntradaLoteForm open={loteOpen} onOpenChange={setLoteOpen} />
     </div>
   );
 }

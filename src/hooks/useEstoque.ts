@@ -75,6 +75,49 @@ export function useAddMovimento() {
   });
 }
 
+// ─── Entrada em Lote ───
+export interface MovimentoLoteItem {
+  produto_id: string;
+  quantidade: number;
+}
+
+export interface MovimentoLoteInput {
+  empresa_id: string;
+  vendedor_id: string;
+  tipo: "reposicao" | "ajuste";
+  observacoes?: string;
+  itens: MovimentoLoteItem[];
+}
+
+export function useAddMovimentoLote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (m: MovimentoLoteInput) => {
+      if (!m.itens.length) throw new Error("Nenhum item para registrar");
+      const rows = m.itens.map((item) => ({
+        empresa_id: m.empresa_id,
+        produto_id: item.produto_id,
+        vendedor_id: m.vendedor_id,
+        tipo: m.tipo,
+        quantidade: item.quantidade,
+        observacoes: m.observacoes ?? "",
+      }));
+      const { data, error } = await supabase
+        .from("movimentos_estoque")
+        .insert(rows)
+        .select();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["estoque"] });
+      qc.invalidateQueries({ queryKey: ["movimentos_estoque"] });
+      toast.success(`Entrada em lote registrada: ${data.length} produto(s)`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 // ─── Vendedores (profiles com role vendedor) ───
 export function useVendedores() {
   return useQuery({
