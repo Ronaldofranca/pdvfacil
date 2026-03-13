@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const { data: previsoes } = usePrevisaoEstoque();
   const { data: topIndicadores } = useTopIndicadores();
   const { data: empresas } = useEmpresas();
+  const { data: lembretes } = useLembretesContagem();
 
   const alertasAltos = (alertas || []).filter((a) => a.prioridade === "alta").length;
   const estoqueCritico = (previsoes || []).filter((p) => p.urgencia === "critico").length;
