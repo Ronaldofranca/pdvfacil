@@ -265,6 +265,8 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
             telefones: telefones.filter(t => normalizeTelefone(t.telefone).length > 0),
           });
         }
+        clearDraft();
+        try { localStorage.removeItem(telefonesKey); } catch {}
         onOpenChange(false);
       },
     });
