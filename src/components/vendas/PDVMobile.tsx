@@ -20,6 +20,7 @@ import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/u
 import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
+import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { toast } from "sonner";
 
