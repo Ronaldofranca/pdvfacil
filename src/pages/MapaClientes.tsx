@@ -10,7 +10,7 @@ import { useClienteScores, type ClienteScore } from "@/hooks/useClienteScore";
 import { usePedidos } from "@/hooks/usePedidos";
 import { useNavigate } from "react-router-dom";
 
-type Filtro = "todos" | "proximos" | "vencidas" | "inativos" | "vip";
+type Filtro = "todos" | "proximos" | "vencidas" | "inativos" | "vip" | "pedidos_pendentes";
 
 export default function MapaClientesPage() {
   const { data: clientes, isLoading } = useClientes();
