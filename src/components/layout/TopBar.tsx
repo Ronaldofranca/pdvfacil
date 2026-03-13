@@ -19,6 +19,8 @@ interface TopBarProps {
 export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
   const isMobile = useIsMobile();
   const { profile } = useAuth();
+  const { data: empresas } = useEmpresas();
+  const empresaNome = empresas?.[0]?.nome || "Empresa";
 
   const initials = profile?.nome
     ? profile.nome
