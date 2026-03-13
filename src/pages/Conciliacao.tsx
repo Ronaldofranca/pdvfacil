@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Scale } from "lucide-react";
 import { ModulePage } from "@/components/layout/ModulePage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
