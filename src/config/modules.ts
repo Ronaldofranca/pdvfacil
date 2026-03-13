@@ -23,6 +23,8 @@ import {
   Landmark,
   Upload,
   Scale,
+  ClipboardList,
+  CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/types/modules";
