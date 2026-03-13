@@ -19,6 +19,7 @@ import { useDashboardData, useDashboardPeriodo, type DashboardPeriodo } from "@/
 import { useVendedorDashboard } from "@/hooks/useMetasComissoes";
 import { useAlertasInteligentes } from "@/hooks/useAlertasInteligentes";
 import { usePrevisaoEstoque } from "@/hooks/usePrevisaoEstoque";
+import { useLembretesContagem } from "@/hooks/useCobrancas";
 import { useTopIndicadores } from "@/hooks/useIndicacoes";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useAuth } from "@/contexts/AuthContext";
