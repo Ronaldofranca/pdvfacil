@@ -370,7 +370,7 @@ async function importProduto(d: Record<string, string>, empresaId: string, isDup
     await supabase.from("produtos").update(payload).eq("id", existingId);
     result!.updated++;
   } else {
-    const { error } = await supabase.from("produtos").insert({ ...payload, empresa_id: empresaId });
+    const { error } = await (supabase as any).from("produtos").insert({ ...payload, empresa_id: empresaId });
     if (error) throw error;
     result!.created++;
   }
