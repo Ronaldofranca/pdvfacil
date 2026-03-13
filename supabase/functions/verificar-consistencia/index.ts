@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
     }
 
     // 6) Resumo financeiro para validação cruzada
-    const { data: resumo } = await supabase.rpc("check_resumo_financeiro");
+    const { data: resumo } = await supabase.rpc("check_resumo_financeiro", { _empresa_id: empresaId });
 
     if (resumo && resumo.length > 0) {
       const r = resumo[0];
