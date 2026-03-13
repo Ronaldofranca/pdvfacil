@@ -116,6 +116,17 @@ export default function ClientesPage() {
                   </TableCell>
                   <TableCell className="text-sm">{c.cidade || "—"}{c.estado ? ` / ${c.estado}` : ""}</TableCell>
                   <TableCell>
+                    {(() => {
+                      const s = scores?.find((sc) => sc.clienteId === c.id);
+                      if (!s) return <span className="text-xs text-muted-foreground">—</span>;
+                      return (
+                        <Badge variant="outline" className={`gap-1 text-[10px] ${s.cor}`}>
+                          <ShieldCheck className="w-3 h-3" /> {s.classificacao} ({s.score})
+                        </Badge>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell>
                     <ClienteLevelBadge pontos={Number(c.pontos_indicacao)} niveis={niveis} />
                   </TableCell>
                   <TableCell>
