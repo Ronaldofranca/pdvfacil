@@ -77,6 +77,7 @@ const App = () => (
                 <Route path="/notificacoes" element={<NotificacoesPage />} />
                 <Route path="/sync" element={<SyncPage />} />
                 <Route path="/backup" element={<ProtectedRoute requiredRole="admin"><BackupPage /></ProtectedRoute>} />
+                <Route path="/importacao" element={<ProtectedRoute requiredRole="admin"><ImportacaoPage /></ProtectedRoute>} />
                 <Route path="/audit" element={<ProtectedRoute requiredRole="admin"><AuditPage /></ProtectedRoute>} />
                 <Route path="/mapa-clientes" element={<MapaClientesPage />} />
                 <Route path="/metas" element={<MetasComissoesPage />} />
