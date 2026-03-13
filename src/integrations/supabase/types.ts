@@ -286,6 +286,7 @@ export type Database = {
       clientes: {
         Row: {
           ativo: boolean
+          bairro: string
           cep: string
           cidade: string
           cliente_indicador_id: string | null
@@ -305,10 +306,12 @@ export type Database = {
           tipo: string
           total_compras: number
           total_indicacoes: number
+          uf: string
           updated_at: string
         }
         Insert: {
           ativo?: boolean
+          bairro?: string
           cep?: string
           cidade?: string
           cliente_indicador_id?: string | null
@@ -328,10 +331,12 @@ export type Database = {
           tipo?: string
           total_compras?: number
           total_indicacoes?: number
+          uf?: string
           updated_at?: string
         }
         Update: {
           ativo?: boolean
+          bairro?: string
           cep?: string
           cidade?: string
           cliente_indicador_id?: string | null
@@ -351,6 +356,7 @@ export type Database = {
           tipo?: string
           total_compras?: number
           total_indicacoes?: number
+          uf?: string
           updated_at?: string
         }
         Relationships: [

@@ -48,7 +48,8 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
     cpf_cnpj: "",
     cidade: "",
     rua: "",
-    estado: "",
+    bairro: "",
+    uf: "",
     cep: "",
     latitude: "",
     longitude: "",
@@ -66,7 +67,8 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
         cpf_cnpj: cliente.cpf_cnpj ?? "",
         cidade: cliente.cidade ?? "",
         rua: cliente.rua ?? "",
-        estado: cliente.estado ?? "",
+        bairro: cliente.bairro ?? "",
+        uf: (cliente.uf ?? cliente.estado ?? "").toUpperCase(),
         cep: cliente.cep ?? "",
         latitude: cliente.latitude != null ? String(cliente.latitude) : "",
         longitude: cliente.longitude != null ? String(cliente.longitude) : "",
@@ -90,7 +92,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
         }]);
       }
     } else {
-      setForm({ nome: "", email: "", cpf_cnpj: "", cidade: "", rua: "", estado: "", cep: "", latitude: "", longitude: "", observacoes: "", ativo: true, cliente_indicador_id: "" });
+      setForm({ nome: "", email: "", cpf_cnpj: "", cidade: "", rua: "", bairro: "", uf: "", cep: "", latitude: "", longitude: "", observacoes: "", ativo: true, cliente_indicador_id: "" });
       setTelefones([{ telefone: "", tipo: "celular", principal: true }]);
     }
     setSearchIndicador("");
@@ -108,8 +110,9 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
       setForm(f => ({
         ...f,
         rua: result.logradouro || f.rua,
+        bairro: result.bairro || f.bairro,
         cidade: result.localidade || f.cidade,
-        estado: result.uf || f.estado,
+        uf: (result.uf || f.uf || "").toUpperCase(),
       }));
       toast.success("Endereço preenchido pelo CEP!");
     } else {
@@ -205,7 +208,9 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
       cpf_cnpj: form.cpf_cnpj,
       cidade: form.cidade,
       rua: form.rua,
-      estado: form.estado,
+      bairro: form.bairro,
+      estado: form.uf,
+      uf: form.uf,
       cep: form.cep.replace(/\D/g, ""),
       latitude: form.latitude ? parseFloat(form.latitude) : null,
       longitude: form.longitude ? parseFloat(form.longitude) : null,
@@ -337,13 +342,17 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
               <Label>Rua / Endereço</Label>
               <Input value={form.rua} onChange={(e) => set("rua", e.target.value)} />
             </div>
+            <div className="col-span-2">
+              <Label>Bairro</Label>
+              <Input value={form.bairro} onChange={(e) => set("bairro", e.target.value)} />
+            </div>
             <div>
               <Label>Cidade</Label>
               <Input value={form.cidade} onChange={(e) => set("cidade", e.target.value)} />
             </div>
             <div>
-              <Label>Estado</Label>
-              <Input value={form.estado} onChange={(e) => set("estado", e.target.value)} placeholder="UF" maxLength={2} />
+              <Label>UF</Label>
+              <Input value={form.uf} onChange={(e) => set("uf", e.target.value.toUpperCase())} placeholder="UF" maxLength={2} />
             </div>
 
             {/* GPS */}

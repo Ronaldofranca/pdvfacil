@@ -13,7 +13,9 @@ const clienteSchema = z.object({
   tipo: z.enum(["pf", "pj"]).optional(),
   cidade: z.string().max(100).optional(),
   rua: z.string().max(200).optional(),
+  bairro: z.string().max(120).optional(),
   estado: z.string().max(2).optional(),
+  uf: z.string().max(2).optional(),
   cep: z.string().max(10).optional(),
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
@@ -31,7 +33,9 @@ export interface ClienteInput {
   tipo?: "pf" | "pj";
   cidade?: string;
   rua?: string;
+  bairro?: string;
   estado?: string;
+  uf?: string;
   cep?: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -83,7 +87,9 @@ export function useUpsertCliente() {
         tipo: c.tipo ?? "pf",
         cidade: c.cidade ?? "",
         rua: c.rua ?? "",
-        estado: c.estado ?? "",
+        bairro: c.bairro ?? "",
+        estado: (c.uf ?? c.estado ?? "").toUpperCase(),
+        uf: (c.uf ?? c.estado ?? "").toUpperCase(),
         cep: c.cep ?? "",
         latitude: c.latitude ?? null,
         longitude: c.longitude ?? null,

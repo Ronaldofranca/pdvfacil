@@ -35,7 +35,9 @@ export interface Cliente extends BaseEntity {
   email: string;
   endereco: string;
   cidade: string;
+  bairro: string;
   estado: string;
+  uf: string;
   cep: string;
   latitude: number | null;
   longitude: number | null;
