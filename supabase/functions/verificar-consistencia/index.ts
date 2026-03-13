@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     }
 
     // 5) Itens de venda órfãos
-    const { data: itensOrfaos } = await supabase.rpc("check_itens_orfaos");
+    const { data: itensOrfaos } = await supabase.rpc("check_itens_orfaos", { _empresa_id: empresaId });
 
     if (itensOrfaos && itensOrfaos.length > 0 && itensOrfaos[0].qtd > 0) {
       inconsistencias.push({
