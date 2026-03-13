@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PortalProtectedRoute } from "@/components/portal/PortalProtectedRoute";
+import { PortalLayout } from "@/components/portal/PortalLayout";
 import { AppLayout } from "@/components/layout/AppLayout";
 import DashboardPage from "./pages/Dashboard";
 import VendasPage from "./pages/Vendas";
@@ -43,6 +45,15 @@ import PedidosPage from "./pages/Pedidos";
 import AgendaEntregasPage from "./pages/AgendaEntregas";
 import NotFound from "./pages/NotFound";
 
+// Portal do Cliente
+import PortalLoginPage from "./pages/portal/PortalLogin";
+import PortalHomePage from "./pages/portal/PortalHome";
+import PortalPedidosPage from "./pages/portal/PortalPedidos";
+import PortalParcelasPage from "./pages/portal/PortalParcelas";
+import PortalComprasPage from "./pages/portal/PortalCompras";
+import PortalNovoPedidoPage from "./pages/portal/PortalNovoPedido";
+import PortalDadosPage from "./pages/portal/PortalDados";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -63,6 +74,18 @@ const App = () => (
               <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
               <Route path="/catalogo/produtos" element={<CatalogoPublicoPage />} />
               <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
+
+              {/* Portal do Cliente */}
+              <Route path="/portal/login" element={<PortalLoginPage />} />
+              <Route path="/portal" element={<PortalProtectedRoute><PortalLayout /></PortalProtectedRoute>}>
+                <Route index element={<PortalHomePage />} />
+                <Route path="pedidos" element={<PortalPedidosPage />} />
+                <Route path="novo-pedido" element={<PortalNovoPedidoPage />} />
+                <Route path="parcelas" element={<PortalParcelasPage />} />
+                <Route path="compras" element={<PortalComprasPage />} />
+                <Route path="dados" element={<PortalDadosPage />} />
+              </Route>
+
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/pedidos" element={<PedidosPage />} />

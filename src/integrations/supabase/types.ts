@@ -430,6 +430,8 @@ export type Database = {
           total_indicacoes: number
           uf: string
           updated_at: string
+          user_id: string | null
+          vendedor_id: string | null
         }
         Insert: {
           ativo?: boolean
@@ -455,6 +457,8 @@ export type Database = {
           total_indicacoes?: number
           uf?: string
           updated_at?: string
+          user_id?: string | null
+          vendedor_id?: string | null
         }
         Update: {
           ativo?: boolean
@@ -480,6 +484,8 @@ export type Database = {
           total_indicacoes?: number
           uf?: string
           updated_at?: string
+          user_id?: string | null
+          vendedor_id?: string | null
         }
         Relationships: [
           {
@@ -644,6 +650,8 @@ export type Database = {
           permitir_brinde: boolean
           permitir_desconto: boolean
           permitir_venda_sem_estoque: boolean
+          pix_chave: string
+          pix_tipo: string
           pontos_por_indicacao: number
           sessao_expiracao_horas: number
           updated_at: string
@@ -672,6 +680,8 @@ export type Database = {
           permitir_brinde?: boolean
           permitir_desconto?: boolean
           permitir_venda_sem_estoque?: boolean
+          pix_chave?: string
+          pix_tipo?: string
           pontos_por_indicacao?: number
           sessao_expiracao_horas?: number
           updated_at?: string
@@ -700,6 +710,8 @@ export type Database = {
           permitir_brinde?: boolean
           permitir_desconto?: boolean
           permitir_venda_sem_estoque?: boolean
+          pix_chave?: string
+          pix_tipo?: string
           pontos_por_indicacao?: number
           sessao_expiracao_horas?: number
           updated_at?: string
@@ -2628,6 +2640,7 @@ export type Database = {
               total: number
             }[]
           }
+      get_my_cliente_id: { Args: never; Returns: string }
       get_my_empresa_id: { Args: never; Returns: string }
       get_public_empresa_id: { Args: never; Returns: string }
       has_permission: { Args: { _permission_name: string }; Returns: boolean }
@@ -2639,11 +2652,12 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_cliente: { Args: never; Returns: boolean }
       is_gerente: { Args: never; Returns: boolean }
       reset_login_attempts: { Args: { _email: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "gerente" | "vendedor"
+      app_role: "admin" | "gerente" | "vendedor" | "cliente"
       forma_pagamento:
         | "dinheiro"
         | "pix"
@@ -2789,7 +2803,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "gerente", "vendedor"],
+      app_role: ["admin", "gerente", "vendedor", "cliente"],
       forma_pagamento: [
         "dinheiro",
         "pix",
