@@ -84,9 +84,11 @@ export default function ClientesPage() {
               <TableHead>Nome</TableHead>
               <TableHead>Telefone</TableHead>
               <TableHead>Cidade</TableHead>
+              <TableHead>Score</TableHead>
               <TableHead>Nível</TableHead>
               <TableHead>Pontos</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-36" />
               <TableHead className="w-36" />
             </TableRow>
           </TableHeader>
