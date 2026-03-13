@@ -2655,7 +2655,7 @@ export type Database = {
       reset_login_attempts: { Args: { _email: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "gerente" | "vendedor"
+      app_role: "admin" | "gerente" | "vendedor" | "cliente"
       forma_pagamento:
         | "dinheiro"
         | "pix"
@@ -2801,7 +2801,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "gerente", "vendedor"],
+      app_role: ["admin", "gerente", "vendedor", "cliente"],
       forma_pagamento: [
         "dinheiro",
         "pix",
