@@ -4,16 +4,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Navigation, Phone, ShoppingCart, AlertTriangle, Search, Filter, ExternalLink } from "lucide-react";
+import { MapPin, Navigation, Phone, ShoppingCart, AlertTriangle, Search, Filter, ExternalLink, ClipboardList, Truck } from "lucide-react";
 import { useClientes } from "@/hooks/useClientes";
 import { useClienteScores, type ClienteScore } from "@/hooks/useClienteScore";
+import { usePedidos } from "@/hooks/usePedidos";
 import { useNavigate } from "react-router-dom";
 
-type Filtro = "todos" | "proximos" | "vencidas" | "inativos" | "vip";
+type Filtro = "todos" | "proximos" | "vencidas" | "inativos" | "vip" | "pedidos_pendentes";
 
 export default function MapaClientesPage() {
   const { data: clientes, isLoading } = useClientes();
   const { data: scores } = useClienteScores();
+  const { data: pedidosPendentes } = usePedidos({ status: undefined });
   const navigate = useNavigate();
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [busca, setBusca] = useState("");
@@ -45,6 +47,10 @@ export default function MapaClientesPage() {
   const scoreMap = new Map<string, ClienteScore>();
   (scores || []).forEach((s) => scoreMap.set(s.clienteId, s));
 
+  const pedidosPendentesMap = new Map<string, number>();
+  (pedidosPendentes ?? []).filter((p: any) => ["rascunho", "aguardando_entrega", "em_rota"].includes(p.status))
+    .forEach((p: any) => pedidosPendentesMap.set(p.cliente_id, (pedidosPendentesMap.get(p.cliente_id) ?? 0) + 1));
+
   const clientesComGeo = (clientes || []).filter((c: any) => c.latitude && c.longitude);
   const clientesFiltrados = clientesComGeo
     .map((c: any) => {
@@ -52,7 +58,8 @@ export default function MapaClientesPage() {
       const distancia = userLocation
         ? haversine(userLocation.lat, userLocation.lng, c.latitude!, c.longitude!)
         : null;
-      return { ...c, score, distancia };
+      const pedidosPend = pedidosPendentesMap.get(c.id) ?? 0;
+      return { ...c, score, distancia, pedidosPend };
     })
     .filter((c: any) => {
       if (busca && !c.nome.toLowerCase().includes(busca.toLowerCase())) return false;
@@ -60,6 +67,7 @@ export default function MapaClientesPage() {
       if (filtro === "proximos") return c.distancia !== null && c.distancia <= 10;
       if (filtro === "inativos") return c.score?.classificacao === "Risco" || c.score?.classificacao === "Comum";
       if (filtro === "vencidas") return (c.score?.parcelasVencidas ?? 0) > 0;
+      if (filtro === "pedidos_pendentes") return c.pedidosPend > 0;
       return true;
     })
     .sort((a: any, b: any) => {
@@ -118,6 +126,7 @@ export default function MapaClientesPage() {
           <SelectContent>
             <SelectItem value="todos">Todos</SelectItem>
             <SelectItem value="proximos">Próximos (10km)</SelectItem>
+            <SelectItem value="pedidos_pendentes">Com Pedidos Pendentes</SelectItem>
             <SelectItem value="vencidas">Com Parcelas Vencidas</SelectItem>
             <SelectItem value="inativos">Inativos</SelectItem>
             <SelectItem value="vip">VIP</SelectItem>
@@ -170,6 +179,12 @@ export default function MapaClientesPage() {
                         {c.score.parcelasVencidas} parcela(s) vencida(s)
                       </p>
                     )}
+                    {c.pedidosPend > 0 && (
+                      <p className="text-xs text-primary flex items-center gap-1 mt-0.5">
+                        <ClipboardList className="w-3 h-3" />
+                        {c.pedidosPend} pedido(s) pendente(s)
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
                     <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => openMaps(c.latitude, c.longitude)}>
@@ -178,6 +193,11 @@ export default function MapaClientesPage() {
                     {c.telefone && (
                       <Button size="icon" variant="outline" className="h-8 w-8" asChild>
                         <a href={`tel:${c.telefone}`}><Phone className="w-3.5 h-3.5" /></a>
+                      </Button>
+                    )}
+                    {c.pedidosPend > 0 && (
+                      <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => navigate(`/pedidos?cliente=${c.id}`)} title="Ver pedidos">
+                        <ClipboardList className="w-3.5 h-3.5" />
                       </Button>
                     )}
                     <Button size="icon" variant="default" className="h-8 w-8" onClick={() => navigate(`/vendas?clienteId=${c.id}`)}>

@@ -39,6 +39,8 @@ import CobrancasPage from "./pages/Cobrancas";
 import CaixaPage from "./pages/Caixa";
 import ImportacaoPage from "./pages/ImportacaoMassa";
 import ConciliacaoPage from "./pages/Conciliacao";
+import PedidosPage from "./pages/Pedidos";
+import AgendaEntregasPage from "./pages/AgendaEntregas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +65,8 @@ const App = () => (
               <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route path="/" element={<DashboardPage />} />
+                <Route path="/pedidos" element={<PedidosPage />} />
+                <Route path="/agenda-entregas" element={<AgendaEntregasPage />} />
                 <Route path="/vendas" element={<VendasPage />} />
                 <Route path="/clientes" element={<ClientesPage />} />
                 <Route path="/produtos" element={<ProdutosPage />} />

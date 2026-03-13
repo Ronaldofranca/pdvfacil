@@ -4,6 +4,7 @@ import {
   ShoppingCart, DollarSign, AlertTriangle, CreditCard, PackageX,
   TrendingUp, Target, BellRing, MapPin, PackageSearch, Users,
   FileDown, Calendar as CalendarIcon, UserCheck, BarChart3, Award, Star, MessageSquare, CalendarClock,
+  ClipboardList, Truck,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import { useLembretesContagem } from "@/hooks/useCobrancas";
 import { useTopIndicadores } from "@/hooks/useIndicacoes";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePedidosDashboard } from "@/hooks/usePedidos";
 import { exportPDF, fmtR } from "@/lib/reportExport";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -54,6 +56,7 @@ export default function DashboardPage() {
   const { data: topIndicadores } = useTopIndicadores();
   const { data: empresas } = useEmpresas();
   const { data: lembretes } = useLembretesContagem();
+  const { data: pedidosDash } = usePedidosDashboard();
 
   const alertasAltos = (alertas || []).filter((a) => a.prioridade === "alta").length;
   const estoqueCritico = (previsoes || []).filter((p) => p.urgencia === "critico").length;
@@ -157,7 +160,44 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* ═══ META DO VENDEDOR (para vendedores) ═══ */}
+      {/* ═══ PEDIDOS PENDENTES ═══ */}
+      {pedidosDash && (pedidosDash.totalPendentes > 0 || pedidosDash.atrasados > 0) && (
+        <Card className={pedidosDash.atrasados > 0 ? "border-destructive/20" : "border-primary/20"}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-primary" /> Pedidos Pendentes
+              </h2>
+              <Link to="/agenda-entregas"><Badge variant="outline" className="text-[10px] cursor-pointer">Agenda</Badge></Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{pedidosDash.totalPendentes}</p>
+                <p className="text-[10px] text-muted-foreground">Pendentes</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-primary">{pedidosDash.paraHoje}</p>
+                <p className="text-[10px] text-muted-foreground">Para Hoje</p>
+              </div>
+              <div className="text-center">
+                <p className={`text-lg font-bold ${pedidosDash.atrasados > 0 ? "text-destructive" : "text-foreground"}`}>{pedidosDash.atrasados}</p>
+                <p className="text-[10px] text-muted-foreground">Atrasados</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-primary">{fmtR(pedidosDash.valorPendente)}</p>
+                <p className="text-[10px] text-muted-foreground">Valor Total</p>
+              </div>
+            </div>
+            {pedidosDash.atrasados > 0 && (
+              <Link to="/agenda-entregas" className="flex items-center gap-2 text-destructive text-sm mt-3 hover:underline">
+                <AlertTriangle className="w-3.5 h-3.5" /> {pedidosDash.atrasados} pedido(s) com entrega atrasada
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+
       {vendedorDash && vendedorDash.metaValor > 0 && (
         <Card>
           <CardContent className="p-4">
@@ -454,11 +494,12 @@ export default function DashboardPage() {
         </Card>
       )}
       {/* Quick Actions */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-2">
         {[
+          { label: "Pedidos", icon: ClipboardList, path: "/pedidos", color: "text-primary" },
+          { label: "Entregas", icon: Truck, path: "/agenda-entregas", color: (pedidosDash?.atrasados ?? 0) > 0 ? "text-destructive" : "text-primary" },
           { label: "Mapa", icon: MapPin, path: "/mapa-clientes", color: "text-primary" },
           { label: "Metas", icon: Target, path: "/metas", color: "text-primary" },
-          { label: "Previsão", icon: PackageSearch, path: "/previsao-estoque", color: "text-primary" },
           { label: "Alertas", icon: BellRing, path: "/alertas", color: alertasAltos > 0 ? "text-destructive" : "text-primary" },
         ].map((item) => (
           <Link key={item.path} to={item.path}>

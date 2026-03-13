@@ -23,6 +23,8 @@ import {
   Landmark,
   Upload,
   Scale,
+  ClipboardList,
+  CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/types/modules";
@@ -39,7 +41,8 @@ export interface ModuleConfig {
 export const modules: ModuleConfig[] = [
   // Operacional
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/", group: "operacional", description: "Visão geral do negócio" },
-  { key: "vendas", label: "Vendas", icon: ShoppingCart, path: "/vendas", group: "operacional", description: "Gerenciar pedidos e vendas" },
+  { key: "pedidos" as any, label: "Pedidos", icon: ClipboardList, path: "/pedidos", group: "operacional", description: "Pedidos e entregas" },
+  { key: "vendas", label: "Vendas", icon: ShoppingCart, path: "/vendas", group: "operacional", description: "Gerenciar vendas" },
   { key: "clientes", label: "Clientes", icon: Users, path: "/clientes", group: "operacional", description: "Cadastro de clientes" },
   { key: "produtos", label: "Produtos", icon: Package, path: "/produtos", group: "operacional", description: "Catálogo de produtos" },
   { key: "estoque", label: "Estoque", icon: Warehouse, path: "/estoque", group: "operacional", description: "Controle de estoque" },
