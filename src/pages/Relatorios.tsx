@@ -877,6 +877,117 @@ function ParcelasTable({ data, loading }: { data: any[]; loading: boolean }) {
   );
 }
 
+// ═══ PEDIDOS REPORT TAB ═══
+function PedidosReportTab({ pedidos, isLoading, vendedorMap, doExportCSV, doExportPDF }: {
+  pedidos: any[] | undefined;
+  isLoading: boolean;
+  vendedorMap: Map<string, string>;
+  doExportCSV: (rows: Record<string, any>[], name: string) => void;
+  doExportPDF: (title: string, headers: string[], rows: string[][], totals?: string[]) => void;
+}) {
+  const STATUS_LABELS: Record<string, string> = {
+    rascunho: "Rascunho",
+    aguardando_entrega: "Aguardando",
+    em_rota: "Em Rota",
+    entregue: "Entregue",
+    cancelado: "Cancelado",
+    convertido_em_venda: "Convertido",
+  };
+
+  const data = pedidos ?? [];
+  const hoje = new Date().toISOString().split("T")[0];
+
+  const porStatus = useMemo(() => {
+    const map = new Map<string, number>();
+    data.forEach((p) => map.set(p.status, (map.get(p.status) ?? 0) + 1));
+    return Array.from(map.entries()).map(([status, qtd]) => ({ status: STATUS_LABELS[status] ?? status, qtd }));
+  }, [data]);
+
+  const atrasados = data.filter((p) => p.data_prevista_entrega < hoje && ["rascunho", "aguardando_entrega", "em_rota"].includes(p.status));
+  const convertidos = data.filter((p) => p.status === "convertido_em_venda");
+  const cancelados = data.filter((p) => p.status === "cancelado");
+  const totalValor = data.reduce((s, p) => s + Number(p.valor_total), 0);
+
+  return (
+    <>
+      <ExportBar
+        onCSV={() => doExportCSV(data.map((p) => ({
+          Data: format(new Date(p.data_pedido), "dd/MM/yyyy"),
+          Cliente: p.clientes?.nome ?? "—",
+          Vendedor: vendedorMap.get(p.vendedor_id) ?? "",
+          Status: STATUS_LABELS[p.status] ?? p.status,
+          Entrega: p.data_prevista_entrega,
+          Total: p.valor_total,
+        })), "pedidos")}
+        onPDF={() => doExportPDF("Relatório de Pedidos",
+          ["Data", "Cliente", "Status", "Entrega", "Total"],
+          data.map((p) => [
+            format(new Date(p.data_pedido), "dd/MM/yyyy"),
+            p.clientes?.nome ?? "—",
+            STATUS_LABELS[p.status] ?? p.status,
+            p.data_prevista_entrega,
+            fmtR(Number(p.valor_total)),
+          ]),
+          ["TOTAL", `${data.length} pedidos`, "", "", fmtR(totalValor)]
+        )}
+      />
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <SummaryCard label="Total Pedidos" value={String(data.length)} sub={fmtR(totalValor)} />
+        <SummaryCard label="Convertidos" value={String(convertidos.length)} color="text-primary" />
+        <SummaryCard label="Cancelados" value={String(cancelados.length)} color="text-destructive" />
+        <SummaryCard label="Atrasados" value={String(atrasados.length)} color="text-destructive" />
+        <SummaryCard label="Por Status" value={`${porStatus.length} tipos`} />
+      </div>
+
+      {porStatus.length > 0 && (
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold mb-3">Pedidos por Status</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <ReBarChart data={porStatus}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="status" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip />
+              <Bar dataKey="qtd" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            </ReBarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
+      <Card><Table><TableHeader><TableRow>
+        <TableHead>Data</TableHead>
+        <TableHead>Cliente</TableHead>
+        <TableHead>Vendedor</TableHead>
+        <TableHead>Status</TableHead>
+        <TableHead>Entrega</TableHead>
+        <TableHead className="text-right">Total</TableHead>
+      </TableRow></TableHeader><TableBody>
+        {isLoading ? <LR cols={6} /> : !data.length ? <ER cols={6} msg="Nenhum pedido no período" /> :
+          data.map((p) => (
+            <TableRow key={p.id}>
+              <TableCell className="text-sm">{format(new Date(p.data_pedido), "dd/MM/yyyy")}</TableCell>
+              <TableCell className="font-medium text-sm">{p.clientes?.nome ?? "—"}</TableCell>
+              <TableCell className="text-sm">{vendedorMap.get(p.vendedor_id) ?? "—"}</TableCell>
+              <TableCell>
+                <Badge variant={p.status === "cancelado" ? "destructive" : p.status === "convertido_em_venda" ? "default" : "secondary"} className="text-[10px]">
+                  {STATUS_LABELS[p.status] ?? p.status}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-sm">
+                {p.data_prevista_entrega}
+                {p.data_prevista_entrega < hoje && ["rascunho", "aguardando_entrega", "em_rota"].includes(p.status) && (
+                  <Badge variant="destructive" className="ml-1 text-[9px]">Atrasado</Badge>
+                )}
+              </TableCell>
+              <TableCell className="text-right font-medium">{fmtR(Number(p.valor_total))}</TableCell>
+            </TableRow>
+          ))}
+      </TableBody></Table></Card>
+    </>
+  );
+}
+
 function LR({ cols }: { cols: number }) {
   return <TableRow><TableCell colSpan={cols} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>;
 }
