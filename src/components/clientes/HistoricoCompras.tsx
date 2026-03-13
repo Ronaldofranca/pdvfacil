@@ -90,7 +90,7 @@ export function HistoricoCompras({ open, onOpenChange, cliente }: Props) {
               </div>
               <div>
                 <Label>Valor (R$)</Label>
-                <Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} />
+                <Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} onBlur={(e) => { const v = parseFloat(e.target.value); setValor(isNaN(v) ? "0.00" : v.toFixed(2)); }} />
               </div>
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>Cancelar</Button>
