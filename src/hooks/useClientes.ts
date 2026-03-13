@@ -33,7 +33,9 @@ export interface ClienteInput {
   tipo?: "pf" | "pj";
   cidade?: string;
   rua?: string;
+  bairro?: string;
   estado?: string;
+  uf?: string;
   cep?: string;
   latitude?: number | null;
   longitude?: number | null;
