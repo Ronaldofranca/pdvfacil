@@ -112,6 +112,7 @@ export interface AuditLog extends BaseEntity {
 
 export type ModuleKey =
   | "dashboard"
+  | "pedidos"
   | "vendas"
   | "clientes"
   | "produtos"
