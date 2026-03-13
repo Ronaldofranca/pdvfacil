@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Navigation, Phone, ShoppingCart, AlertTriangle, Search, Filter, ExternalLink } from "lucide-react";
+import { MapPin, Navigation, Phone, ShoppingCart, AlertTriangle, Search, Filter, ExternalLink, ClipboardList, Truck } from "lucide-react";
 import { useClientes } from "@/hooks/useClientes";
 import { useClienteScores, type ClienteScore } from "@/hooks/useClienteScore";
+import { usePedidos } from "@/hooks/usePedidos";
 import { useNavigate } from "react-router-dom";
 
 type Filtro = "todos" | "proximos" | "vencidas" | "inativos" | "vip";
