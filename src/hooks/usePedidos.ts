@@ -162,6 +162,7 @@ export function useCriarPedido() {
 
       const itensPayload = input.itens.map((i) => ({
         pedido_id: pedido.id,
+        empresa_id: input.empresa_id,
         produto_id: i.produto_id,
         nome_produto: i.nome,
         quantidade: i.quantidade,
