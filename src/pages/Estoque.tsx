@@ -184,6 +184,7 @@ export default function EstoquePage() {
       </Tabs>
 
       <MovimentoForm open={movOpen} onOpenChange={setMovOpen} />
+      <EntradaLoteForm open={loteOpen} onOpenChange={setLoteOpen} />
     </div>
   );
 }
