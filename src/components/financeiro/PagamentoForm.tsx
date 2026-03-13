@@ -94,7 +94,7 @@ export function PagamentoForm({ open, onOpenChange, parcela }: Props) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Valor (R$) *</Label>
-              <Input required type="number" step="0.01" min="0.01" max={saldo} value={valor} onChange={(e) => setValor(e.target.value)} />
+              <Input required type="number" step="0.01" min="0.01" max={saldo} value={valor} onChange={(e) => setValor(e.target.value)} onBlur={(e) => { const v = parseFloat(e.target.value); setValor(isNaN(v) ? "0.00" : v.toFixed(2)); }} />
             </div>
             <div>
               <Label>Forma *</Label>

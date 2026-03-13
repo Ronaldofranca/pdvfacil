@@ -81,7 +81,7 @@ export function GerarParcelasForm({ open, onOpenChange, vendaId, clienteId, valo
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Valor Total (R$) *</Label>
-              <Input required type="number" step="0.01" value={form.valor_total} onChange={(e) => set("valor_total", e.target.value)} />
+              <Input required type="number" step="0.01" value={form.valor_total} onChange={(e) => set("valor_total", e.target.value)} onBlur={(e) => { const v = parseFloat(e.target.value); set("valor_total", isNaN(v) ? "0.00" : v.toFixed(2)); }} />
             </div>
             <div>
               <Label>Nº Parcelas *</Label>

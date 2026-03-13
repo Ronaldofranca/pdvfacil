@@ -80,7 +80,7 @@ export function KitForm({ open, onOpenChange, kit }: Props) {
           </div>
           <div>
             <Label>Preço do Kit (R$)</Label>
-            <Input type="number" step="0.01" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} />
+            <Input type="number" step="0.01" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} onBlur={(e) => { const v = parseFloat(e.target.value); setForm((f: typeof form) => ({ ...f, preco: isNaN(v) ? "0.00" : v.toFixed(2) })); }} />
           </div>
           <div>
             <Label>Descrição</Label>

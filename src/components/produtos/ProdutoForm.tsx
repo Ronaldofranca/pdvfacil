@@ -124,11 +124,11 @@ export function ProdutoForm({ open, onOpenChange, produto }: Props) {
             </div>
             <div>
               <Label>Preço (R$)</Label>
-              <Input type="number" step="0.01" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} />
+              <Input type="number" step="0.01" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} onBlur={(e) => { const v = parseFloat(e.target.value); setForm((f: typeof form) => ({ ...f, preco: isNaN(v) ? "0.00" : v.toFixed(2) })); }} />
             </div>
             <div>
               <Label>Custo (R$)</Label>
-              <Input type="number" step="0.01" value={form.custo} onChange={(e) => setForm({ ...form, custo: e.target.value })} />
+              <Input type="number" step="0.01" value={form.custo} onChange={(e) => setForm({ ...form, custo: e.target.value })} onBlur={(e) => { const v = parseFloat(e.target.value); setForm((f: typeof form) => ({ ...f, custo: isNaN(v) ? "0.00" : v.toFixed(2) })); }} />
             </div>
             <div className="col-span-2">
               <Label>Categoria</Label>
