@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEmpresas } from "@/hooks/useEmpresas";
 
 interface TopBarProps {
   onMenuToggle: () => void;
@@ -18,6 +19,8 @@ interface TopBarProps {
 export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
   const isMobile = useIsMobile();
   const { profile } = useAuth();
+  const { data: empresas } = useEmpresas();
+  const empresaNome = empresas?.[0]?.nome || "Empresa";
 
   const initials = profile?.nome
     ? profile.nome
@@ -38,7 +41,7 @@ export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
         )}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Building2 className="w-4 h-4" />
-          <span className="font-medium text-foreground">{profile?.cargo || "Empresa"}</span>
+          <span className="font-medium text-foreground truncate max-w-[160px]">{empresaNome}</span>
         </div>
       </div>
       <div className="flex items-center gap-1">

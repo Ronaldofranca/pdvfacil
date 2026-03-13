@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Zap, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEmpresas } from "@/hooks/useEmpresas";
 
 interface SidebarProps {
   open: boolean;
@@ -13,6 +14,8 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose, onLogout }: SidebarProps) {
   const { profile } = useAuth();
+  const { data: empresas } = useEmpresas();
+  const empresaNome = empresas?.[0]?.nome || "VendaForce";
 
   return (
     <aside
@@ -26,7 +29,7 @@ export function Sidebar({ open, onClose, onLogout }: SidebarProps) {
         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
           <Zap className="w-4 h-4 text-primary-foreground" />
         </div>
-        <span className="text-lg font-bold text-foreground tracking-tight">VendaForce</span>
+        <span className="text-lg font-bold text-foreground tracking-tight truncate">{empresaNome}</span>
       </div>
 
       {/* Navigation */}
