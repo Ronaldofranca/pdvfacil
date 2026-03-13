@@ -72,6 +72,7 @@ export function usePedidos(filtros?: { status?: StatusPedido; cliente_id?: strin
       if (error) throw error;
       return data as Pedido[];
     },
+    enabled: filtros?.cliente_id !== undefined ? !!filtros.cliente_id : true,
   });
 }
 
