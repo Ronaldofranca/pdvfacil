@@ -48,7 +48,8 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
     cpf_cnpj: "",
     cidade: "",
     rua: "",
-    estado: "",
+    bairro: "",
+    uf: "",
     cep: "",
     latitude: "",
     longitude: "",
@@ -66,7 +67,8 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
         cpf_cnpj: cliente.cpf_cnpj ?? "",
         cidade: cliente.cidade ?? "",
         rua: cliente.rua ?? "",
-        estado: cliente.estado ?? "",
+        bairro: cliente.bairro ?? "",
+        uf: (cliente.uf ?? cliente.estado ?? "").toUpperCase(),
         cep: cliente.cep ?? "",
         latitude: cliente.latitude != null ? String(cliente.latitude) : "",
         longitude: cliente.longitude != null ? String(cliente.longitude) : "",
@@ -90,7 +92,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
         }]);
       }
     } else {
-      setForm({ nome: "", email: "", cpf_cnpj: "", cidade: "", rua: "", estado: "", cep: "", latitude: "", longitude: "", observacoes: "", ativo: true, cliente_indicador_id: "" });
+      setForm({ nome: "", email: "", cpf_cnpj: "", cidade: "", rua: "", bairro: "", uf: "", cep: "", latitude: "", longitude: "", observacoes: "", ativo: true, cliente_indicador_id: "" });
       setTelefones([{ telefone: "", tipo: "celular", principal: true }]);
     }
     setSearchIndicador("");
