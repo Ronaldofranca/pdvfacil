@@ -342,6 +342,10 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
               <Label>Rua / Endereço</Label>
               <Input value={form.rua} onChange={(e) => set("rua", e.target.value)} />
             </div>
+            <div className="col-span-2">
+              <Label>Bairro</Label>
+              <Input value={form.bairro} onChange={(e) => set("bairro", e.target.value)} />
+            </div>
             <div>
               <Label>Cidade</Label>
               <Input value={form.cidade} onChange={(e) => set("cidade", e.target.value)} />
