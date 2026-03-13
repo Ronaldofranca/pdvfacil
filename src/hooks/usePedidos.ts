@@ -152,7 +152,7 @@ export function useCriarPedido() {
           horario_entrega: input.horario_entrega ?? "",
           status: "rascunho",
           subtotal: subtotalBruto,
-          desconto: input.desconto,
+          desconto_total: input.desconto,
           valor_total: total,
           observacoes: input.observacoes ?? "",
         })
