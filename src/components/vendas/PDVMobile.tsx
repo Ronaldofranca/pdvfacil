@@ -273,6 +273,30 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
     
+    // Validate kit component stock for non-admin users
+    if (!isAdmin) {
+      const estoqueMap = new Map<string, number>();
+      for (const e of estoqueData ?? []) {
+        estoqueMap.set(e.produto_id, Number(e.quantidade));
+      }
+      for (const item of cart) {
+        if (item.is_kit && item.kit_itens) {
+          const missing: string[] = [];
+          for (const ki of item.kit_itens) {
+            const saldo = estoqueMap.get(ki.produto_id) ?? 0;
+            if (saldo < ki.quantidade * item.quantidade) {
+              const prod = (onlineProdutos as any[])?.find((p: any) => p.id === ki.produto_id);
+              missing.push(prod?.nome ?? ki.produto_id.slice(0, 8));
+            }
+          }
+          if (missing.length > 0) {
+            toast.error(`Kit "${item.nome}" sem estoque: ${missing.join(", ")}`);
+            return;
+          }
+        }
+      }
+    }
+
     if (hasCrediario) {
       if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");
       if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
