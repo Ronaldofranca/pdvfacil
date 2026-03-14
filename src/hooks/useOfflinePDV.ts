@@ -13,6 +13,7 @@ export interface CachedProduto {
   nome: string;
   codigo: string;
   preco: number;
+  custo: number;
   ativo: boolean;
   categoria_id: string | null;
   categorias?: { nome: string } | null;

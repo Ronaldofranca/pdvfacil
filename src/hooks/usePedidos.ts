@@ -42,6 +42,9 @@ export interface ItemPedido {
   subtotal: number;
   created_at: string;
   updated_at: string;
+  produtos?: {
+    custo: number | null;
+  } | null;
 }
 
 export interface PedidoInput {
