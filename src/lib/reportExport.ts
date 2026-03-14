@@ -498,7 +498,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   ` : "";
 
   // ─── Payments ───
-  const pagamentosHtml = pagamentos.length > 0 ? `
+  const pagamentosHtml = showFormaPagamento && pagamentos.length > 0 ? `
     <div class="section">
       <div class="section-title">${isVenda ? "Formas de Pagamento" : "Pagamentos Realizados"}</div>
       ${pagamentos.map((p) => `
