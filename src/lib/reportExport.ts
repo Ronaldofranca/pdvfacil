@@ -404,15 +404,29 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   }
 
   // ─── Header ───
+  const showLogo = rc?.recibo_exibir_logo ?? true;
+  const subtitle = rc?.recibo_subtitulo || "";
+  const showTelefone = rc?.recibo_exibir_telefone ?? true;
+  const showEndereco = rc?.recibo_exibir_endereco ?? true;
+  const showCpfCnpj = rc?.recibo_exibir_cpf_cnpj ?? false;
+  const showCliente = rc?.recibo_exibir_cliente ?? true;
+  const showFormaPagamento = rc?.recibo_exibir_forma_pagamento ?? true;
+  const showParcelas = rc?.recibo_exibir_parcelas ?? true;
+  const showObservacoes = rc?.recibo_exibir_observacoes ?? true;
+  const mensagemFinal = rc?.recibo_mensagem_final ?? "Obrigado pela preferência!";
+  const rodape = rc?.recibo_rodape ?? "Este recibo não tem valor fiscal.";
+
   const headerHtml = `
     <div class="receipt-header">
       <div class="brand">
-        ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" />` : ""}
+        ${showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" />` : ""}
         <div class="brand-info">
           <h1>${escapeHtml(empresa)}</h1>
-          ${empresaInfo?.telefone ? `<p>📞 ${escapeHtml(empresaInfo.telefone)}</p>` : ""}
+          ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
+          ${showTelefone && empresaInfo?.telefone ? `<p>📞 ${escapeHtml(empresaInfo.telefone)}</p>` : ""}
           ${empresaInfo?.cidade || empresaInfo?.uf ? `<p>📍 ${escapeHtml([empresaInfo.cidade, empresaInfo.uf].filter(Boolean).join(" - "))}</p>` : ""}
-          ${empresaInfo?.endereco ? `<p>${escapeHtml(empresaInfo.endereco)}</p>` : ""}
+          ${showEndereco && empresaInfo?.endereco ? `<p>${escapeHtml(empresaInfo.endereco)}</p>` : ""}
+          ${showCpfCnpj && empresaInfo?.cnpj ? `<p>CNPJ: ${escapeHtml(empresaInfo.cnpj)}</p>` : ""}
         </div>
       </div>
       <div class="doc-info">
