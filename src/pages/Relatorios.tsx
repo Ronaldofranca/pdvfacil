@@ -132,7 +132,23 @@ export default function RelatoriosPage() {
 
   // Totals
   const totalVendas = vendasFiltered.reduce((s, v) => s + Number(v.total), 0);
-  const totalPgtos = pgtos?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+  const totalPgtosParcelas = pgtos?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+  // Incluir vendas à vista (non-crediário) no total recebido
+  const totalAVista = useMemo(() => {
+    let total = 0;
+    (vendas ?? []).forEach((v) => {
+      const vpgtos = (v as any).pagamentos;
+      if (Array.isArray(vpgtos)) {
+        for (const pg of vpgtos) {
+          if (pg.forma !== "crediario") {
+            total += Number(pg.valor ?? 0);
+          }
+        }
+      }
+    });
+    return total;
+  }, [vendas]);
+  const totalPgtos = totalPgtosParcelas + totalAVista;
   const totalVencido = vencidas?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
   const totalPendente = (todasParcelas ?? []).filter((p) => p.status === "pendente").reduce((s, p) => s + Number(p.saldo ?? 0), 0);
 
