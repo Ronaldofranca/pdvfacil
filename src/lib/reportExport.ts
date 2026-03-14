@@ -212,9 +212,9 @@ function crc16ccitt(str: string): string {
   return crc.toString(16).toUpperCase().padStart(4, "0");
 }
 
-async function generatePixQRCodeDataUrl(chave: string, tipo: string, valor?: number, nome?: string): Promise<string | null> {
+async function generatePixQRCodeDataUrl(chave: string, tipo: string, valor?: number, nome?: string, cidade?: string): Promise<string | null> {
   try {
-    const pixPayload = buildPixPayload(chave, tipo, valor, nome);
+    const pixPayload = buildPixPayload(chave, tipo, valor, nome, cidade);
     const dataUrl = await QRCode.toDataURL(pixPayload, {
       width: 200,
       margin: 1,
@@ -225,6 +225,9 @@ async function generatePixQRCodeDataUrl(chave: string, tipo: string, valor?: num
     return null;
   }
 }
+
+// Export for reuse in components
+export { buildPixPayload, generatePixQRCodeDataUrl };
 
 // ─── Shared receipt CSS ───
 const RECEIPT_CSS = `
