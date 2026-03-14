@@ -340,9 +340,13 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
       }
     }
 
-    // For crediário, entrada counts as payment
+    // Check fiado restriction
     if (hasCrediario) {
       if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");
+      const clienteFiado = clientes?.find((c) => c.id === clienteId);
+      if (clienteFiado && (clienteFiado as any).permitir_fiado === false) {
+        return toast.error("Este cliente está restrito para compras fiado. Permitir apenas pagamento à vista.");
+      }
       if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
     } else {
       if (totalPago < total) return toast.error("Valor pago insuficiente");
