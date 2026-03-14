@@ -76,8 +76,9 @@ export function CrediarioConfigPanel({ config, onChange, total, compact }: Props
             min="1"
             max="48"
             className={compact ? "h-10 text-sm" : "h-9 text-xs"}
-            value={config.num_parcelas}
-            onChange={(e) => set("num_parcelas", parseInt(e.target.value) || 1)}
+            value={config.num_parcelas === 0 ? "" : config.num_parcelas}
+            onChange={(e) => set("num_parcelas", e.target.value === "" ? 0 : parseInt(e.target.value) || 0)}
+            onBlur={() => { if (config.num_parcelas < 1) set("num_parcelas", 1); }}
           />
         </div>
         <div className={compact ? "col-span-2" : ""}>
