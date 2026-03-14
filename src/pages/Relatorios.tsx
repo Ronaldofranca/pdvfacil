@@ -413,10 +413,11 @@ export default function RelatoriosPage() {
         {/* ═══ PRODUTOS ═══ */}
         <TabsContent value="produtos" className="space-y-4">
           <ExportBar
-            onCSV={() => doExportCSV((prodVendidos ?? []).map((p) => ({ Produto: p.nome, Qtd: p.qtd, Receita: p.receita })), "produtos")}
+            onCSV={() => doExportCSV((prodVendidos ?? []).map((p) => ({ Produto: p.nome, Qtd: p.qtd, Receita: p.receita, Custo: p.custo, Lucro: p.lucro })), "produtos")}
             onPDF={() => doExportPDF("Relatório de Produtos",
-              ["Produto", "Qtd Vendida", "Receita"],
-              (prodVendidos ?? []).map((p) => [p.nome, String(p.qtd), fmtR(p.receita)])
+              ["Produto", "Qtd Vendida", "Receita", "Custo", "Lucro"],
+              (prodVendidos ?? []).map((p) => [p.nome, String(p.qtd), fmtR(p.receita), fmtR(p.custo), fmtR(p.lucro)]),
+              ["TOTAL", "", fmtR((prodVendidos ?? []).reduce((s, p) => s + p.receita, 0)), fmtR((prodVendidos ?? []).reduce((s, p) => s + p.custo, 0)), fmtR((prodVendidos ?? []).reduce((s, p) => s + p.lucro, 0))]
             )}
           />
           <Tabs defaultValue="mais">
@@ -426,26 +427,32 @@ export default function RelatoriosPage() {
             </TabsList>
             <TabsContent value="mais">
               <Card><Table><TableHeader><TableRow>
-                <TableHead>Produto</TableHead><TableHead className="text-right">Qtd</TableHead><TableHead className="text-right">Receita</TableHead>
+                <TableHead>Produto</TableHead><TableHead className="text-right">Qtd</TableHead>
+                <TableHead className="text-right">Receita</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Lucro</TableHead>
               </TableRow></TableHeader><TableBody>
-                {lProd ? <LR cols={3} /> : !(prodVendidos ?? []).length ? <ER cols={3} /> : prodVendidos!.map((p) => (
+                {lProd ? <LR cols={5} /> : !(prodVendidos ?? []).length ? <ER cols={5} /> : prodVendidos!.map((p) => (
                   <TableRow key={p.produto_id}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell className="text-right">{p.qtd}</TableCell>
-                    <TableCell className="text-right font-semibold">{fmtR(p.receita)}</TableCell>
+                    <TableCell className="text-right">{fmtR(p.receita)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{fmtR(p.custo)}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{fmtR(p.lucro)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody></Table></Card>
             </TabsContent>
             <TabsContent value="menos">
               <Card><Table><TableHeader><TableRow>
-                <TableHead>Produto</TableHead><TableHead className="text-right">Qtd</TableHead><TableHead className="text-right">Receita</TableHead>
+                <TableHead>Produto</TableHead><TableHead className="text-right">Qtd</TableHead>
+                <TableHead className="text-right">Receita</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Lucro</TableHead>
               </TableRow></TableHeader><TableBody>
-                {lProd ? <LR cols={3} /> : !(prodVendidos ?? []).length ? <ER cols={3} /> : [...(prodVendidos ?? [])].reverse().map((p) => (
+                {lProd ? <LR cols={5} /> : !(prodVendidos ?? []).length ? <ER cols={5} /> : [...(prodVendidos ?? [])].reverse().map((p) => (
                   <TableRow key={p.produto_id}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell className="text-right">{p.qtd}</TableCell>
-                    <TableCell className="text-right font-semibold">{fmtR(p.receita)}</TableCell>
+                    <TableCell className="text-right">{fmtR(p.receita)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{fmtR(p.custo)}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{fmtR(p.lucro)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody></Table></Card>
