@@ -1052,6 +1052,65 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
           </Button>
         </div>
       )}
+
+      {/* ─── Kit Detail Modal ─── */}
+      {kitDetailData && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end justify-center" onClick={() => setKitDetailId(null)}>
+          <div
+            className="bg-background w-full max-w-lg rounded-t-3xl p-6 space-y-4 max-h-[70vh] overflow-y-auto animate-in slide-in-from-bottom"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-primary/15 text-primary border-primary/30 gap-1">
+                  <Layers className="w-3 h-3" /> Kit
+                </Badge>
+                <h3 className="font-bold text-lg text-foreground">{kitDetailData.nome}</h3>
+              </div>
+              <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setKitDetailId(null)}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            {kitDetailData.imagem_url && (
+              <img src={kitDetailData.imagem_url} alt={kitDetailData.nome} className="w-full h-40 object-cover rounded-2xl" />
+            )}
+            {kitDetailData.descricao && (
+              <p className="text-sm text-muted-foreground">{kitDetailData.descricao}</p>
+            )}
+            <p className="text-2xl font-bold text-primary">{fmt(Number(kitDetailData.preco))}</p>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Composição do kit</p>
+              <div className="space-y-2">
+                {(kitDetailData as any).kit_itens?.map((ki: any) => (
+                  <div key={ki.produto_id} className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      {ki.produtos?.imagem_url ? (
+                        <img src={ki.produtos.imagem_url} className="w-10 h-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="text-sm font-medium text-foreground">{ki.produtos?.nome ?? "Produto"}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-muted-foreground">×{Number(ki.quantidade)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Button
+              className="w-full h-14 text-lg gap-2 rounded-2xl font-bold"
+              onClick={() => {
+                const kitProduct = kitsAsProducts.find((k: any) => k._kit_id === kitDetailData.id);
+                if (kitProduct) addToCart(kitProduct);
+                setKitDetailId(null);
+              }}
+            >
+              <Plus className="w-6 h-6" /> Adicionar ao carrinho
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
