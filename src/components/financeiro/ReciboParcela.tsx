@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileDown, Printer, Share2 } from "lucide-react";
 import { usePagamentosDaParcela, useParcelas } from "@/hooks/useParcelas";
 import { useEmpresas } from "@/hooks/useEmpresas";
+import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { exportReceiptPDF, fmtR } from "@/lib/reportExport";
@@ -36,9 +37,9 @@ const FORMA_LABELS: Record<string, string> = {
 export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
   const { data: pagamentos } = usePagamentosDaParcela(parcela?.id ?? null);
   const { data: empresas } = useEmpresas();
+  const { data: config } = useConfiguracoes();
   const empresa = empresas?.[0];
   
-  // Fetch sibling parcelas for the same venda to show remaining
   const { data: todasParcelas } = useParcelas(
     parcela?.venda_id ? { vendaId: parcela.venda_id } : undefined
   );
@@ -48,26 +49,29 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
   const clienteNome = (parcela as any).clientes?.nome ?? "Cliente não identificado";
   const vendaId = parcela.venda_id ? `#${parcela.venda_id.slice(0, 8)}` : "—";
 
-  // Calculate saldo anterior (before latest payment)
-  const ultimoPagamento = pagamentos?.[0]; // already ordered DESC
+  const ultimoPagamento = pagamentos?.[0];
   const valorPagoAntes = ultimoPagamento
     ? Number(parcela.valor_pago) - Number(ultimoPagamento.valor_pago)
     : Number(parcela.valor_pago);
   const saldoAnterior = Number(parcela.valor_total) - Math.max(0, valorPagoAntes);
 
-  // Remaining parcelas (not this one, still pending)
   const parcelasRestantes = todasParcelas?.filter(
     (p) => p.id !== parcela.id && (p.status === "pendente" || p.status === "parcial" || p.status === "vencida")
   );
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const pagamentosList = pagamentos?.map((pg) => ({
       forma: FORMA_LABELS[pg.forma_pagamento] ?? pg.forma_pagamento.replace(/_/g, " "),
       valor: Number(pg.valor_pago),
       data: format(new Date(pg.data_pagamento), "dd/MM/yyyy HH:mm"),
     })) ?? [];
 
-    exportReceiptPDF({
+    const saldoRestante = Number(parcela.saldo);
+    const pixConfig = config?.pix_chave && config?.pix_tipo && saldoRestante > 0
+      ? { chave: config.pix_chave, tipo: config.pix_tipo, valor: saldoRestante }
+      : undefined;
+
+    await exportReceiptPDF({
       type: "pagamento",
       id: parcela.id.slice(0, 8),
       empresa: empresa?.nome ?? "Empresa",
@@ -85,14 +89,14 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
         descontos: 0,
         total: Number(parcela.valor_total),
       },
-      pagamentos: pagamentosList.map((p) => ({ forma: p.forma, valor: p.valor })),
+      pagamentos: pagamentosList.map((p) => ({ forma: p.forma, valor: p.valor, data: p.data })),
       parcelaInfo: {
         numero: parcela.numero,
         vencimento: format(new Date(parcela.vencimento + "T12:00:00"), "dd/MM/yyyy"),
         valorTotal: Number(parcela.valor_total),
         valorPago: Number(parcela.valor_pago),
         saldoAnterior,
-        saldoRestante: Number(parcela.saldo),
+        saldoRestante,
         status: STATUS_LABELS[parcela.status] ?? parcela.status,
         vendaId: parcela.venda_id?.slice(0, 8) ?? "—",
       },
@@ -102,6 +106,11 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
         vencimento: format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy"),
         status: STATUS_LABELS[p.status] ?? p.status,
       })),
+      empresaInfo: {
+        telefone: empresa?.telefone || undefined,
+        endereco: empresa?.endereco || undefined,
+      },
+      pix: pixConfig,
     });
   };
 

@@ -6,6 +6,7 @@ import { FileDown, Printer, Share2 } from "lucide-react";
 import { useVendaItens } from "@/hooks/useVendas";
 import { useParcelas } from "@/hooks/useParcelas";
 import { useEmpresas } from "@/hooks/useEmpresas";
+import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { exportReceiptPDF, fmtR } from "@/lib/reportExport";
@@ -45,6 +46,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
   const { data: itens } = useVendaItens(venda?.id ?? null);
   const { data: parcelas } = useParcelas(venda?.id ? { vendaId: venda.id } : undefined);
   const { data: empresas } = useEmpresas();
+  const { data: config } = useConfiguracoes();
   const empresa = empresas?.[0];
 
   if (!venda) return null;
@@ -55,8 +57,20 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
   const pagamentos = Array.isArray(venda.pagamentos) ? (venda.pagamentos as any[]) : [];
   const hasCrediario = pagamentos.some((p: any) => p.forma === "crediario");
 
-  const handleExportPDF = () => {
-    exportReceiptPDF({
+  const handleExportPDF = async () => {
+    // Determine PIX value: for crediário, use saldo em aberto; for cash, no PIX needed
+    const hasPixPayment = pagamentos.some((p: any) => p.forma === "pix");
+    const pixConfig = config?.pix_chave && config?.pix_tipo
+      ? {
+          chave: config.pix_chave,
+          tipo: config.pix_tipo,
+          valor: hasCrediario
+            ? parcelas?.reduce((s, p) => s + (p.status !== "paga" ? Number(p.valor_total) - Number(p.valor_pago) : 0), 0) || Number(venda.total)
+            : hasPixPayment ? undefined : Number(venda.total),
+        }
+      : undefined;
+
+    await exportReceiptPDF({
       type: "venda",
       id: vendaId,
       empresa: empresa?.nome ?? "Empresa",
@@ -90,6 +104,11 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
         vencimento: format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy"),
         status: PARCELA_STATUS[p.status] ?? p.status,
       })) : undefined,
+      empresaInfo: {
+        telefone: empresa?.telefone || undefined,
+        endereco: empresa?.endereco || undefined,
+      },
+      pix: pixConfig,
     });
   };
 
@@ -101,7 +120,6 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
       } catch { /* user cancelled */ }
     } else {
       await navigator.clipboard.writeText(text);
-      // Would use toast but keeping it simple
     }
   };
 
@@ -149,7 +167,6 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
             <p className="text-sm font-semibold">Itens da Venda</p>
             {itens?.map((item) => (
               <div key={item.id} className="flex items-start gap-3 p-2 rounded border text-sm">
-                {/* Product image placeholder */}
                 <div className="w-10 h-10 rounded bg-muted flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
                   <img 
                     src={(item as any).produtos?.imagem_url || "/placeholder.svg"} 
