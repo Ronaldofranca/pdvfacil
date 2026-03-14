@@ -372,7 +372,7 @@ const RECEIPT_CSS = `
   }
 `;
 
-export async function exportReceiptPDF(options: ReceiptPDFOptions) {
+export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<string> {
   const {
     type, id, empresa, logoUrl, data, cliente,
     itens, resumo, pagamentos, parcelas,
