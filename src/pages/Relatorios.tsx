@@ -25,7 +25,7 @@ import {
   useRelParcelasPorCliente, useRelLucroProduto, useRelCurvaABC,
   useRelVendedores, useRelClientes, useRelEstoqueAtual,
   useRelMovimentacaoEstoque, useRelMetasVendedores, useRelRomaneios,
-  useRelPedidos,
+  useRelPedidos, useRelLucroResumo,
 } from "@/hooks/useRelatorios";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useTopIndicadores } from "@/hooks/useIndicacoes";
@@ -72,6 +72,7 @@ export default function RelatoriosPage() {
   const { data: metas, isLoading: lMetas } = useRelMetasVendedores(now.getMonth() + 1, now.getFullYear());
   const { data: romaneios, isLoading: lRom } = useRelRomaneios(inicio, fim);
   const { data: pedidosRel, isLoading: lPed } = useRelPedidos(inicio, fim);
+  const { data: lucroResumo, isLoading: lLucroRes } = useRelLucroResumo(inicio, fim);
   // Vendedor name map
   const vendedorMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -184,7 +185,7 @@ export default function RelatoriosPage() {
     return Array.from(map.entries()).map(([forma, valor]) => ({ forma, valor }));
   }, [pgtos, vendas]);
 
-  // Lucro por vendedor
+  // Lucro por vendedor (using item-level cost data)
   const lucroPorVendedor = useMemo(() => {
     const map = new Map<string, { nome: string; receita: number; custo: number; lucro: number }>();
     (vendasDet ?? []).forEach((v) => {
@@ -192,11 +193,27 @@ export default function RelatoriosPage() {
       const nome = vendedorMap.get(vid) ?? vid.slice(0, 8);
       const curr = map.get(vid) ?? { nome, receita: 0, custo: 0, lucro: 0 };
       curr.receita += Number(v.total);
+      let vendaCusto = 0;
+      for (const it of (v as any).itens_venda ?? []) {
+        vendaCusto += Number(it.custo_unitario ?? 0) * Number(it.quantidade);
+      }
+      curr.custo += vendaCusto;
+      curr.lucro += Number(v.total) - vendaCusto;
       map.set(vid, curr);
     });
-    // Approximate cost from lucros data
     return Array.from(map.values()).sort((a, b) => b.receita - a.receita);
   }, [vendasDet, vendedorMap]);
+
+  // Per-sale cost/lucro computation
+  const vendasComLucro = useMemo(() => {
+    return (vendasDet ?? []).map((v) => {
+      let custo = 0;
+      for (const it of (v as any).itens_venda ?? []) {
+        custo += Number(it.custo_unitario ?? 0) * Number(it.quantidade);
+      }
+      return { ...v, _custo: custo, _lucro: Number(v.total) - custo };
+    });
+  }, [vendasDet]);
 
   // Export helpers
   const doExportCSV = (rows: Record<string, any>[], name: string) => exportCSV(rows, `${name}_${inicio}_${fim}.csv`);
@@ -324,15 +341,22 @@ export default function RelatoriosPage() {
             <TabsContent value="periodo">
               <Card><Table><TableHeader><TableRow>
                 <TableHead>Data</TableHead><TableHead>Cliente</TableHead><TableHead>Vendedor</TableHead>
-                <TableHead className="text-right">Desconto</TableHead><TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Total</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Lucro</TableHead>
               </TableRow></TableHeader><TableBody>
-                {lVendas ? <LR cols={5} /> : !vendasFiltered.length ? <ER cols={5} /> : vendasFiltered.map((v) => (
+                {lVendas ? <LR cols={6} /> : !vendasComLucro.length ? <ER cols={6} /> : vendasComLucro
+                  .filter((v) => {
+                    if (vendedorFilter !== "all" && v.vendedor_id !== vendedorFilter) return false;
+                    if (clienteFilter !== "all" && (v as any).clientes?.nome !== clienteFilter) return false;
+                    return true;
+                  })
+                  .map((v) => (
                   <TableRow key={v.id}>
                     <TableCell className="text-sm">{format(new Date(v.data_venda), "dd/MM/yy HH:mm")}</TableCell>
                     <TableCell>{(v as any).clientes?.nome ?? "—"}</TableCell>
                     <TableCell>{vendedorMap.get(v.vendedor_id) ?? "—"}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">{fmtR(Number(v.desconto_total))}</TableCell>
                     <TableCell className="text-right font-semibold">{fmtR(Number(v.total))}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{fmtR(v._custo)}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{fmtR(v._lucro)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody></Table></Card>
@@ -389,10 +413,11 @@ export default function RelatoriosPage() {
         {/* ═══ PRODUTOS ═══ */}
         <TabsContent value="produtos" className="space-y-4">
           <ExportBar
-            onCSV={() => doExportCSV((prodVendidos ?? []).map((p) => ({ Produto: p.nome, Qtd: p.qtd, Receita: p.receita })), "produtos")}
+            onCSV={() => doExportCSV((prodVendidos ?? []).map((p) => ({ Produto: p.nome, Qtd: p.qtd, Receita: p.receita, Custo: p.custo, Lucro: p.lucro })), "produtos")}
             onPDF={() => doExportPDF("Relatório de Produtos",
-              ["Produto", "Qtd Vendida", "Receita"],
-              (prodVendidos ?? []).map((p) => [p.nome, String(p.qtd), fmtR(p.receita)])
+              ["Produto", "Qtd Vendida", "Receita", "Custo", "Lucro"],
+              (prodVendidos ?? []).map((p) => [p.nome, String(p.qtd), fmtR(p.receita), fmtR(p.custo), fmtR(p.lucro)]),
+              ["TOTAL", "", fmtR((prodVendidos ?? []).reduce((s, p) => s + p.receita, 0)), fmtR((prodVendidos ?? []).reduce((s, p) => s + p.custo, 0)), fmtR((prodVendidos ?? []).reduce((s, p) => s + p.lucro, 0))]
             )}
           />
           <Tabs defaultValue="mais">
@@ -402,26 +427,32 @@ export default function RelatoriosPage() {
             </TabsList>
             <TabsContent value="mais">
               <Card><Table><TableHeader><TableRow>
-                <TableHead>Produto</TableHead><TableHead className="text-right">Qtd</TableHead><TableHead className="text-right">Receita</TableHead>
+                <TableHead>Produto</TableHead><TableHead className="text-right">Qtd</TableHead>
+                <TableHead className="text-right">Receita</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Lucro</TableHead>
               </TableRow></TableHeader><TableBody>
-                {lProd ? <LR cols={3} /> : !(prodVendidos ?? []).length ? <ER cols={3} /> : prodVendidos!.map((p) => (
+                {lProd ? <LR cols={5} /> : !(prodVendidos ?? []).length ? <ER cols={5} /> : prodVendidos!.map((p) => (
                   <TableRow key={p.produto_id}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell className="text-right">{p.qtd}</TableCell>
-                    <TableCell className="text-right font-semibold">{fmtR(p.receita)}</TableCell>
+                    <TableCell className="text-right">{fmtR(p.receita)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{fmtR(p.custo)}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{fmtR(p.lucro)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody></Table></Card>
             </TabsContent>
             <TabsContent value="menos">
               <Card><Table><TableHeader><TableRow>
-                <TableHead>Produto</TableHead><TableHead className="text-right">Qtd</TableHead><TableHead className="text-right">Receita</TableHead>
+                <TableHead>Produto</TableHead><TableHead className="text-right">Qtd</TableHead>
+                <TableHead className="text-right">Receita</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Lucro</TableHead>
               </TableRow></TableHeader><TableBody>
-                {lProd ? <LR cols={3} /> : !(prodVendidos ?? []).length ? <ER cols={3} /> : [...(prodVendidos ?? [])].reverse().map((p) => (
+                {lProd ? <LR cols={5} /> : !(prodVendidos ?? []).length ? <ER cols={5} /> : [...(prodVendidos ?? [])].reverse().map((p) => (
                   <TableRow key={p.produto_id}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell className="text-right">{p.qtd}</TableCell>
-                    <TableCell className="text-right font-semibold">{fmtR(p.receita)}</TableCell>
+                    <TableCell className="text-right">{fmtR(p.receita)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{fmtR(p.custo)}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{fmtR(p.lucro)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody></Table></Card>
@@ -628,6 +659,41 @@ export default function RelatoriosPage() {
 
         {/* ═══ LUCRO ═══ */}
         <TabsContent value="lucro" className="space-y-4">
+          {/* Summary cards */}
+          {lucroResumo && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <Card className="p-4">
+                <p className="text-xs text-muted-foreground font-medium uppercase">Total Vendido</p>
+                <p className="text-xl font-bold text-foreground mt-1">{fmtR(lucroResumo.totalVendido)}</p>
+              </Card>
+              <Card className="p-4">
+                <p className="text-xs text-muted-foreground font-medium uppercase">Custo Produtos</p>
+                <p className="text-xl font-bold text-muted-foreground mt-1">{fmtR(lucroResumo.custoTotal)}</p>
+              </Card>
+              <Card className="p-4">
+                <p className="text-xs text-muted-foreground font-medium uppercase">Lucro Bruto</p>
+                <p className="text-xl font-bold text-primary mt-1">{fmtR(lucroResumo.lucroBruto)}</p>
+                <p className="text-[11px] text-muted-foreground">Margem {lucroResumo.margemBruta.toFixed(1)}%</p>
+              </Card>
+              {lucroResumo.totalSangrias > 0 && (
+                <Card className="p-4">
+                  <p className="text-xs text-muted-foreground font-medium uppercase">Sangrias</p>
+                  <p className="text-xl font-bold text-destructive mt-1">-{fmtR(lucroResumo.totalSangrias)}</p>
+                </Card>
+              )}
+              {lucroResumo.totalSuprimentos > 0 && (
+                <Card className="p-4">
+                  <p className="text-xs text-muted-foreground font-medium uppercase">Suprimentos</p>
+                  <p className="text-xl font-bold text-foreground mt-1">+{fmtR(lucroResumo.totalSuprimentos)}</p>
+                </Card>
+              )}
+              <Card className="p-4 border-primary/30">
+                <p className="text-xs text-muted-foreground font-medium uppercase">Lucro Líquido</p>
+                <p className="text-xl font-bold text-primary mt-1">{fmtR(lucroResumo.lucroLiquido)}</p>
+                <p className="text-[11px] text-muted-foreground">Margem {lucroResumo.margemLiquida.toFixed(1)}%</p>
+              </Card>
+            </div>
+          )}
           <ExportBar
             onCSV={() => doExportCSV((lucros ?? []).map((l) => ({
               Produto: l.nome, Qtd: l.qtd, Receita: l.receita, Custo: l.custo, Lucro: l.lucro, Margem: l.margem.toFixed(1) + "%",
@@ -635,7 +701,7 @@ export default function RelatoriosPage() {
             onPDF={() => doExportPDF("Relatório de Lucro por Produto",
               ["Produto", "Qtd", "Receita", "Custo", "Lucro", "Margem"],
               (lucros ?? []).map((l) => [l.nome, String(l.qtd), fmtR(l.receita), fmtR(l.custo), fmtR(l.lucro), l.margem.toFixed(1) + "%"]),
-              ["TOTAL", "", fmtR((lucros ?? []).reduce((s, l) => s + l.receita, 0)), fmtR((lucros ?? []).reduce((s, l) => s + l.custo, 0)), fmtR((lucros ?? []).reduce((s, l) => s + l.lucro, 0)), ""]
+              ["TOTAL", "", fmtR(lucroResumo?.totalVendido ?? 0), fmtR(lucroResumo?.custoTotal ?? 0), fmtR(lucroResumo?.lucroBruto ?? 0), lucroResumo ? lucroResumo.margemBruta.toFixed(1) + "%" : ""]
             )}
           />
           {lucros && lucros.length > 0 && (

@@ -26,7 +26,7 @@ export function useRelVendasDetalhadas(inicio: string, fim: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendas")
-        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, cliente_id, clientes(nome), itens_venda(produto_id, nome_produto, quantidade, preco_vendido, preco_original, subtotal, desconto, bonus)")
+        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, cliente_id, clientes(nome), itens_venda(produto_id, nome_produto, quantidade, preco_vendido, preco_original, subtotal, desconto, bonus, custo_unitario)")
         .gte("data_venda", inicio)
         .lte("data_venda", fim + "T23:59:59")
         .eq("status", "finalizada" as any)
@@ -37,7 +37,7 @@ export function useRelVendasDetalhadas(inicio: string, fim: string) {
   });
 }
 
-// ─── Produtos vendidos ───
+// ─── Produtos vendidos (com custo e lucro) ───
 export function useRelProdutosVendidos(inicio: string, fim: string) {
   return useQuery({
     queryKey: ["rel_produtos_vendidos", inicio, fim],
@@ -54,16 +54,20 @@ export function useRelProdutosVendidos(inicio: string, fim: string) {
       const vendaIds = vendas.map((v) => v.id);
       const { data, error } = await supabase
         .from("itens_venda")
-        .select("produto_id, nome_produto, quantidade, preco_vendido, subtotal, bonus")
+        .select("produto_id, nome_produto, quantidade, preco_vendido, subtotal, bonus, custo_unitario")
         .in("venda_id", vendaIds);
       if (error) throw error;
 
-      const map = new Map<string, { nome: string; qtd: number; receita: number }>();
+      const map = new Map<string, { nome: string; qtd: number; receita: number; custo: number; lucro: number }>();
       for (const item of data ?? []) {
         const key = item.produto_id;
-        const curr = map.get(key) ?? { nome: item.nome_produto, qtd: 0, receita: 0 };
+        const curr = map.get(key) ?? { nome: item.nome_produto, qtd: 0, receita: 0, custo: 0, lucro: 0 };
+        const itemReceita = Number(item.subtotal);
+        const itemCusto = Number(item.custo_unitario ?? 0) * Number(item.quantidade);
         curr.qtd += Number(item.quantidade);
-        curr.receita += Number(item.subtotal);
+        curr.receita += itemReceita;
+        curr.custo += itemCusto;
+        curr.lucro += itemReceita - itemCusto;
         map.set(key, curr);
       }
 
@@ -349,6 +353,66 @@ export function useRelPedidos(inicio: string, fim: string) {
         .order("data_pedido", { ascending: false });
       if (error) throw error;
       return data as any[];
+    },
+  });
+}
+
+// ─── Resumo de lucro do período (com sangrias/suprimentos) ───
+export function useRelLucroResumo(inicio: string, fim: string) {
+  return useQuery({
+    queryKey: ["rel_lucro_resumo", inicio, fim],
+    queryFn: async () => {
+      // 1. Vendas finalizadas no período
+      const { data: vendas } = await supabase
+        .from("vendas")
+        .select("id, total")
+        .gte("data_venda", inicio)
+        .lte("data_venda", fim + "T23:59:59")
+        .eq("status", "finalizada" as any);
+
+      const totalVendido = vendas?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
+      const vendaIds = vendas?.map((v) => v.id) ?? [];
+
+      // 2. Custo dos produtos vendidos
+      let custoTotal = 0;
+      if (vendaIds.length > 0) {
+        const { data: itens } = await supabase
+          .from("itens_venda")
+          .select("quantidade, custo_unitario")
+          .in("venda_id", vendaIds);
+        for (const item of itens ?? []) {
+          custoTotal += Number(item.custo_unitario ?? 0) * Number(item.quantidade);
+        }
+      }
+
+      const lucroBruto = totalVendido - custoTotal;
+
+      // 3. Sangrias e suprimentos do período (from caixa_movimentacoes)
+      const { data: movCaixa } = await supabase
+        .from("caixa_movimentacoes")
+        .select("tipo, valor, created_at")
+        .gte("created_at", inicio)
+        .lte("created_at", fim + "T23:59:59");
+
+      let totalSangrias = 0;
+      let totalSuprimentos = 0;
+      for (const mov of movCaixa ?? []) {
+        if (mov.tipo === "sangria") totalSangrias += Number(mov.valor);
+        else if (mov.tipo === "suprimento") totalSuprimentos += Number(mov.valor);
+      }
+
+      const lucroLiquido = lucroBruto - totalSangrias;
+
+      return {
+        totalVendido,
+        custoTotal,
+        lucroBruto,
+        totalSangrias,
+        totalSuprimentos,
+        lucroLiquido,
+        margemBruta: totalVendido > 0 ? (lucroBruto / totalVendido) * 100 : 0,
+        margemLiquida: totalVendido > 0 ? (lucroLiquido / totalVendido) * 100 : 0,
+      };
     },
   });
 }
