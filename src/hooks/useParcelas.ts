@@ -62,7 +62,7 @@ export function useGerarParcelas() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["parcelas"] });
+      invalidateDashboardQueries(qc);
       toast.success("Parcelas geradas!");
     },
     onError: (e: Error) => toast.error(e.message),
