@@ -163,6 +163,16 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
 
       const totalVendas = vendas?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
 
+      // Vendas canceladas no período
+      const { data: canceladasPeriodo } = await supabase
+        .from("vendas")
+        .select("id, total")
+        .gte("cancelado_em" as any, inicio)
+        .lt("cancelado_em" as any, fim)
+        .eq("status", "cancelada" as any);
+      const qtdCanceladas = canceladasPeriodo?.length ?? 0;
+      const totalCancelado = canceladasPeriodo?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
+
       // Itens para produtos ranking e lucro
       const vendaIds = vendas?.map((v) => v.id) ?? [];
       let itens: any[] = [];
