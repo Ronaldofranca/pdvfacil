@@ -341,15 +341,22 @@ export default function RelatoriosPage() {
             <TabsContent value="periodo">
               <Card><Table><TableHeader><TableRow>
                 <TableHead>Data</TableHead><TableHead>Cliente</TableHead><TableHead>Vendedor</TableHead>
-                <TableHead className="text-right">Desconto</TableHead><TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Total</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Lucro</TableHead>
               </TableRow></TableHeader><TableBody>
-                {lVendas ? <LR cols={5} /> : !vendasFiltered.length ? <ER cols={5} /> : vendasFiltered.map((v) => (
+                {lVendas ? <LR cols={6} /> : !vendasComLucro.length ? <ER cols={6} /> : vendasComLucro
+                  .filter((v) => {
+                    if (vendedorFilter !== "all" && v.vendedor_id !== vendedorFilter) return false;
+                    if (clienteFilter !== "all" && (v as any).clientes?.nome !== clienteFilter) return false;
+                    return true;
+                  })
+                  .map((v) => (
                   <TableRow key={v.id}>
                     <TableCell className="text-sm">{format(new Date(v.data_venda), "dd/MM/yy HH:mm")}</TableCell>
                     <TableCell>{(v as any).clientes?.nome ?? "—"}</TableCell>
                     <TableCell>{vendedorMap.get(v.vendedor_id) ?? "—"}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">{fmtR(Number(v.desconto_total))}</TableCell>
                     <TableCell className="text-right font-semibold">{fmtR(Number(v.total))}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{fmtR(v._custo)}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{fmtR(v._lucro)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody></Table></Card>
