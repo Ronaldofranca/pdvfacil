@@ -3,6 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 
+const kitItemSchema = z.object({
+  produto_id: z.string().uuid(),
+  quantidade: z.number().min(1),
+}).optional();
+
 const cartItemSchema = z.object({
   produto_id: z.string().uuid(),
   nome: z.string().min(1).max(200),
@@ -12,6 +17,8 @@ const cartItemSchema = z.object({
   desconto: z.number().min(0),
   bonus: z.boolean(),
   subtotal: z.number().min(0),
+  is_kit: z.boolean().optional(),
+  kit_itens: z.array(z.object({ produto_id: z.string().uuid(), quantidade: z.number().min(1) })).optional(),
 });
 
 const pagamentoSchema = z.object({
