@@ -1,0 +1,22 @@
+
+ALTER TABLE public.configuracoes
+  ADD COLUMN IF NOT EXISTS recibo_cor_cabecalho TEXT NOT NULL DEFAULT '#0f172a',
+  ADD COLUMN IF NOT EXISTS recibo_cor_fonte_cabecalho TEXT NOT NULL DEFAULT '#ffffff',
+  ADD COLUMN IF NOT EXISTS recibo_subtitulo TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS recibo_exibir_logo BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS recibo_cor_principal TEXT NOT NULL DEFAULT '#10b981',
+  ADD COLUMN IF NOT EXISTS recibo_cor_titulos TEXT NOT NULL DEFAULT '#64748b',
+  ADD COLUMN IF NOT EXISTS recibo_cor_texto TEXT NOT NULL DEFAULT '#1a1a2e',
+  ADD COLUMN IF NOT EXISTS recibo_cor_total TEXT NOT NULL DEFAULT '#059669',
+  ADD COLUMN IF NOT EXISTS recibo_cor_bordas TEXT NOT NULL DEFAULT '#e2e8f0',
+  ADD COLUMN IF NOT EXISTS recibo_exibir_telefone BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS recibo_exibir_endereco BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS recibo_exibir_cpf_cnpj BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS recibo_exibir_cliente BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS recibo_exibir_vendedor BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS recibo_exibir_forma_pagamento BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS recibo_exibir_parcelas BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS recibo_exibir_observacoes BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS recibo_exibir_imagem_produto BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS recibo_mensagem_final TEXT NOT NULL DEFAULT 'Obrigado pela preferência!',
+  ADD COLUMN IF NOT EXISTS recibo_rodape TEXT NOT NULL DEFAULT 'Este recibo não tem valor fiscal.';

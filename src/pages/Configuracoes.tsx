@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   User, Building2, Palette, ShoppingCart, CreditCard, CalendarDays,
-  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award, Sun, Moon, Monitor, Globe
+  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award, Sun, Moon, Monitor, Globe, FileDown
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,11 +28,13 @@ import {
   useAllNiveisRecompensa, useAddNivelRecompensa, useUpdateNivelRecompensa, useDeleteNivelRecompensa,
   type NivelRecompensa,
 } from "@/hooks/useNiveisRecompensa";
+import { ReciboConfig } from "@/components/configuracoes/ReciboConfig";
 
 const TABS = [
   { id: "perfil", label: "Perfil", icon: User },
   { id: "empresa", label: "Empresa", icon: Building2 },
   { id: "visual", label: "Visual", icon: Palette },
+  { id: "recibo", label: "Recibo", icon: FileDown },
   { id: "pdv", label: "PDV", icon: ShoppingCart },
   { id: "pagamento", label: "Pagamento", icon: CreditCard },
   { id: "parcelas", label: "Parcelas", icon: CalendarDays },
@@ -215,6 +217,19 @@ export default function ConfiguracoesPage() {
                 );
               })}
               <p className="text-xs text-muted-foreground">As cores são aplicadas ao catálogo público automaticamente.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* RECIBO */}
+        <TabsContent value="recibo">
+          <Card>
+            <CardHeader>
+              <CardTitle>Personalização do Recibo</CardTitle>
+              <CardDescription>Customize cores, conteúdo e aparência dos recibos de venda e pagamento</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ReciboConfig config={config} empresa={empresa} onSave={saveConfig} />
             </CardContent>
           </Card>
         </TabsContent>

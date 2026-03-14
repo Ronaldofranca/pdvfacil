@@ -721,6 +721,26 @@ export type Database = {
           portal_mostrar_pix: boolean
           portal_rodape: string
           portal_titulo: string
+          recibo_cor_bordas: string
+          recibo_cor_cabecalho: string
+          recibo_cor_fonte_cabecalho: string
+          recibo_cor_principal: string
+          recibo_cor_texto: string
+          recibo_cor_titulos: string
+          recibo_cor_total: string
+          recibo_exibir_cliente: boolean
+          recibo_exibir_cpf_cnpj: boolean
+          recibo_exibir_endereco: boolean
+          recibo_exibir_forma_pagamento: boolean
+          recibo_exibir_imagem_produto: boolean
+          recibo_exibir_logo: boolean
+          recibo_exibir_observacoes: boolean
+          recibo_exibir_parcelas: boolean
+          recibo_exibir_telefone: boolean
+          recibo_exibir_vendedor: boolean
+          recibo_mensagem_final: string
+          recibo_rodape: string
+          recibo_subtitulo: string
           sessao_expiracao_horas: number
           updated_at: string
           valor_minimo_indicacao: number
@@ -760,6 +780,26 @@ export type Database = {
           portal_mostrar_pix?: boolean
           portal_rodape?: string
           portal_titulo?: string
+          recibo_cor_bordas?: string
+          recibo_cor_cabecalho?: string
+          recibo_cor_fonte_cabecalho?: string
+          recibo_cor_principal?: string
+          recibo_cor_texto?: string
+          recibo_cor_titulos?: string
+          recibo_cor_total?: string
+          recibo_exibir_cliente?: boolean
+          recibo_exibir_cpf_cnpj?: boolean
+          recibo_exibir_endereco?: boolean
+          recibo_exibir_forma_pagamento?: boolean
+          recibo_exibir_imagem_produto?: boolean
+          recibo_exibir_logo?: boolean
+          recibo_exibir_observacoes?: boolean
+          recibo_exibir_parcelas?: boolean
+          recibo_exibir_telefone?: boolean
+          recibo_exibir_vendedor?: boolean
+          recibo_mensagem_final?: string
+          recibo_rodape?: string
+          recibo_subtitulo?: string
           sessao_expiracao_horas?: number
           updated_at?: string
           valor_minimo_indicacao?: number
@@ -799,6 +839,26 @@ export type Database = {
           portal_mostrar_pix?: boolean
           portal_rodape?: string
           portal_titulo?: string
+          recibo_cor_bordas?: string
+          recibo_cor_cabecalho?: string
+          recibo_cor_fonte_cabecalho?: string
+          recibo_cor_principal?: string
+          recibo_cor_texto?: string
+          recibo_cor_titulos?: string
+          recibo_cor_total?: string
+          recibo_exibir_cliente?: boolean
+          recibo_exibir_cpf_cnpj?: boolean
+          recibo_exibir_endereco?: boolean
+          recibo_exibir_forma_pagamento?: boolean
+          recibo_exibir_imagem_produto?: boolean
+          recibo_exibir_logo?: boolean
+          recibo_exibir_observacoes?: boolean
+          recibo_exibir_parcelas?: boolean
+          recibo_exibir_telefone?: boolean
+          recibo_exibir_vendedor?: boolean
+          recibo_mensagem_final?: string
+          recibo_rodape?: string
+          recibo_subtitulo?: string
           sessao_expiracao_horas?: number
           updated_at?: string
           valor_minimo_indicacao?: number

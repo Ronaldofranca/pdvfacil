@@ -9,6 +9,7 @@ import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { exportReceiptPDF, shareReceiptWhatsApp, fmtR } from "@/lib/reportExport";
+import { getReceiptConfig } from "@/lib/receiptConfig";
 
 interface Props {
   open: boolean;
@@ -60,6 +61,7 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
   );
 
   const buildReceiptOptions = () => {
+    const rc = getReceiptConfig(config);
     const pagamentosList = pagamentos?.map((pg) => ({
       forma: FORMA_LABELS[pg.forma_pagamento] ?? pg.forma_pagamento.replace(/_/g, " "),
       valor: Number(pg.valor_pago),
@@ -109,8 +111,10 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
       empresaInfo: {
         telefone: empresa?.telefone || undefined,
         endereco: empresa?.endereco || undefined,
+        cnpj: empresa?.cnpj || undefined,
       },
       pix: pixConfig,
+      receiptConfig: rc,
     };
   };
 
