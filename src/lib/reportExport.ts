@@ -617,7 +617,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 <head>
 <meta charset="utf-8">
 <title>${title} ${docId}</title>
-<style>${RECEIPT_CSS}</style>
+<style>${buildReceiptCSS(rc)}</style>
 </head>
 <body>
   ${headerHtml}
