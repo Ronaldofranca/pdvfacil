@@ -98,23 +98,24 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 pb-20">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Visão geral do negócio</p>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-1.5 items-center shrink-0">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="text-xs gap-1"
+            className="text-xs gap-1.5 h-8"
             onClick={() => setShowValues((prev) => !prev)}
             title={showValues ? "Ocultar valores" : "Mostrar valores"}
           >
             {showValues ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+            <span className="hidden sm:inline">{showValues ? "Ocultar" : "Mostrar"}</span>
           </Button>
-          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleExportPDF}>
-            <FileDown className="h-3.5 w-3.5" /> PDF
+          <Button variant="outline" size="sm" className="text-xs gap-1 h-8" onClick={handleExportPDF}>
+            <FileDown className="h-3.5 w-3.5" /> <span className="hidden sm:inline">PDF</span>
           </Button>
         </div>
       </div>
