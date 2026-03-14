@@ -4,9 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { enqueue, setCache, getCache } from "@/lib/offline/db";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { type CartItem, type Pagamento, type VendaInput } from "@/hooks/useVendas";
+import { type CartItem, type Pagamento, type VendaInput, generateIdempotencyKey } from "@/hooks/useVendas";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
 
 export interface CachedProduto {
   id: string;
@@ -29,7 +28,7 @@ const CACHE_KEY_CLIENTES = "pdv:clientes";
 
 /**
  * Caches products and clients to IndexedDB for offline PDV usage.
- * When offline, queues the full sale as multiple sync_queue items
+ * When offline, queues the full sale as a single atomic RPC call
  * that the syncEngine processes once connectivity is restored.
  */
 export function useOfflinePDV() {
@@ -82,7 +81,7 @@ export function useOfflinePDV() {
     return cached ?? [];
   }, []);
 
-  // ─── Offline sale submission ───
+  // ─── Offline sale submission — enqueues a single atomic RPC call ───
   const finalizarVendaOffline = useCallback(
     async (input: {
       itens: CartItem[];
@@ -96,83 +95,61 @@ export function useOfflinePDV() {
         return false;
       }
 
-      const vendaId = uuidv4();
-      const subtotal = input.itens.reduce((s, i) => s + i.subtotal, 0);
-      const total = subtotal; // desconto already applied in subtotals
+      const subtotalBruto = input.itens.reduce((s, i) => s + i.quantidade * i.preco_original, 0);
+      const total = input.itens.reduce((s, i) => s + i.subtotal, 0);
+      const idempotencyKey = generateIdempotencyKey();
+
+      // Prepare items payload matching the RPC signature
+      const itensPayload = input.itens.map((i) => {
+        const isKit = !!i.is_kit;
+        const kitItens = i.kit_itens ?? [];
+        let realKitId: string | null = null;
+        if (isKit && kitItens.length) {
+          realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
+        }
+        return {
+          produto_id: i.produto_id,
+          nome: i.nome,
+          quantidade: i.quantidade,
+          preco_original: i.preco_original,
+          preco_vendido: i.preco_vendido,
+          desconto: i.desconto,
+          bonus: i.bonus,
+          subtotal: i.subtotal,
+          custo_unitario: i.custo_unitario ?? 0,
+          is_kit: isKit,
+          kit_itens: kitItens,
+          real_kit_id: realKitId,
+        };
+      });
+
+      const hasCrediario = input.pagamentos.some((p) => p.forma === "crediario");
 
       try {
-        // 1. Queue: create venda
-        await enqueue("vendas", "insert", {
-          id: vendaId,
-          empresa_id: profile.empresa_id,
-          cliente_id: input.cliente_id || null,
-          vendedor_id: user.id,
-          status: "finalizada",
-          subtotal: input.itens.reduce((s, i) => s + i.quantidade * i.preco_original, 0),
-          desconto_total: input.desconto_total,
-          total,
-          pagamentos: input.pagamentos.filter((p) => p.valor > 0),
-          observacoes: input.observacoes ?? "",
-          data_venda: new Date().toISOString(),
+        // Enqueue a SINGLE RPC call — the syncEngine will call fn_finalizar_venda_atomica
+        // This preserves full atomicity: either the entire sale succeeds or fails
+        await enqueue("vendas", "rpc" as any, {
+          fn_name: "fn_finalizar_venda_atomica",
+          idempotency_key: idempotencyKey,
+          params: {
+            _idempotency_key: idempotencyKey,
+            _empresa_id: profile.empresa_id,
+            _cliente_id: input.cliente_id || null,
+            _vendedor_id: user.id,
+            _subtotal: subtotalBruto,
+            _desconto_total: input.desconto_total,
+            _total: total,
+            _pagamentos: JSON.stringify(
+              hasCrediario
+                ? [{ forma: "crediario", valor: total }]
+                : input.pagamentos.filter((p) => p.valor > 0)
+            ),
+            _observacoes: input.observacoes ?? "",
+            _data_venda: new Date().toISOString(),
+            _itens: JSON.stringify(itensPayload),
+            _crediario: null, // Crediario config not available in offline simplified flow
+          },
         });
-
-        // 2. Queue: insert each item with cost snapshot
-        for (const item of input.itens) {
-          const isKit = !!item.is_kit;
-          const kitItens = item.kit_itens as { produto_id: string; quantidade: number }[] | undefined;
-          let produtoIdForDb = item.produto_id;
-          let kitIdForDb: string | null = null;
-
-          if (isKit && kitItens?.length) {
-            produtoIdForDb = kitItens[0].produto_id;
-            kitIdForDb = item.produto_id.startsWith("kit_") ? item.produto_id.slice(4) : null;
-          }
-
-          await enqueue("itens_venda", "insert", {
-            id: uuidv4(),
-            venda_id: vendaId,
-            produto_id: produtoIdForDb,
-            kit_id: kitIdForDb,
-            item_type: isKit ? "kit" : "produto",
-            nome_produto: item.nome,
-            quantidade: item.quantidade,
-            preco_original: item.preco_original,
-            preco_vendido: item.preco_vendido,
-            desconto: item.desconto,
-            bonus: item.bonus,
-            subtotal: item.subtotal,
-            custo_unitario: Number(item.custo_unitario ?? 0),
-          });
-        }
-
-        // 3. Queue: stock movements (kits are decomposed into component products)
-        for (const item of input.itens.filter((i) => i.quantidade > 0)) {
-          if (item.is_kit && item.kit_itens?.length) {
-            const realKitId = item.produto_id.startsWith("kit_") ? item.produto_id.slice(4) : null;
-            for (const ki of item.kit_itens) {
-              await enqueue("movimentos_estoque", "insert", {
-                id: uuidv4(),
-                empresa_id: profile.empresa_id,
-                produto_id: ki.produto_id,
-                vendedor_id: user.id,
-                tipo: "venda",
-                quantidade: ki.quantidade * item.quantidade,
-                observacoes: `Venda #${vendaId.slice(0, 8)} (offline - Kit: ${item.nome})`,
-                kit_id: realKitId,
-              });
-            }
-          } else {
-            await enqueue("movimentos_estoque", "insert", {
-              id: uuidv4(),
-              empresa_id: profile.empresa_id,
-              produto_id: item.produto_id,
-              vendedor_id: user.id,
-              tipo: "venda",
-              quantidade: item.quantidade,
-              observacoes: `Venda #${vendaId.slice(0, 8)} (offline)`,
-            });
-          }
-        }
 
         await refreshCounts();
         toast.success("Venda salva localmente — será sincronizada quando houver internet");

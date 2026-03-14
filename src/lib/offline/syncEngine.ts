@@ -21,6 +21,24 @@ async function processItem(item: QueueItem): Promise<"ok" | "skipped"> {
   const { table, operation, payload } = item;
   const client = supabase as any;
 
+  // Handle RPC calls (e.g., offline PDV sales)
+  if (operation === "rpc") {
+    const { fn_name, params } = payload as { fn_name: string; params: Record<string, unknown> };
+    const { data, error } = await client.rpc(fn_name, params);
+    if (error) {
+      // Idempotency: if the sale was already processed, skip
+      if (error.message?.includes("already_processed") || error.code === "23505") {
+        return "skipped";
+      }
+      throw error;
+    }
+    // Check if RPC returned already_processed flag
+    if (data?.already_processed) {
+      return "skipped";
+    }
+    return "ok";
+  }
+
   switch (operation) {
     case "insert": {
       // Idempotent insert: use upsert with the payload's id to avoid duplicates
@@ -72,7 +90,7 @@ export async function processSyncQueue(): Promise<SyncResult> {
   const seen = new Map<string, QueueItem>();
   const deduped: QueueItem[] = [];
   for (const item of pending) {
-    const key = `${item.table}:${item.operation}:${(item.payload as any).id ?? item.uuid}`;
+    const key = `${item.table}:${item.operation}:${(item.payload as any).id ?? (item.payload as any).idempotency_key ?? item.uuid}`;
     if (seen.has(key)) {
       // Remove earlier duplicate from queue
       const earlier = seen.get(key)!;
