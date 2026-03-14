@@ -185,7 +185,7 @@ export default function RelatoriosPage() {
     return Array.from(map.entries()).map(([forma, valor]) => ({ forma, valor }));
   }, [pgtos, vendas]);
 
-  // Lucro por vendedor
+  // Lucro por vendedor (using item-level cost data)
   const lucroPorVendedor = useMemo(() => {
     const map = new Map<string, { nome: string; receita: number; custo: number; lucro: number }>();
     (vendasDet ?? []).forEach((v) => {
@@ -193,11 +193,27 @@ export default function RelatoriosPage() {
       const nome = vendedorMap.get(vid) ?? vid.slice(0, 8);
       const curr = map.get(vid) ?? { nome, receita: 0, custo: 0, lucro: 0 };
       curr.receita += Number(v.total);
+      let vendaCusto = 0;
+      for (const it of (v as any).itens_venda ?? []) {
+        vendaCusto += Number(it.custo_unitario ?? 0) * Number(it.quantidade);
+      }
+      curr.custo += vendaCusto;
+      curr.lucro += Number(v.total) - vendaCusto;
       map.set(vid, curr);
     });
-    // Approximate cost from lucros data
     return Array.from(map.values()).sort((a, b) => b.receita - a.receita);
   }, [vendasDet, vendedorMap]);
+
+  // Per-sale cost/lucro computation
+  const vendasComLucro = useMemo(() => {
+    return (vendasDet ?? []).map((v) => {
+      let custo = 0;
+      for (const it of (v as any).itens_venda ?? []) {
+        custo += Number(it.custo_unitario ?? 0) * Number(it.quantidade);
+      }
+      return { ...v, _custo: custo, _lucro: Number(v.total) - custo };
+    });
+  }, [vendasDet]);
 
   // Export helpers
   const doExportCSV = (rows: Record<string, any>[], name: string) => exportCSV(rows, `${name}_${inicio}_${fim}.csv`);
