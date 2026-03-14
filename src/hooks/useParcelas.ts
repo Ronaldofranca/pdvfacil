@@ -98,8 +98,7 @@ export function useRegistrarPagamento() {
       return data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["parcelas"] });
-      qc.invalidateQueries({ queryKey: ["pagamentos"] });
+      invalidateDashboardQueries(qc);
       toast.success("Pagamento registrado!");
     },
     onError: (e: Error) => toast.error(e.message),
