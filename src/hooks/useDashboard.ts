@@ -51,7 +51,7 @@ export function useDashboardData() {
     queryFn: async () => {
       const { start: hjStart, end: hjEnd } = localDayRange(new Date());
 
-      // Vendas do dia
+      // Vendas do dia (finalizadas)
       const { data: vendasHoje } = await supabase
         .from("vendas")
         .select("id, total, subtotal, data_venda, vendedor_id, pagamentos, clientes(nome)")
@@ -59,6 +59,14 @@ export function useDashboardData() {
         .lt("data_venda", hjEnd)
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
+
+      // Vendas canceladas do dia
+      const { data: canceladasHoje } = await supabase
+        .from("vendas")
+        .select("id, total")
+        .gte("cancelado_em" as any, hjStart)
+        .lt("cancelado_em" as any, hjEnd)
+        .eq("status", "cancelada" as any);
 
       const totalVendasDia = vendasHoje?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
       const qtdVendasDia = vendasHoje?.length ?? 0;
