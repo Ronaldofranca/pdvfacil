@@ -715,7 +715,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-base text-foreground">{item.nome}</span>
                           {item.is_kit && (
-                            <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                            <Badge className="text-[10px] gap-0.5 px-1.5 py-0 bg-primary/15 text-primary border-primary/30">
                               <Layers className="w-2.5 h-2.5" />Kit
                             </Badge>
                           )}
@@ -728,6 +728,31 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                         <p className="text-sm text-muted-foreground mt-0.5">
                           {item.quantidade}x {fmt(item.preco_vendido)}
                           {item.desconto > 0 && ` (desc: ${fmt(item.desconto)})`}
+                        </p>
+                        {/* Expandable kit composition */}
+                        {item.is_kit && item.kit_itens && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedCartKit(expandedCartKit === item.produto_id ? null : item.produto_id)}
+                            className="text-xs text-primary mt-1 flex items-center gap-1"
+                          >
+                            <Package className="w-3 h-3" />
+                            {item.kit_itens.length} {item.kit_itens.length === 1 ? "item" : "itens"}
+                            <ChevronRight className={`w-3 h-3 transition-transform ${expandedCartKit === item.produto_id ? "rotate-90" : ""}`} />
+                          </button>
+                        )}
+                        {item.is_kit && expandedCartKit === item.produto_id && item.kit_itens && (
+                          <div className="mt-2 ml-1 space-y-1 border-l-2 border-primary/20 pl-3">
+                            {item.kit_itens.map((ki) => {
+                              const prod = (onlineProdutos as any[])?.find((p: any) => p.id === ki.produto_id);
+                              return (
+                                <p key={ki.produto_id} className="text-xs text-muted-foreground">
+                                  {prod?.nome ?? ki.produto_id.slice(0, 8)} × {ki.quantidade * item.quantidade}
+                                </p>
+                              );
+                            })}
+                          </div>
+                        )}
                         </p>
                       </div>
                       <span className="font-bold text-primary text-lg">
