@@ -188,13 +188,17 @@ export function useFinalizarVenda() {
         tipo: "venda";
         quantidade: number;
         observacoes: string;
+        kit_id?: string | null;
       }[] = [];
 
       for (const i of v.itens) {
         if (i.quantidade <= 0) continue;
-        if ((i as any).is_kit && (i as any).kit_itens?.length) {
+        const isKit = !!(i as any).is_kit;
+        const kitItens = (i as any).kit_itens as KitItemRef[] | undefined;
+        if (isKit && kitItens?.length) {
+          const realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
           // Kit: create movements for each component product
-          for (const ki of (i as any).kit_itens) {
+          for (const ki of kitItens) {
             movimentos.push({
               empresa_id: v.empresa_id,
               produto_id: ki.produto_id,
@@ -202,6 +206,7 @@ export function useFinalizarVenda() {
               tipo: "venda" as any,
               quantidade: ki.quantidade * i.quantidade,
               observacoes: `Venda #${venda.id.slice(0, 8)} (Kit: ${i.nome})`,
+              kit_id: realKitId,
             });
           }
         } else {
