@@ -19,49 +19,58 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ─── AUTH: Validate caller JWT ───
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller JWT
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Check if this is a scheduled/cron call
+    const body = await req.json().catch(() => ({}));
+    const isScheduled = body?.scheduled === true;
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    let empresaId: string | null = null;
+
+    if (isScheduled) {
+      // Scheduled call: run for ALL empresas using service role
+      // empresaId stays null to check all
+    } else {
+      // Manual call: validate JWT and admin role
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Não autorizado" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
-    }
 
-    // Check admin role
-    const { data: isAdminResult } = await callerClient.rpc("is_admin");
-    if (!isAdminResult) {
-      return new Response(
-        JSON.stringify({ error: "Apenas administradores podem executar verificação de consistência" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims?.sub) {
+        return new Response(JSON.stringify({ error: "Não autorizado" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    // Get caller empresa_id for scoped operations
-    const { data: empresaId } = await callerClient.rpc("get_my_empresa_id");
-    if (!empresaId) {
-      return new Response(
-        JSON.stringify({ error: "Empresa não encontrada" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const { data: isAdminResult } = await callerClient.rpc("is_admin");
+      if (!isAdminResult) {
+        return new Response(
+          JSON.stringify({ error: "Apenas administradores podem executar verificação de consistência" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: eid } = await callerClient.rpc("get_my_empresa_id");
+      if (!eid) {
+        return new Response(
+          JSON.stringify({ error: "Empresa não encontrada" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      empresaId = eid;
     }
 
     // ─── Use service role for data checks (bypasses RLS for cross-table integrity) ───
