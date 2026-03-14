@@ -973,11 +973,14 @@ function QuickProductCard({ product, onAdd, fmt }: { product: any; onAdd: (p: an
           <img src={product.imagem_url} alt={product.nome} className="w-12 h-12 rounded-xl object-cover shrink-0" />
         ) : (
           <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
-            <Package className="w-5 h-5 text-muted-foreground" />
+            {product.is_kit ? <Layers className="w-5 h-5 text-primary" /> : <Package className="w-5 h-5 text-muted-foreground" />}
           </div>
         )}
         <div>
-          <p className="font-semibold text-foreground text-base">{product.nome}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-semibold text-foreground text-base">{product.nome}</p>
+            {product.is_kit && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Kit</Badge>}
+          </div>
           {product.codigo && <p className="text-xs text-muted-foreground mt-0.5">{product.codigo}</p>}
         </div>
       </div>
