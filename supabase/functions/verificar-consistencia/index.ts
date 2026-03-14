@@ -169,13 +169,35 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Se encontrou inconsistências, notificar admins da empresa do caller
+    // Log findings to financial_integrity_logs
     if (inconsistencias.length > 0) {
-      const { data: admins } = await supabase
+      const gravidadeToNivel: Record<string, string> = { alta: "critico", media: "alto", baixa: "medio" };
+
+      // Determine target empresas
+      const targetEmpresas = empresaId ? [empresaId] : 
+        [...new Set(inconsistencias.flatMap((i) => {
+          // Extract empresa_id from details if available
+          return [];
+        }))];
+
+      // If we have a specific empresa, log for it; otherwise use first empresa from DB
+      if (empresaId) {
+        const logs = inconsistencias.map((i) => ({
+          empresa_id: empresaId,
+          tipo_problema: i.tipo,
+          descricao: `${i.descricao}${i.detalhes ? ` — ${i.detalhes}` : ""}`,
+          nivel_risco: gravidadeToNivel[i.gravidade] ?? "medio",
+        }));
+        await supabase.from("financial_integrity_logs").insert(logs);
+      }
+
+      // Notify admins
+      const adminQuery = supabase
         .from("user_roles")
         .select("user_id, empresa_id")
-        .eq("role", "admin")
-        .eq("empresa_id", empresaId);
+        .eq("role", "admin");
+      if (empresaId) adminQuery.eq("empresa_id", empresaId);
+      const { data: admins } = await adminQuery;
 
       if (admins && admins.length > 0) {
         const mensagem = inconsistencias
@@ -185,7 +207,7 @@ Deno.serve(async (req) => {
         const notificacoes = admins.map((admin) => ({
           empresa_id: admin.empresa_id,
           usuario_id: admin.user_id,
-          titulo: `🔍 Verificação de Consistência: ${inconsistencias.length} problema(s) encontrado(s)`,
+          titulo: `🔍 Auditoria Financeira: ${inconsistencias.length} problema(s) encontrado(s)`,
           mensagem,
           tipo: "warning",
         }));
