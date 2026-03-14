@@ -120,69 +120,6 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
     await shareReceiptWhatsApp(buildReceiptOptions(), clientePhone);
   };
 
-  const buildReceiptOptions = () => {
-    const hasPixPayment = pagamentos.some((p: any) => p.forma === "pix");
-    const pixConfig = config?.pix_chave && config?.pix_tipo
-      ? {
-          chave: config.pix_chave,
-          tipo: config.pix_tipo,
-          valor: hasCrediario
-            ? parcelas?.reduce((s, p) => s + (p.status !== "paga" ? Number(p.valor_total) - Number(p.valor_pago) : 0), 0) || Number(venda.total)
-            : hasPixPayment ? undefined : Number(venda.total),
-        }
-      : undefined;
-
-    return {
-      type: "venda" as const,
-      id: vendaId,
-      empresa: empresa?.nome ?? "Empresa",
-      logoUrl: empresa?.logo_url ?? undefined,
-      data: format(dataVenda, "dd/MM/yyyy HH:mm", { locale: ptBR }),
-      cliente: {
-        nome: clienteNome,
-        id: venda.cliente_id?.slice(0, 8) ?? "—",
-      },
-      itens: itens?.map((item) => ({
-        nome: item.nome_produto,
-        quantidade: Number(item.quantidade),
-        precoUnitario: Number(item.preco_vendido),
-        desconto: Number(item.desconto),
-        subtotal: Number(item.subtotal),
-        bonus: item.bonus,
-        imagemUrl: (item as any).produtos?.imagem_url || undefined,
-      })) ?? [],
-      resumo: {
-        subtotal: Number(venda.subtotal),
-        descontos: Number(venda.desconto_total),
-        total: Number(venda.total),
-      },
-      pagamentos: pagamentos.map((p: any) => ({
-        forma: FORMA_LABELS[p.forma] ?? p.forma,
-        valor: p.valor,
-      })),
-      parcelas: hasCrediario && parcelas?.length ? parcelas.map((p) => ({
-        numero: p.numero,
-        valor: Number(p.valor_total),
-        vencimento: format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy"),
-        status: PARCELA_STATUS[p.status] ?? p.status,
-      })) : undefined,
-      empresaInfo: {
-        telefone: empresa?.telefone || undefined,
-        endereco: empresa?.endereco || undefined,
-      },
-      pix: pixConfig,
-    };
-  };
-
-  const handleExportPDF = async () => {
-    await exportReceiptPDF(buildReceiptOptions());
-  };
-
-  const handleShare = async () => {
-    const clientePhone = (venda as any).clientes?.telefone;
-    await shareReceiptWhatsApp(buildReceiptOptions(), clientePhone);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
