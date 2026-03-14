@@ -42,6 +42,7 @@ const vendaInputSchema = z.object({
   desconto_total: z.number().min(0),
   observacoes: z.string().max(1000).optional(),
   crediario: crediarioSchema,
+  idempotency_key: z.string().min(1).optional(),
 });
 
 // ─── Types ───
@@ -84,6 +85,12 @@ export interface VendaInput {
   desconto_total: number;
   observacoes?: string;
   crediario?: CrediarioConfig;
+  idempotency_key?: string;
+}
+
+// ─── Idempotency key generator ───
+export function generateIdempotencyKey(): string {
+  return `venda_${Date.now()}_${crypto.randomUUID()}`;
 }
 
 // ─── Queries ───
@@ -137,7 +144,7 @@ export function useVendaItens(vendaId: string | null) {
   });
 }
 
-// ─── Finalizar venda ───
+// ─── Finalizar venda (ATOMIC + IDEMPOTENT via RPC) ───
 export function useFinalizarVenda() {
   const qc = useQueryClient();
   return useMutation({
@@ -146,47 +153,19 @@ export function useFinalizarVenda() {
       const subtotalBruto = v.itens.reduce((s, i) => s + i.quantidade * i.preco_original, 0);
       const total = v.itens.reduce((s, i) => s + i.subtotal, 0);
 
-      // Check if crediário payment and needs parcelas
-      const hasCrediario = v.pagamentos.some((p) => p.forma === "crediario");
-      const crediarioConfig = v.crediario;
+      const idempotencyKey = v.idempotency_key || generateIdempotencyKey();
 
-      // 1. Criar venda — set data_venda to current local time explicitly
-      const { data: venda, error: vendaErr } = await supabase
-        .from("vendas")
-        .insert({
-          empresa_id: v.empresa_id,
-          cliente_id: v.cliente_id || null,
-          vendedor_id: v.vendedor_id,
-          status: "finalizada" as any,
-          subtotal: subtotalBruto,
-          desconto_total: v.desconto_total,
-          total,
-          pagamentos: v.pagamentos as any,
-          observacoes: v.observacoes ?? "",
-          data_venda: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      if (vendaErr) throw vendaErr;
-
-      // 2. Inserir itens
+      // Prepare items payload for RPC
       const itensPayload = v.itens.map((i) => {
         const isKit = !!(i as any).is_kit;
         const kitItens = (i as any).kit_itens as KitItemRef[] | undefined;
-        // For kits: use first component product_id for FK, store real kit_id separately
-        let produtoIdForDb = i.produto_id;
-        let kitIdForDb: string | null = null;
+        let realKitId: string | null = null;
         if (isKit && kitItens?.length) {
-          produtoIdForDb = kitItens[0].produto_id;
-          // Extract real kit UUID from "kit_<uuid>" format
-          kitIdForDb = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
+          realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
         }
         return {
-          venda_id: venda.id,
-          produto_id: produtoIdForDb,
-          kit_id: kitIdForDb,
-          item_type: isKit ? "kit" : "produto",
-          nome_produto: i.nome,
+          produto_id: i.produto_id,
+          nome: i.nome,
           quantidade: i.quantidade,
           preco_original: i.preco_original,
           preco_vendido: i.preco_vendido,
@@ -194,103 +173,50 @@ export function useFinalizarVenda() {
           bonus: i.bonus,
           subtotal: i.subtotal,
           custo_unitario: i.custo_unitario ?? 0,
+          is_kit: isKit,
+          kit_itens: kitItens ?? [],
+          real_kit_id: realKitId,
         };
       });
-      const { error: itensErr } = await supabase.from("itens_venda").insert(itensPayload);
-      if (itensErr) throw itensErr;
 
-      // 3. Registrar movimentos de estoque (saída)
-      // For kits: decompose into component products for stock
-      const movimentos: {
-        empresa_id: string;
-        produto_id: string;
-        vendedor_id: string;
-        tipo: "venda";
-        quantidade: number;
-        observacoes: string;
-        kit_id?: string | null;
-      }[] = [];
+      const hasCrediario = v.pagamentos.some((p) => p.forma === "crediario");
 
-      for (const i of v.itens) {
-        if (i.quantidade <= 0) continue;
-        const isKit = !!(i as any).is_kit;
-        const kitItens = (i as any).kit_itens as KitItemRef[] | undefined;
-        if (isKit && kitItens?.length) {
-          const realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
-          // Kit: create movements for each component product
-          for (const ki of kitItens) {
-            movimentos.push({
-              empresa_id: v.empresa_id,
-              produto_id: ki.produto_id,
-              vendedor_id: v.vendedor_id,
-              tipo: "venda" as any,
-              quantidade: ki.quantidade * i.quantidade,
-              observacoes: `Venda #${venda.id.slice(0, 8)} (Kit: ${i.nome})`,
-              kit_id: realKitId,
-            });
-          }
-        } else {
-          movimentos.push({
-            empresa_id: v.empresa_id,
-            produto_id: i.produto_id,
-            vendedor_id: v.vendedor_id,
-            tipo: "venda" as any,
-            quantidade: i.quantidade,
-            observacoes: `Venda #${venda.id.slice(0, 8)}`,
-          });
-        }
+      // Call atomic RPC - everything in a single transaction
+      const { data, error } = await supabase.rpc("fn_finalizar_venda_atomica" as any, {
+        _idempotency_key: idempotencyKey,
+        _empresa_id: v.empresa_id,
+        _cliente_id: v.cliente_id || null,
+        _vendedor_id: v.vendedor_id,
+        _subtotal: subtotalBruto,
+        _desconto_total: v.desconto_total,
+        _total: total,
+        _pagamentos: JSON.stringify(hasCrediario ? [{ forma: "crediario", valor: total }] : v.pagamentos.filter((p) => p.valor > 0)),
+        _observacoes: v.observacoes ?? "",
+        _data_venda: new Date().toISOString(),
+        _itens: JSON.stringify(itensPayload),
+        _crediario: hasCrediario && v.crediario ? JSON.stringify(v.crediario) : null,
+      });
+
+      if (error) throw error;
+
+      const result = data as any;
+      if (result?.already_processed) {
+        console.info("[PDV] Venda já processada (idempotência). ID:", result.id);
       }
 
-      if (movimentos.length > 0) {
-        await supabase.from("movimentos_estoque").insert(movimentos);
-      }
-
-      // 4. Gerar parcelas automaticamente se crediário
-      if (hasCrediario && crediarioConfig && crediarioConfig.num_parcelas > 0) {
-        const entrada = crediarioConfig.entrada || 0;
-        const valorRestante = total - entrada;
-
-        if (valorRestante > 0) {
-          const valorParcela = Math.floor((valorRestante / crediarioConfig.num_parcelas) * 100) / 100;
-          const resto = Math.round((valorRestante - valorParcela * crediarioConfig.num_parcelas) * 100) / 100;
-
-          const parcelas = [];
-          const baseDate = new Date(crediarioConfig.primeiro_vencimento + "T12:00:00");
-
-          for (let i = 0; i < crediarioConfig.num_parcelas; i++) {
-            const venc = new Date(baseDate);
-            venc.setMonth(venc.getMonth() + i);
-            const valor = i === 0 ? valorParcela + resto : valorParcela;
-
-            parcelas.push({
-              empresa_id: v.empresa_id,
-              venda_id: venda.id,
-              cliente_id: v.cliente_id || null,
-              numero: i + 1,
-              valor_total: valor,
-              valor_pago: 0,
-              vencimento: venc.toISOString().split("T")[0],
-              forma_pagamento: "crediario",
-            });
-          }
-
-          const { error: parcelasErr } = await supabase.from("parcelas").insert(parcelas);
-          if (parcelasErr) throw parcelasErr;
-        }
-
-        // Se houve entrada, registrar como pagamento da primeira parcela ou pagamento avulso
-        // A entrada já está contabilizada no pagamento da venda
-      }
-
-      return venda;
+      return { id: result.id, already_processed: result.already_processed };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["vendas"] });
       qc.invalidateQueries({ queryKey: ["estoque"] });
       qc.invalidateQueries({ queryKey: ["movimentos_estoque"] });
       qc.invalidateQueries({ queryKey: ["parcelas"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      toast.success("Venda finalizada com sucesso!");
+      if (data?.already_processed) {
+        toast.info("Venda já havia sido processada. Nenhuma duplicidade criada.");
+      } else {
+        toast.success("Venda finalizada com sucesso!");
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -316,7 +242,6 @@ export function useCancelarVenda() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ vendaId, motivo, userId }: { vendaId: string; motivo: string; userId: string }) => {
-      // Call atomic RPC — handles all steps in a single transaction
       const { data, error } = await supabase.rpc("fn_cancelar_venda" as any, {
         _venda_id: vendaId,
         _motivo: motivo,

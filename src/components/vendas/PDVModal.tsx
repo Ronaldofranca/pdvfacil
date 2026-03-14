@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useProdutos, useKits } from "@/hooks/useProdutos";
 import { useEstoque } from "@/hooks/useEstoque";
 import { useClientes } from "@/hooks/useClientes";
-import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
+import { useFinalizarVenda, generateIdempotencyKey, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -311,10 +311,14 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     }
   };
 
-  // ─── Finalizar ───
+  // ─── Finalizar (with idempotency lock) ───
+  const finalizingRef = useRef(false);
+  const [finalizingStep, setFinalizingStep] = useState("");
+
   const handleFinalizar = () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
+    if (finalizingRef.current || finalizar.isPending) return; // Block duplicate calls
     
     // Validate kit component stock for non-admin users
     if (!isAdmin) {
@@ -352,6 +356,15 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
       if (totalPago < total) return toast.error("Valor pago insuficiente");
     }
 
+    // Lock finalization
+    finalizingRef.current = true;
+    const idempotencyKey = generateIdempotencyKey();
+
+    setFinalizingStep("Finalizando venda...");
+    setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Gravando itens e estoque..."); }, 1500);
+    setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Gerando parcelas..."); }, 3000);
+    setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Concluindo..."); }, 4500);
+
     finalizar.mutate(
       {
         empresa_id: profile.empresa_id,
@@ -364,15 +377,22 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
         desconto_total: totalDescontos,
         observacoes,
         crediario: hasCrediario ? crediarioConfig : undefined,
+        idempotency_key: idempotencyKey,
       },
       {
         onSuccess: () => {
+          finalizingRef.current = false;
+          setFinalizingStep("");
           setCart([]);
           setClienteId("");
           setObservacoes("");
           setPagamentos([{ forma: "dinheiro", valor: 0 }]);
           pdvPersistence.clear();
           onOpenChange(false);
+        },
+        onError: () => {
+          finalizingRef.current = false;
+          setFinalizingStep("");
         },
       }
     );
@@ -650,11 +670,13 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
           <Button
             type="button"
             className="flex-1 gap-1.5"
-            disabled={finalizar.isPending || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
+            disabled={finalizar.isPending || finalizingRef.current || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
             onClick={handleFinalizar}
           >
             <ShoppingCart className="w-4 h-4" />
-            {finalizar.isPending ? "Finalizando..." : `Finalizar ${fmt(total)}`}
+            {finalizar.isPending || finalizingRef.current
+              ? (finalizingStep || "Finalizando...")
+              : `Finalizar ${fmt(total)}`}
           </Button>
         </div>
       </DialogContent>

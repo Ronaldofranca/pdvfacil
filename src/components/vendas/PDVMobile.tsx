@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useProdutos, useKits } from "@/hooks/useProdutos";
 import { useEstoque } from "@/hooks/useEstoque";
 import { useClientes } from "@/hooks/useClientes";
-import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
+import { useFinalizarVenda, generateIdempotencyKey, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/useOfflinePDV";
 import { useOffline } from "@/contexts/OfflineContext";
@@ -289,10 +289,14 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     }
   };
 
-  // ─── Finalizar ───
+  // ─── Finalizar (with idempotency lock) ───
+  const finalizingRef = useRef(false);
+  const [finalizingStep, setFinalizingStep] = useState("");
+
   const handleFinalizar = async () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
+    if (finalizingRef.current || isSubmitting || finalizar.isPending) return; // Block duplicate calls
     
     // Validate kit component stock for non-admin users
     if (!isAdmin) {
@@ -329,7 +333,24 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
       if (totalPago < total) return toast.error("Valor pago insuficiente");
     }
 
+    // Lock finalization
+    finalizingRef.current = true;
     setIsSubmitting(true);
+    const idempotencyKey = generateIdempotencyKey();
+
+    setFinalizingStep("Finalizando venda...");
+    const stepTimers = [
+      setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Gravando itens e estoque..."); }, 1500),
+      setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Gerando parcelas..."); }, 3000),
+      setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Concluindo..."); }, 4500),
+    ];
+
+    const cleanup = () => {
+      finalizingRef.current = false;
+      setIsSubmitting(false);
+      setFinalizingStep("");
+      stepTimers.forEach(clearTimeout);
+    };
 
     if (isOnline) {
       finalizar.mutate(
@@ -344,14 +365,15 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
           desconto_total: totalDescontos,
           observacoes,
           crediario: hasCrediario ? crediarioConfig : undefined,
+          idempotency_key: idempotencyKey,
         },
         {
           onSuccess: () => {
+            cleanup();
             resetForm();
             onOpenChange(false);
-            setIsSubmitting(false);
           },
-          onError: () => setIsSubmitting(false),
+          onError: () => cleanup(),
         }
       );
     } else {
@@ -362,11 +384,11 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
         cliente_id: clienteId || null,
         observacoes,
       });
+      cleanup();
       if (success) {
         resetForm();
         onOpenChange(false);
       }
-      setIsSubmitting(false);
     }
   };
 
@@ -1049,12 +1071,12 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
               )}
               <Button
                 className="w-full h-16 text-xl gap-3 rounded-2xl font-bold"
-                disabled={isSubmitting || finalizar.isPending || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
+                disabled={isSubmitting || finalizar.isPending || finalizingRef.current || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
                 onClick={handleFinalizar}
               >
                 <Check className="w-7 h-7" />
-                {isSubmitting || finalizar.isPending
-                  ? "Finalizando..."
+                {isSubmitting || finalizar.isPending || finalizingRef.current
+                  ? (finalizingStep || "Finalizando...")
                   : `Finalizar ${fmt(total)}`}
               </Button>
             </div>
