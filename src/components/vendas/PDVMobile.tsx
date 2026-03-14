@@ -188,6 +188,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
         desconto: 0,
         bonus: false,
         subtotal: Number(produto.preco),
+        custo_unitario: Number(produto.custo ?? 0),
       };
       if (produto.is_kit && produto.kit_itens) {
         item.is_kit = true;

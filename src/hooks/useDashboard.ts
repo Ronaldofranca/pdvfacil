@@ -232,15 +232,10 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         return { ...v, metaValor, pctMeta, comissao };
       });
 
-      // Lucro do período
+      // Lucro do período — use custo_unitario snapshot
       let lucroPeriodo = 0;
-      if (itens.length > 0) {
-        const prodIds = [...new Set(itens.map((i) => i.produto_id))];
-        const { data: prods } = await supabase.from("produtos").select("id, custo").in("id", prodIds);
-        const custoMap = new Map(prods?.map((p) => [p.id, Number(p.custo)]) ?? []);
-        for (const it of itens) {
-          lucroPeriodo += Number(it.subtotal) - (custoMap.get(it.produto_id) ?? 0) * Number(it.quantidade);
-        }
+      for (const it of itens) {
+        lucroPeriodo += Number(it.subtotal) - Number(it.custo_unitario ?? 0) * Number(it.quantidade);
       }
 
       return {
