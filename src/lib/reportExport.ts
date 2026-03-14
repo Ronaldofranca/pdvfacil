@@ -634,26 +634,53 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   return html;
 }
 
+async function htmlToPdfBlob(html: string): Promise<Blob> {
+  const html2pdf = (await import("html2pdf.js")).default;
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.width = "210mm";
+  document.body.appendChild(container);
+
+  try {
+    const blob: Blob = await html2pdf()
+      .set({
+        margin: 0,
+        filename: "recibo.pdf",
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(container)
+      .outputPdf("blob");
+    return blob;
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
 export async function exportReceiptPDF(options: ReceiptPDFOptions) {
   const html = await buildReceiptHTML(options);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
+  const pdfBlob = await htmlToPdfBlob(html);
+  const url = URL.createObjectURL(pdfBlob);
   const w = window.open(url, "_blank");
-  if (w) {
-    w.onload = () => setTimeout(() => w.print(), 600);
+  if (!w) {
+    downloadBlob(pdfBlob, `recibo_${options.id}.pdf`);
   }
-  setTimeout(() => URL.revokeObjectURL(url), 15000);
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 export async function shareReceiptWhatsApp(options: ReceiptPDFOptions, phone?: string) {
   const html = await buildReceiptHTML(options);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const pdfBlob = await htmlToPdfBlob(html);
   const fileName = options.type === "venda"
-    ? `recibo_venda_${options.id}.html`
-    : `recibo_pagamento_${options.id}.html`;
-  const file = new File([blob], fileName, { type: "text/html" });
+    ? `recibo_venda_${options.id}.pdf`
+    : `recibo_pagamento_${options.id}.pdf`;
+  const file = new File([pdfBlob], fileName, { type: "application/pdf" });
 
-  // Try Web Share API with file (works on mobile)
+  // Try Web Share API with PDF file (works on mobile)
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({
@@ -666,7 +693,9 @@ export async function shareReceiptWhatsApp(options: ReceiptPDFOptions, phone?: s
     }
   }
 
-  // Fallback: open WhatsApp Web with text summary
+  // Fallback: download PDF + open WhatsApp Web with text summary
+  downloadBlob(pdfBlob, fileName);
+
   const isVenda = options.type === "venda";
   const text = isVenda
     ? `📄 *Recibo de Venda #${options.id}*\n👤 Cliente: ${options.cliente.nome}\n💰 Total: ${fmtR(options.resumo.total)}\n📅 Data: ${options.data}`
