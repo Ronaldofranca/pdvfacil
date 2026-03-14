@@ -151,7 +151,7 @@ export interface ReceiptPDFOptions {
 }
 
 // ─── PIX QR Code generation ───
-function buildPixPayload(chave: string, tipo: string, valor?: number, nome?: string): string {
+function buildPixPayload(chave: string, tipo: string, valor?: number, nome?: string, cidade?: string): string {
   // Simplified EMV/BR Code PIX payload
   const formatField = (id: string, value: string) => {
     const len = value.length.toString().padStart(2, "0");
@@ -185,7 +185,8 @@ function buildPixPayload(chave: string, tipo: string, valor?: number, nome?: str
   payload += formatField("59", merchantName);
 
   // Merchant City
-  payload += formatField("60", "SAO PAULO");
+  const merchantCity = (cidade || "SAO PAULO").substring(0, 15).toUpperCase();
+  payload += formatField("60", merchantCity);
 
   // CRC16 placeholder
   payload += "6304";
