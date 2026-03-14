@@ -291,6 +291,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         totalVendas, qtdVendas: vendas?.length ?? 0, totalRecebido, lucroPeriodo,
         topProdutos, vendasPorDia, rankingVendedores: vendedoresComMeta,
         topClientes, recebimentosPorForma, vendedorNames,
+        qtdCanceladas, totalCancelado,
       };
     },
     refetchInterval: 120000,
