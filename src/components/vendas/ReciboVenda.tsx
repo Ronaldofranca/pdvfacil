@@ -57,8 +57,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
   const pagamentos = Array.isArray(venda.pagamentos) ? (venda.pagamentos as any[]) : [];
   const hasCrediario = pagamentos.some((p: any) => p.forma === "crediario");
 
-  const handleExportPDF = async () => {
-    // Determine PIX value: for crediário, use saldo em aberto; for cash, no PIX needed
+  const buildReceiptOptions = () => {
     const hasPixPayment = pagamentos.some((p: any) => p.forma === "pix");
     const pixConfig = config?.pix_chave && config?.pix_tipo
       ? {
@@ -70,8 +69,8 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
         }
       : undefined;
 
-    await exportReceiptPDF({
-      type: "venda",
+    return {
+      type: "venda" as const,
       id: vendaId,
       empresa: empresa?.nome ?? "Empresa",
       logoUrl: empresa?.logo_url ?? undefined,
@@ -109,7 +108,16 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
         endereco: empresa?.endereco || undefined,
       },
       pix: pixConfig,
-    });
+    };
+  };
+
+  const handleExportPDF = async () => {
+    await exportReceiptPDF(buildReceiptOptions());
+  };
+
+  const handleShare = async () => {
+    const clientePhone = (venda as any).clientes?.telefone;
+    await shareReceiptWhatsApp(buildReceiptOptions(), clientePhone);
   };
 
   const buildReceiptOptions = () => {

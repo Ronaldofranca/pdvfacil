@@ -59,7 +59,7 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
     (p) => p.id !== parcela.id && (p.status === "pendente" || p.status === "parcial" || p.status === "vencida")
   );
 
-  const handleExportPDF = async () => {
+  const buildReceiptOptions = () => {
     const pagamentosList = pagamentos?.map((pg) => ({
       forma: FORMA_LABELS[pg.forma_pagamento] ?? pg.forma_pagamento.replace(/_/g, " "),
       valor: Number(pg.valor_pago),
@@ -71,8 +71,8 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
       ? { chave: config.pix_chave, tipo: config.pix_tipo, valor: saldoRestante }
       : undefined;
 
-    await exportReceiptPDF({
-      type: "pagamento",
+    return {
+      type: "pagamento" as const,
       id: parcela.id.slice(0, 8),
       empresa: empresa?.nome ?? "Empresa",
       logoUrl: empresa?.logo_url ?? undefined,
@@ -111,18 +111,16 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
         endereco: empresa?.endereco || undefined,
       },
       pix: pixConfig,
-    });
+    };
+  };
+
+  const handleExportPDF = async () => {
+    await exportReceiptPDF(buildReceiptOptions());
   };
 
   const handleShare = async () => {
-    const text = `Recibo de Pagamento\nCliente: ${clienteNome}\nParcela: ${parcela.numero}ª\nValor Pago: ${fmtR(Number(parcela.valor_pago))}\nSaldo: ${fmtR(Number(parcela.saldo))}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Recibo Parcela ${parcela.numero}ª`, text });
-      } catch { /* cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(text);
-    }
+    const clientePhone = (parcela as any).clientes?.telefone;
+    await shareReceiptWhatsApp(buildReceiptOptions(), clientePhone);
   };
 
   return (
