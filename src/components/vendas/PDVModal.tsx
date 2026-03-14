@@ -438,7 +438,10 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>
                   {clientes?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nome}
+                      {(c as any).permitir_fiado === false && " ⚠️ (Restrito fiado)"}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
