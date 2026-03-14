@@ -83,6 +83,7 @@ export default function DashboardPage() {
         [`Vendas no Período (${periodoLabel})`, `${pd.qtdVendas} (${fmtR(pd.totalVendas)})`],
         ["Total Recebido (Período)", fmtR(pd.totalRecebido)],
         ["Lucro do Período", fmtR(pd.lucroPeriodo)],
+        ["Vendas Canceladas (Período)", `${pd.qtdCanceladas ?? 0} (${fmtR(pd.totalCancelado ?? 0)})`],
         ["---", "---"],
         ["Contas a Receber", fmtR(data.totalAReceber)],
         ["Parcelas Vencidas", `${data.qtdVencidas} (${fmtR(data.totalVencido)})`],
