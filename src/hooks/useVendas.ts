@@ -152,8 +152,8 @@ export function useFinalizarVenda() {
       const itensPayload = v.itens.map((i) => {
         // For kits: use first component product_id for FK, but keep kit name as snapshot
         let produtoIdForDb = i.produto_id;
-        if ((i as any).is_kit && (i as any).kit_itens?.length) {
-          produtoIdForDb = (i as any).kit_itens[0].produto_id;
+        if (i.is_kit && i.kit_itens?.length) {
+          produtoIdForDb = i.kit_itens[0].produto_id;
         }
         return {
           venda_id: venda.id,
@@ -165,6 +165,7 @@ export function useFinalizarVenda() {
           desconto: i.desconto,
           bonus: i.bonus,
           subtotal: i.subtotal,
+          custo_unitario: i.custo_unitario ?? 0,
         };
       });
       const { error: itensErr } = await supabase.from("itens_venda").insert(itensPayload);
