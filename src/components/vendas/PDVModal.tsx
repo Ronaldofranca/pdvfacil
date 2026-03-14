@@ -311,10 +311,14 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     }
   };
 
-  // ─── Finalizar ───
+  // ─── Finalizar (with idempotency lock) ───
+  const finalizingRef = useRef(false);
+  const [finalizingStep, setFinalizingStep] = useState("");
+
   const handleFinalizar = () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
+    if (finalizingRef.current || finalizar.isPending) return; // Block duplicate calls
     
     // Validate kit component stock for non-admin users
     if (!isAdmin) {
@@ -352,6 +356,15 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
       if (totalPago < total) return toast.error("Valor pago insuficiente");
     }
 
+    // Lock finalization
+    finalizingRef.current = true;
+    const idempotencyKey = generateIdempotencyKey();
+
+    setFinalizingStep("Finalizando venda...");
+    setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Gravando itens e estoque..."); }, 1500);
+    setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Gerando parcelas..."); }, 3000);
+    setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Concluindo..."); }, 4500);
+
     finalizar.mutate(
       {
         empresa_id: profile.empresa_id,
@@ -364,15 +377,22 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
         desconto_total: totalDescontos,
         observacoes,
         crediario: hasCrediario ? crediarioConfig : undefined,
+        idempotency_key: idempotencyKey,
       },
       {
         onSuccess: () => {
+          finalizingRef.current = false;
+          setFinalizingStep("");
           setCart([]);
           setClienteId("");
           setObservacoes("");
           setPagamentos([{ forma: "dinheiro", valor: 0 }]);
           pdvPersistence.clear();
           onOpenChange(false);
+        },
+        onError: () => {
+          finalizingRef.current = false;
+          setFinalizingStep("");
         },
       }
     );
