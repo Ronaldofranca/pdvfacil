@@ -3,6 +3,9 @@ import { useEffect, useCallback } from "react";
 /**
  * Warns the user before leaving the page when there are unsaved changes.
  * Uses the browser's beforeunload event for tab close / PWA background.
+ * 
+ * IMPORTANT: This ONLY blocks tab/window close, NOT in-app navigation.
+ * It should never interfere with React Router navigation.
  */
 export function useNavigationGuard(hasUnsavedChanges: boolean) {
   const handler = useCallback(
