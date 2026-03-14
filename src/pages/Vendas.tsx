@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useVendas, useVendaItens, useCancelarVenda } from "@/hooks/useVendas";
+import { useVendas, useVendaItens, useCancelarVenda, useVendaParcelas } from "@/hooks/useVendas";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { PDVModal } from "@/components/vendas/PDVModal";
@@ -40,6 +40,10 @@ export default function VendasPage() {
   // Cancellation dialog
   const [cancelDialogVendaId, setCancelDialogVendaId] = useState<string | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState("");
+  const { data: cancelParcelas } = useVendaParcelas(cancelDialogVendaId);
+
+  const parcelasComPagamento = cancelParcelas?.filter((p) => Number(p.valor_pago) > 0) ?? [];
+  const valorJaPago = parcelasComPagamento.reduce((s, p) => s + Number(p.valor_pago), 0);
 
   const vendaDetail = vendas?.find((v) => v.id === detailId);
 
@@ -154,6 +158,20 @@ export default function VendasPage() {
               Esta ação cancelará a venda, estornará parcelas não pagas e reverterá o estoque.
               O histórico será preservado.
             </p>
+            {parcelasComPagamento.length > 0 && (
+              <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg text-sm space-y-1">
+                <p className="font-semibold text-destructive flex items-center gap-1.5">
+                  ⚠️ Atenção: Pagamentos Existentes
+                </p>
+                <p className="text-muted-foreground">
+                  Esta venda possui {parcelasComPagamento.length} parcela(s) com pagamentos já registrados
+                  totalizando <span className="font-semibold text-foreground">{fmt(valorJaPago)}</span>.
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Os pagamentos serão mantidos no histórico. Parcelas serão marcadas como canceladas com registro do estorno.
+                </p>
+              </div>
+            )}
             <div>
               <Label>Motivo do cancelamento *</Label>
               <Textarea

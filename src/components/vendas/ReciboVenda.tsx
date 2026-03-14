@@ -157,6 +157,21 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
             </div>
           </div>
 
+          {/* Cancellation info */}
+          {venda.status === "cancelada" && (
+            <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg text-sm space-y-1">
+              <p className="font-semibold text-destructive">Venda Cancelada</p>
+              {(venda as any).motivo_cancelamento && (
+                <p className="text-muted-foreground">Motivo: {(venda as any).motivo_cancelamento}</p>
+              )}
+              {(venda as any).cancelado_em && (
+                <p className="text-xs text-muted-foreground">
+                  Cancelada em: {format(new Date((venda as any).cancelado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                </p>
+              )}
+            </div>
+          )}
+
           <Separator />
 
           {/* Items */}
