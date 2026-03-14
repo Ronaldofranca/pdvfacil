@@ -128,6 +128,9 @@ export function useDashboardData() {
         .lt("quantidade", 5)
         .order("quantidade");
 
+      const qtdCanceladasHoje = canceladasHoje?.length ?? 0;
+      const totalCanceladoHoje = canceladasHoje?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
+
       return {
         totalVendasDia, qtdVendasDia, lucroDia, recebidoHoje,
         totalVencido, qtdVencidas: vencidas?.length ?? 0,
@@ -136,6 +139,7 @@ export function useDashboardData() {
         estoqueSemEstoque: (estoqueBaixo ?? []).filter((e: any) => Number(e.quantidade) <= 0).length,
         vendasRecentes: vendasHoje?.slice(0, 8) ?? [],
         parcelasVencidas: vencidas?.slice(0, 10) ?? [],
+        qtdCanceladasHoje, totalCanceladoHoje,
       };
     },
     refetchInterval: 60000,
