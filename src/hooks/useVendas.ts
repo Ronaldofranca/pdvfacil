@@ -170,11 +170,15 @@ export function useFinalizarVenda() {
         const isKit = !!(i as any).is_kit;
         const kitItens = (i as any).kit_itens as KitItemRef[] | undefined;
         let realKitId: string | null = null;
+        let cleanProdutoId = i.produto_id;
         if (isKit && kitItens?.length) {
-          realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
+          realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : i.produto_id;
+          cleanProdutoId = kitItens[0].produto_id; // Use first component as DB produto_id
+        } else if (i.produto_id.startsWith("kit_")) {
+          cleanProdutoId = i.produto_id.slice(4);
         }
         return {
-          produto_id: i.produto_id,
+          produto_id: cleanProdutoId,
           nome: i.nome,
           quantidade: i.quantidade,
           preco_original: i.preco_original,
