@@ -40,6 +40,7 @@ const TABS = [
   { id: "vendedores", label: "Vendedores", icon: Users },
   { id: "indicacoes", label: "Indicações", icon: Award },
   { id: "catalogo", label: "Catálogo", icon: BookOpen },
+  { id: "portal", label: "Portal", icon: Globe },
   { id: "notificacoes", label: "Notificações", icon: Bell },
   { id: "backup", label: "Backup", icon: HardDrive },
   { id: "seguranca", label: "Segurança", icon: Shield },
