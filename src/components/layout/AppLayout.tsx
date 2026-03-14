@@ -12,6 +12,7 @@ export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   const { handleLogout, extendSession, showExpiryWarning, expiryCountdown } = useSessionManager();
+  useRoutePersistence();
 
   const doLogout = () => handleLogout("manual");
 
