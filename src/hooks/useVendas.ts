@@ -209,11 +209,11 @@ export function useFinalizarVenda() {
         _subtotal: subtotalBruto,
         _desconto_total: v.desconto_total,
         _total: total,
-        _pagamentos: JSON.stringify(pagamentosPayload),
+        _pagamentos: pagamentosPayload,
         _observacoes: v.observacoes ?? "",
         _data_venda: localISO,
-        _itens: JSON.stringify(itensPayload),
-        _crediario: hasCrediario && v.crediario ? JSON.stringify(v.crediario) : null,
+        _itens: itensPayload,
+        _crediario: hasCrediario && v.crediario ? v.crediario : null,
       });
 
       if (error) throw error;
