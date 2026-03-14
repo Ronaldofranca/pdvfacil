@@ -1209,6 +1209,7 @@ export type Database = {
         Row: {
           bonus: boolean
           created_at: string
+          custo_unitario: number
           desconto: number
           id: string
           nome_produto: string
@@ -1222,6 +1223,7 @@ export type Database = {
         Insert: {
           bonus?: boolean
           created_at?: string
+          custo_unitario?: number
           desconto?: number
           id?: string
           nome_produto: string
@@ -1235,6 +1237,7 @@ export type Database = {
         Update: {
           bonus?: boolean
           created_at?: string
+          custo_unitario?: number
           desconto?: number
           id?: string
           nome_produto?: string
