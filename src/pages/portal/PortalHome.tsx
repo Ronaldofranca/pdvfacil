@@ -48,7 +48,7 @@ export default function PortalHomePage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("nome, email")
+        .select("nome, email, telefone")
         .eq("user_id", cliente!.vendedor_id!)
         .maybeSingle();
       return data;
