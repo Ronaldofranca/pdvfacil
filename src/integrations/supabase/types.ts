@@ -1011,6 +1011,53 @@ export type Database = {
           },
         ]
       }
+      financial_integrity_logs: {
+        Row: {
+          created_at: string
+          data_detectada: string
+          descricao: string
+          empresa_id: string
+          id: string
+          nivel_risco: string
+          registro_afetado: string | null
+          resolvido: boolean
+          resolvido_em: string | null
+          tipo_problema: string
+        }
+        Insert: {
+          created_at?: string
+          data_detectada?: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          nivel_risco?: string
+          registro_afetado?: string | null
+          resolvido?: boolean
+          resolvido_em?: string | null
+          tipo_problema: string
+        }
+        Update: {
+          created_at?: string
+          data_detectada?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          nivel_risco?: string
+          registro_afetado?: string | null
+          resolvido?: boolean
+          resolvido_em?: string | null
+          tipo_problema?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_integrity_logs_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       formas_pagamento: {
         Row: {
           ativa: boolean

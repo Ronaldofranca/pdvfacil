@@ -108,6 +108,10 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
         endereco: empresa?.endereco || undefined,
       },
       pix: pixConfig,
+      cancelamento: venda.status === "cancelada" ? {
+        motivo: (venda as any).motivo_cancelamento ?? "Não informado",
+        data: (venda as any).cancelado_em ? format(new Date((venda as any).cancelado_em), "dd/MM/yyyy HH:mm", { locale: ptBR }) : undefined,
+      } : undefined,
     };
   };
 
@@ -125,7 +129,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Recibo de Venda #{vendaId}
+            {venda.status === "cancelada" ? "Comprovante de Cancelamento" : "Recibo de Venda"} #{vendaId}
           </DialogTitle>
         </DialogHeader>
 
