@@ -618,16 +618,33 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                   autoFocus
                 />
               </div>
+              {/* Filter tabs */}
+              <div className="flex items-center gap-1.5 px-4 pb-3 -mt-1">
+                {(["todos", "produtos", "kits"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setFilterType(t)}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors
+                      ${filterType === t
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                      }`}
+                  >
+                    {t === "todos" ? "Todos" : t === "produtos" ? "Produtos" : "Kits"}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex-1 p-4 space-y-4">
-              {searchProd.trim() ? (
+              {searchProd.trim() || filterType !== "todos" ? (
                 <div className="space-y-2">
                   {filteredProdutos?.map((p) => (
-                    <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                    <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} onDetail={setKitDetailId} />
                   ))}
                   {!filteredProdutos?.length && (
-                    <p className="text-muted-foreground text-center py-12">Nenhum produto encontrado</p>
+                    <p className="text-muted-foreground text-center py-12">Nenhum {filterType === "kits" ? "kit" : "produto"} encontrado</p>
                   )}
                 </div>
               ) : (
