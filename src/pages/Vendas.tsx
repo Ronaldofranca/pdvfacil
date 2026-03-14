@@ -40,6 +40,10 @@ export default function VendasPage() {
   // Cancellation dialog
   const [cancelDialogVendaId, setCancelDialogVendaId] = useState<string | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState("");
+  const { data: cancelParcelas } = useVendaParcelas(cancelDialogVendaId);
+
+  const parcelasComPagamento = cancelParcelas?.filter((p) => Number(p.valor_pago) > 0) ?? [];
+  const valorJaPago = parcelasComPagamento.reduce((s, p) => s + Number(p.valor_pago), 0);
 
   const vendaDetail = vendas?.find((v) => v.id === detailId);
 
