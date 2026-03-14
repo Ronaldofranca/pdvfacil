@@ -136,7 +136,7 @@ export function useDashboardData() {
 
 // Period-based data (vendas, products, clients, vendedores)
 export function useDashboardPeriodo(periodo: DashboardPeriodo) {
-  const { inicio, fim } = getPeriodoDates(periodo);
+  const { start: inicio, end: fim } = getPeriodoRange(periodo);
   return useQuery({
     queryKey: ["dashboard_periodo", inicio, fim],
     queryFn: async () => {
@@ -145,7 +145,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         .from("vendas")
         .select("id, total, desconto_total, subtotal, data_venda, vendedor_id, cliente_id, pagamentos, clientes(nome)")
         .gte("data_venda", inicio)
-        .lte("data_venda", fim + "T23:59:59")
+        .lt("data_venda", fim)
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
 
