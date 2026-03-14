@@ -74,41 +74,17 @@ export function useDashboardData() {
       // Vendas do dia (finalizadas)
       const { data: vendasHoje } = await supabase
         .from("vendas")
-        .select("id, total, subtotal, data_venda, vendedor_id, pagamentos, clientes(nome)")
+        .select("id, total, subtotal, total_profit, data_venda, vendedor_id, pagamentos, clientes(nome)")
         .gte("data_venda", hjStart)
         .lt("data_venda", hjEnd)
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
 
-      // Vendas canceladas do dia
-      const { data: canceladasHoje } = await supabase
-        .from("vendas")
-        .select("id, total")
-        .gte("cancelado_em" as any, hjStart)
-        .lt("cancelado_em" as any, hjEnd)
-        .eq("status", "cancelada" as any);
-
       const totalVendasDia = vendasHoje?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
       const qtdVendasDia = vendasHoje?.length ?? 0;
 
-      // Lucro do dia — use custo_unitario snapshot from itens_venda
-      const vendaIds = vendasHoje?.map((v) => v.id) ?? [];
-      let lucroDia = 0;
-      if (vendaIds.length > 0) {
-        const { data: itens } = await supabase
-          .from("itens_venda")
-          .select("produto_id, quantidade, subtotal, custo_unitario")
-          .in("venda_id", vendaIds);
-
-        if (itens && itens.length > 0) {
-          for (const item of itens) {
-            lucroDia += Number(item.subtotal) - Number(item.custo_unitario ?? 0) * Number(item.quantidade);
-          }
-        } else {
-          // Fallback: sales without itens_venda (legacy pre-RPC sales) — estimate lucro as total
-          lucroDia = totalVendasDia;
-        }
-      }
+      // Lucro do dia — use pre-computed total_profit (immutable historical snapshot)
+      const lucroDia = vendasHoje?.reduce((s, v) => s + Number((v as any).total_profit ?? 0), 0) ?? 0;
 
       // Recebido hoje = pagamentos de parcelas + vendas à vista (não-crediário)
       const { data: pgtosHoje } = await supabase
