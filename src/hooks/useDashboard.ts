@@ -176,19 +176,35 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
       });
       const topClientes = Array.from(porCliente.values()).sort((a, b) => b.total - a.total).slice(0, 10);
 
-      // Recebimentos por forma
+      // Recebimentos por forma = pagamentos de parcelas + vendas à vista
       const { data: pgtos } = await supabase
         .from("pagamentos")
         .select("valor_pago, forma_pagamento")
         .gte("data_pagamento", inicio)
         .lte("data_pagamento", fim + "T23:59:59");
       const porForma = new Map<string, number>();
+      // 1. Pagamentos de parcelas
       pgtos?.forEach((p) => {
         const f = p.forma_pagamento || "outro";
         porForma.set(f, (porForma.get(f) ?? 0) + Number(p.valor_pago));
       });
-      const recebimentosPorForma = Array.from(porForma.entries()).map(([forma, valor]) => ({ forma: forma.replace(/_/g, " "), valor }));
-      const totalRecebido = pgtos?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+      // 2. Vendas à vista (non-crediário portions)
+      let recebidoAVistaP = 0;
+      vendas?.forEach((v) => {
+        const vpgtos = (v as any).pagamentos;
+        if (Array.isArray(vpgtos)) {
+          for (const pg of vpgtos) {
+            if (pg.forma !== "crediario") {
+              const val = Number(pg.valor ?? 0);
+              recebidoAVistaP += val;
+              const f = (pg.forma || "outro").replace(/_/g, " ");
+              porForma.set(f, (porForma.get(f) ?? 0) + val);
+            }
+          }
+        }
+      });
+      const recebimentosPorForma = Array.from(porForma.entries()).map(([forma, valor]) => ({ forma, valor }));
+      const totalRecebido = (pgtos?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0) + recebidoAVistaP;
 
       // Vendedores - get names
       const vendedorIds = [...porVendedor.keys()];
