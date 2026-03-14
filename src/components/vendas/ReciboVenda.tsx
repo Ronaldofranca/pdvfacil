@@ -129,7 +129,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Recibo de Venda #{vendaId}
+            {venda.status === "cancelada" ? "Comprovante de Cancelamento" : "Recibo de Venda"} #{vendaId}
           </DialogTitle>
         </DialogHeader>
 
