@@ -64,8 +64,8 @@ export function CrediarioConfigPanel({ config, onChange, total, compact }: Props
             min="0"
             max={total}
             className={compact ? "h-10 text-sm" : "h-9 text-xs"}
-            value={config.entrada || ""}
-            onChange={(e) => set("entrada", parseFloat(e.target.value) || 0)}
+            value={config.entrada === 0 ? "" : config.entrada}
+            onChange={(e) => set("entrada", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
             placeholder="0,00"
           />
         </div>
