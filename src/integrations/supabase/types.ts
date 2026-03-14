@@ -2646,6 +2646,7 @@ export type Database = {
           desconto_total: number
           empresa_id: string
           id: string
+          idempotency_key: string | null
           motivo_cancelamento: string | null
           observacoes: string
           pagamentos: Json
@@ -2664,6 +2665,7 @@ export type Database = {
           desconto_total?: number
           empresa_id: string
           id?: string
+          idempotency_key?: string | null
           motivo_cancelamento?: string | null
           observacoes?: string
           pagamentos?: Json
@@ -2682,6 +2684,7 @@ export type Database = {
           desconto_total?: number
           empresa_id?: string
           id?: string
+          idempotency_key?: string | null
           motivo_cancelamento?: string | null
           observacoes?: string
           pagamentos?: Json
@@ -2919,6 +2922,23 @@ export type Database = {
           }
       fn_cancelar_venda: {
         Args: { _motivo: string; _usuario_id: string; _venda_id: string }
+        Returns: Json
+      }
+      fn_finalizar_venda_atomica: {
+        Args: {
+          _cliente_id: string
+          _crediario?: Json
+          _data_venda: string
+          _desconto_total: number
+          _empresa_id: string
+          _idempotency_key: string
+          _itens: Json
+          _observacoes: string
+          _pagamentos: Json
+          _subtotal: number
+          _total: number
+          _vendedor_id: string
+        }
         Returns: Json
       }
       get_my_cliente_id: { Args: never; Returns: string }
