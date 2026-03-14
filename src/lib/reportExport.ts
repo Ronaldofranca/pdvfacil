@@ -661,19 +661,57 @@ async function htmlToPdfBlob(html: string): Promise<Blob> {
   container.style.left = "-9999px";
   container.style.top = "0";
   container.style.width = "210mm";
+  container.style.background = "#fff";
   document.body.appendChild(container);
+
+  // Wait for ALL images inside the container to load before capturing
+  const images = container.querySelectorAll("img");
+  if (images.length > 0) {
+    const imagePromises = Array.from(images).map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete && img.naturalHeight > 0) {
+            resolve();
+            return;
+          }
+          img.onload = () => resolve();
+          img.onerror = () => {
+            img.style.display = "none"; // Hide broken images
+            resolve();
+          };
+          // Timeout safety — don't block PDF forever
+          setTimeout(() => resolve(), 5000);
+        })
+    );
+    await Promise.all(imagePromises);
+  }
+
+  // Extra frame wait to ensure rendering is complete
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
   try {
     const blob: Blob = await html2pdf()
       .set({
-        margin: 0,
+        margin: [5, 5, 10, 5],
         filename: "recibo.pdf",
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true },
+        image: { type: "jpeg", quality: 0.92 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       })
       .from(container)
       .outputPdf("blob");
+
+    if (blob.size < 500) {
+      console.error("[Receipt] PDF generated but suspiciously small:", blob.size, "bytes");
+    }
+
     return blob;
   } finally {
     document.body.removeChild(container);
