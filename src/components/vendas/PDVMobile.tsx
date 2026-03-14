@@ -364,13 +364,26 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     () =>
       (produtos as any[])
         ?.filter((p: any) => p.ativo !== false)
+        .filter((p: any) => {
+          if (filterType === "kits") return p.is_kit;
+          if (filterType === "produtos") return !p.is_kit;
+          return true;
+        })
         .filter(
           (p: any) =>
             p.nome.toLowerCase().includes(searchProd.toLowerCase()) ||
             p.codigo?.toLowerCase().includes(searchProd.toLowerCase())
         ),
-    [produtos, searchProd]
+    [produtos, searchProd, filterType]
   );
+
+  // Kit detail data for modal
+  const kitDetailData = useMemo(() => {
+    if (!kitDetailId) return null;
+    const kit = onlineKits?.find((k: any) => k.id === kitDetailId);
+    if (!kit) return null;
+    return kit;
+  }, [kitDetailId, onlineKits]);
 
   const filteredClientes = useMemo(
     () =>
