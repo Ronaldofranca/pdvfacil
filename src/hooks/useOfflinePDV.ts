@@ -116,12 +116,24 @@ export function useOfflinePDV() {
           data_venda: new Date().toISOString(),
         });
 
-        // 2. Queue: insert each item
+        // 2. Queue: insert each item with cost snapshot
         for (const item of input.itens) {
+          const isKit = !!item.is_kit;
+          const kitItens = item.kit_itens as { produto_id: string; quantidade: number }[] | undefined;
+          let produtoIdForDb = item.produto_id;
+          let kitIdForDb: string | null = null;
+
+          if (isKit && kitItens?.length) {
+            produtoIdForDb = kitItens[0].produto_id;
+            kitIdForDb = item.produto_id.startsWith("kit_") ? item.produto_id.slice(4) : null;
+          }
+
           await enqueue("itens_venda", "insert", {
             id: uuidv4(),
             venda_id: vendaId,
-            produto_id: item.produto_id,
+            produto_id: produtoIdForDb,
+            kit_id: kitIdForDb,
+            item_type: isKit ? "kit" : "produto",
             nome_produto: item.nome,
             quantidade: item.quantidade,
             preco_original: item.preco_original,
@@ -129,20 +141,37 @@ export function useOfflinePDV() {
             desconto: item.desconto,
             bonus: item.bonus,
             subtotal: item.subtotal,
+            custo_unitario: Number(item.custo_unitario ?? 0),
           });
         }
 
-        // 3. Queue: stock movements
+        // 3. Queue: stock movements (kits are decomposed into component products)
         for (const item of input.itens.filter((i) => i.quantidade > 0)) {
-          await enqueue("movimentos_estoque", "insert", {
-            id: uuidv4(),
-            empresa_id: profile.empresa_id,
-            produto_id: item.produto_id,
-            vendedor_id: user.id,
-            tipo: "venda",
-            quantidade: item.quantidade,
-            observacoes: `Venda #${vendaId.slice(0, 8)} (offline)`,
-          });
+          if (item.is_kit && item.kit_itens?.length) {
+            const realKitId = item.produto_id.startsWith("kit_") ? item.produto_id.slice(4) : null;
+            for (const ki of item.kit_itens) {
+              await enqueue("movimentos_estoque", "insert", {
+                id: uuidv4(),
+                empresa_id: profile.empresa_id,
+                produto_id: ki.produto_id,
+                vendedor_id: user.id,
+                tipo: "venda",
+                quantidade: ki.quantidade * item.quantidade,
+                observacoes: `Venda #${vendaId.slice(0, 8)} (offline - Kit: ${item.nome})`,
+                kit_id: realKitId,
+              });
+            }
+          } else {
+            await enqueue("movimentos_estoque", "insert", {
+              id: uuidv4(),
+              empresa_id: profile.empresa_id,
+              produto_id: item.produto_id,
+              vendedor_id: user.id,
+              tipo: "venda",
+              quantidade: item.quantidade,
+              observacoes: `Venda #${vendaId.slice(0, 8)} (offline)`,
+            });
+          }
         }
 
         await refreshCounts();
