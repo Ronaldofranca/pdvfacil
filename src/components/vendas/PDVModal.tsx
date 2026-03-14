@@ -670,11 +670,13 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
           <Button
             type="button"
             className="flex-1 gap-1.5"
-            disabled={finalizar.isPending || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
+            disabled={finalizar.isPending || finalizingRef.current || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
             onClick={handleFinalizar}
           >
             <ShoppingCart className="w-4 h-4" />
-            {finalizar.isPending ? "Finalizando..." : `Finalizar ${fmt(total)}`}
+            {finalizar.isPending || finalizingRef.current
+              ? (finalizingStep || "Finalizando...")
+              : `Finalizar ${fmt(total)}`}
           </Button>
         </div>
       </DialogContent>
