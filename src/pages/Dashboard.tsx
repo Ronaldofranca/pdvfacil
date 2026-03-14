@@ -4,7 +4,7 @@ import {
   ShoppingCart, DollarSign, AlertTriangle, CreditCard, PackageX,
   TrendingUp, Target, BellRing, MapPin, PackageSearch, Users,
   FileDown, Calendar as CalendarIcon, UserCheck, BarChart3, Award, Star, MessageSquare, CalendarClock,
-  ClipboardList, Truck,
+  ClipboardList, Truck, Eye, EyeOff,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,8 +44,11 @@ const PERIODOS: { value: DashboardPeriodo; label: string }[] = [
   { value: "mes", label: "Mês" },
 ];
 
+const MASKED = "R$ •••••";
+
 export default function DashboardPage() {
   const [periodo, setPeriodo] = useState<DashboardPeriodo>("mes");
+  const [showValues, setShowValues] = useState(true);
   const { isAdmin, isVendedor } = useAuth();
 
   const { data, isLoading } = useDashboardData();
@@ -61,6 +64,8 @@ export default function DashboardPage() {
   const alertasAltos = (alertas || []).filter((a) => a.prioridade === "alta").length;
   const estoqueCritico = (previsoes || []).filter((p) => p.urgencia === "critico").length;
   const empresaNome = empresas?.[0]?.nome ?? "VendaForce";
+
+  const v = (val: string) => showValues ? val : MASKED;
 
   const handleExportPDF = () => {
     if (!data || !pd) return;
@@ -96,6 +101,15 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground">Visão geral do negócio</p>
         </div>
         <div className="flex gap-2 items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs gap-1"
+            onClick={() => setShowValues((prev) => !prev)}
+            title={showValues ? "Ocultar valores" : "Mostrar valores"}
+          >
+            {showValues ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </Button>
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleExportPDF}>
             <FileDown className="h-3.5 w-3.5" /> PDF
           </Button>
@@ -106,11 +120,11 @@ export default function DashboardPage() {
       <div>
         <h2 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Resumo de Hoje</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KPICard icon={ShoppingCart} label="Vendas" value={data ? fmtR(data.totalVendasDia) : "—"} sub={data ? `${data.qtdVendasDia} venda(s)` : ""} color="text-primary" loading={isLoading} />
-          <KPICard icon={DollarSign} label="Recebido Hoje" value={data ? fmtR(data.recebidoHoje) : "—"} color="text-primary" loading={isLoading} />
-          <KPICard icon={TrendingUp} label="Lucro Estimado" value={data ? fmtR(data.lucroDia) : "—"} color="text-primary" loading={isLoading} />
-          <KPICard icon={CreditCard} label="Contas a Receber" value={data ? fmtR(data.totalAReceber) : "—"} sub={data ? `${data.qtdPendentes} parcelas` : ""} loading={isLoading} />
-          <KPICard icon={AlertTriangle} label="Parcelas Vencidas" value={data ? fmtR(data.totalVencido) : "—"} sub={data ? `${data.qtdVencidas} parcela(s)` : ""} color="text-destructive" loading={isLoading} />
+          <KPICard icon={ShoppingCart} label="Vendas" value={data ? v(fmtR(data.totalVendasDia)) : "—"} sub={data ? `${data.qtdVendasDia} venda(s)` : ""} color="text-primary" loading={isLoading} />
+          <KPICard icon={DollarSign} label="Recebido Hoje" value={data ? v(fmtR(data.recebidoHoje)) : "—"} color="text-primary" loading={isLoading} />
+          <KPICard icon={TrendingUp} label="Lucro Estimado" value={data ? v(fmtR(data.lucroDia)) : "—"} color="text-primary" loading={isLoading} />
+          <KPICard icon={CreditCard} label="Contas a Receber" value={data ? v(fmtR(data.totalAReceber)) : "—"} sub={data ? `${data.qtdPendentes} parcelas` : ""} loading={isLoading} />
+          <KPICard icon={AlertTriangle} label="Parcelas Vencidas" value={data ? v(fmtR(data.totalVencido)) : "—"} sub={data ? `${data.qtdVencidas} parcela(s)` : ""} color="text-destructive" loading={isLoading} />
         </div>
       </div>
 
@@ -137,7 +151,7 @@ export default function DashboardPage() {
               )}
               {(data?.qtdVencidas ?? 0) > 0 && (
                 <Link to="/cobrancas" className="flex items-center gap-2 text-destructive hover:underline">
-                  <AlertTriangle className="w-3.5 h-3.5" /> {data!.qtdVencidas} parcela(s) vencida(s) — {fmtR(data!.totalVencido)}
+                  <AlertTriangle className="w-3.5 h-3.5" /> {data!.qtdVencidas} parcela(s) vencida(s) — {v(fmtR(data!.totalVencido))}
                 </Link>
               )}
               {(lembretes?.clientesMultiplosAtraso ?? 0) > 0 && (
@@ -184,7 +198,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-muted-foreground">Atrasados</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-primary">{fmtR(pedidosDash.valorPendente)}</p>
+                <p className="text-lg font-bold text-primary">{v(fmtR(pedidosDash.valorPendente))}</p>
                 <p className="text-[10px] text-muted-foreground">Valor Total</p>
               </div>
             </div>
@@ -209,13 +223,13 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{fmtR(vendedorDash.totalMes)}</span>
+                <span className="text-muted-foreground">{v(fmtR(vendedorDash.totalMes))}</span>
                 <span className="font-semibold text-foreground">{vendedorDash.percentualMeta}%</span>
               </div>
               <Progress value={Math.min(vendedorDash.percentualMeta, 100)} className="h-3" />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Meta: {fmtR(vendedorDash.metaValor)}</span>
-                <span>Comissão: {fmtR(vendedorDash.comissaoAcumulada)}</span>
+                <span>Meta: {v(fmtR(vendedorDash.metaValor))}</span>
+                <span>Comissão: {v(fmtR(vendedorDash.comissaoAcumulada))}</span>
               </div>
             </div>
           </CardContent>
@@ -236,9 +250,9 @@ export default function DashboardPage() {
 
       {/* Period KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KPICard icon={ShoppingCart} label={`Vendas (${PERIODOS.find(p=>p.value===periodo)?.label})`} value={pd ? fmtR(pd.totalVendas) : "—"} sub={pd ? `${pd.qtdVendas} venda(s)` : ""} color="text-primary" loading={lPd} />
-        <KPICard icon={DollarSign} label="Recebido" value={pd ? fmtR(pd.totalRecebido) : "—"} color="text-primary" loading={lPd} />
-        <KPICard icon={TrendingUp} label="Lucro Estimado" value={pd ? fmtR(pd.lucroPeriodo) : "—"} color="text-primary" loading={lPd} />
+        <KPICard icon={ShoppingCart} label={`Vendas (${PERIODOS.find(p=>p.value===periodo)?.label})`} value={pd ? v(fmtR(pd.totalVendas)) : "—"} sub={pd ? `${pd.qtdVendas} venda(s)` : ""} color="text-primary" loading={lPd} />
+        <KPICard icon={DollarSign} label="Recebido" value={pd ? v(fmtR(pd.totalRecebido)) : "—"} color="text-primary" loading={lPd} />
+        <KPICard icon={TrendingUp} label="Lucro Estimado" value={pd ? v(fmtR(pd.lucroPeriodo)) : "—"} color="text-primary" loading={lPd} />
         <KPICard icon={PackageX} label="Estoque Baixo" value={data ? `${data.estoqueBaixo.length}` : "—"} sub={`${data?.estoqueSemEstoque ?? 0} sem estoque`} color="text-destructive" loading={isLoading} />
       </div>
 
@@ -252,8 +266,8 @@ export default function DashboardPage() {
               <ReBarChart data={pd.vendasPorDia}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="dia" className="text-xs" />
-                <YAxis className="text-xs" tickFormatter={(v) => `R$${v}`} />
-                <Tooltip formatter={(v: number) => fmtR(v)} />
+                <YAxis className="text-xs" tickFormatter={(val) => showValues ? `R$${val}` : "•••"} />
+                <Tooltip formatter={(val: number) => showValues ? fmtR(val) : MASKED} />
                 <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </ReBarChart>
             </ResponsiveContainer>
@@ -266,10 +280,10 @@ export default function DashboardPage() {
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /> Recebimentos por Forma</h3>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={pd.recebimentosPorForma} dataKey="valor" nameKey="forma" cx="50%" cy="50%" outerRadius={80} label={({ forma, valor }) => `${forma}: ${fmtR(valor)}`}>
+                <Pie data={pd.recebimentosPorForma} dataKey="valor" nameKey="forma" cx="50%" cy="50%" outerRadius={80} label={({ forma, valor }) => showValues ? `${forma}: ${fmtR(valor)}` : `${forma}: •••`}>
                   {pd.recebimentosPorForma.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
-                <Legend /><Tooltip formatter={(v: number) => fmtR(v)} />
+                <Legend /><Tooltip formatter={(val: number) => showValues ? fmtR(val) : MASKED} />
               </PieChart>
             </ResponsiveContainer>
           </Card>
@@ -298,7 +312,7 @@ export default function DashboardPage() {
                       <span className="text-sm font-medium text-foreground">{p.nome}</span>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-primary">{fmtR(p.total)}</p>
+                      <p className="text-sm font-semibold text-primary">{v(fmtR(p.total))}</p>
                       <p className="text-[10px] text-muted-foreground">{p.qtd} un</p>
                     </div>
                   </div>
@@ -326,7 +340,7 @@ export default function DashboardPage() {
                       <span className="text-sm font-medium text-foreground">{c.nome}</span>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-primary">{fmtR(c.total)}</p>
+                      <p className="text-sm font-semibold text-primary">{v(fmtR(c.total))}</p>
                       <p className="text-[10px] text-muted-foreground">{c.qtd} vendas</p>
                     </div>
                   </div>
@@ -347,10 +361,10 @@ export default function DashboardPage() {
             <div className="space-y-2">
               {isLoading ? <p className="text-sm text-muted-foreground py-4 text-center">Carregando...</p> :
                 !data?.vendasRecentes.length ? <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma venda hoje</p> :
-                data.vendasRecentes.map((v: any) => (
-                  <div key={v.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                    <p className="text-sm font-medium text-foreground">{v.clientes?.nome ?? "Cliente avulso"}</p>
-                    <p className="text-sm font-semibold text-primary">{fmtR(Number(v.total))}</p>
+                data.vendasRecentes.map((vr: any) => (
+                  <div key={vr.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                    <p className="text-sm font-medium text-foreground">{vr.clientes?.nome ?? "Cliente avulso"}</p>
+                    <p className="text-sm font-semibold text-primary">{v(fmtR(Number(vr.total)))}</p>
                   </div>
                 ))}
             </div>
@@ -402,7 +416,7 @@ export default function DashboardPage() {
                     <TableCell className="text-sm font-medium">{p.clientes?.nome ?? "—"}</TableCell>
                     <TableCell>{p.numero}ª</TableCell>
                     <TableCell className="text-sm">{format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy")}</TableCell>
-                    <TableCell className="text-right font-semibold text-destructive">{fmtR(Number(p.saldo))}</TableCell>
+                    <TableCell className="text-right font-semibold text-destructive">{v(fmtR(Number(p.saldo)))}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -430,19 +444,19 @@ export default function DashboardPage() {
                 <TableHead className="text-right">Comissão</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {pd.rankingVendedores.map((v) => (
-                  <TableRow key={v.id}>
-                    <TableCell className="font-medium">{v.nome}</TableCell>
-                    <TableCell className="text-right">{v.qtd}</TableCell>
-                    <TableCell className="text-right font-semibold">{fmtR(v.total)}</TableCell>
+                {pd.rankingVendedores.map((rv) => (
+                  <TableRow key={rv.id}>
+                    <TableCell className="font-medium">{rv.nome}</TableCell>
+                    <TableCell className="text-right">{rv.qtd}</TableCell>
+                    <TableCell className="text-right font-semibold">{v(fmtR(rv.total))}</TableCell>
                     <TableCell className="text-right">
-                      {v.metaValor > 0 ? (
-                        <span className={cn(v.pctMeta >= 100 ? "text-primary font-bold" : v.pctMeta >= 70 ? "text-yellow-600" : "text-destructive")}>
-                          {v.pctMeta.toFixed(0)}%
+                      {rv.metaValor > 0 ? (
+                        <span className={cn(rv.pctMeta >= 100 ? "text-primary font-bold" : rv.pctMeta >= 70 ? "text-yellow-600" : "text-destructive")}>
+                          {rv.pctMeta.toFixed(0)}%
                         </span>
                       ) : "—"}
                     </TableCell>
-                    <TableCell className="text-right text-muted-foreground">{v.comissao > 0 ? fmtR(v.comissao) : "—"}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{rv.comissao > 0 ? v(fmtR(rv.comissao)) : "—"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
