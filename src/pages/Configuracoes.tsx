@@ -221,6 +221,19 @@ export default function ConfiguracoesPage() {
           </Card>
         </TabsContent>
 
+        {/* RECIBO */}
+        <TabsContent value="recibo">
+          <Card>
+            <CardHeader>
+              <CardTitle>Personalização do Recibo</CardTitle>
+              <CardDescription>Customize cores, conteúdo e aparência dos recibos de venda e pagamento</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ReciboConfig config={config} empresa={empresa} onSave={saveConfig} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* 4. PDV */}
         <TabsContent value="pdv">
           <Card>
