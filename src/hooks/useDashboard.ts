@@ -80,8 +80,8 @@ export function useDashboardData() {
       const { data: pgtosHoje } = await supabase
         .from("pagamentos")
         .select("valor_pago")
-        .gte("data_pagamento", hj)
-        .lte("data_pagamento", hj + "T23:59:59");
+        .gte("data_pagamento", hjStart)
+        .lt("data_pagamento", hjEnd);
       const recebidoParcelas = pgtosHoje?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
 
       // Somar valores à vista das vendas do dia (excluindo parcela crediário)
