@@ -8,7 +8,7 @@ export function useRelVendasPeriodo(inicio: string, fim: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendas")
-        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, clientes(nome)")
+        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, pagamentos, clientes(nome)")
         .gte("data_venda", inicio)
         .lte("data_venda", fim + "T23:59:59")
         .eq("status", "finalizada" as any)

@@ -164,12 +164,25 @@ export default function RelatoriosPage() {
 
   const pgtosPorForma = useMemo(() => {
     const map = new Map<string, number>();
+    // Pagamentos de parcelas
     pgtos?.forEach((p) => {
-      const forma = p.forma_pagamento || "outro";
+      const forma = (p.forma_pagamento || "outro").replace(/_/g, " ");
       map.set(forma, (map.get(forma) ?? 0) + Number(p.valor_pago));
     });
-    return Array.from(map.entries()).map(([forma, valor]) => ({ forma: forma.replace(/_/g, " "), valor }));
-  }, [pgtos]);
+    // Vendas à vista (non-crediário)
+    (vendas ?? []).forEach((v) => {
+      const vpgtos = (v as any).pagamentos;
+      if (Array.isArray(vpgtos)) {
+        for (const pg of vpgtos) {
+          if (pg.forma !== "crediario") {
+            const forma = (pg.forma || "outro").replace(/_/g, " ");
+            map.set(forma, (map.get(forma) ?? 0) + Number(pg.valor ?? 0));
+          }
+        }
+      }
+    });
+    return Array.from(map.entries()).map(([forma, valor]) => ({ forma, valor }));
+  }, [pgtos, vendas]);
 
   // Lucro por vendedor
   const lucroPorVendedor = useMemo(() => {
