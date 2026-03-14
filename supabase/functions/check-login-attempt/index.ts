@@ -30,8 +30,37 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Action: reset (on successful login)
+    // Action: reset (on successful login) — requires valid JWT
     if (action === "reset") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(
+          JSON.stringify({ error: "Não autorizado" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const callerClient = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const { data: { user }, error: userErr } = await callerClient.auth.getUser();
+      if (userErr || !user) {
+        return new Response(
+          JSON.stringify({ error: "Não autorizado" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Only allow resetting attempts for the authenticated user's own email
+      if (user.email?.toLowerCase() !== normalizedEmail) {
+        return new Response(
+          JSON.stringify({ error: "Não autorizado" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       await supabaseAdmin.rpc("reset_login_attempts", { _email: normalizedEmail });
 
       // Log successful login
@@ -48,7 +77,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Action: check (before login attempt)
+    // Action: check (before login attempt) — no JWT needed (pre-auth)
     const { data, error } = await supabaseAdmin.rpc("check_login_attempt", {
       _email: normalizedEmail,
       _ip: ip,

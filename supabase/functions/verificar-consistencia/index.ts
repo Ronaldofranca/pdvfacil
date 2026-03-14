@@ -23,54 +23,42 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Check if this is a scheduled/cron call
-    const body = await req.json().catch(() => ({}));
-    const isScheduled = body?.scheduled === true;
-
-    let empresaId: string | null = null;
-
-    if (isScheduled) {
-      // Scheduled call: run for ALL empresas using service role
-      // empresaId stays null to check all
-    } else {
-      // Manual call: validate JWT and admin role
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader?.startsWith("Bearer ")) {
-        return new Response(JSON.stringify({ error: "Não autorizado" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const callerClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
+    // Always validate JWT — no more scheduled bypass
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
 
-      const token = authHeader.replace("Bearer ", "");
-      const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
-      if (claimsError || !claimsData?.claims?.sub) {
-        return new Response(JSON.stringify({ error: "Não autorizado" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-      const { data: isAdminResult } = await callerClient.rpc("is_admin");
-      if (!isAdminResult) {
-        return new Response(
-          JSON.stringify({ error: "Apenas administradores podem executar verificação de consistência" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-      const { data: eid } = await callerClient.rpc("get_my_empresa_id");
-      if (!eid) {
-        return new Response(
-          JSON.stringify({ error: "Empresa não encontrada" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      empresaId = eid;
+    const { data: isAdminResult } = await callerClient.rpc("is_admin");
+    if (!isAdminResult) {
+      return new Response(
+        JSON.stringify({ error: "Apenas administradores podem executar verificação de consistência" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: empresaId } = await callerClient.rpc("get_my_empresa_id");
+    if (!empresaId) {
+      return new Response(
+        JSON.stringify({ error: "Empresa não encontrada" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // ─── Use service role for data checks (bypasses RLS for cross-table integrity) ───
@@ -171,18 +159,17 @@ Deno.serve(async (req) => {
 
     // 7) Reconciliação automática de caixa — verificar divergências do dia
     const today = new Date().toISOString().split("T")[0];
-    const caixaQuery = supabase
+    const { data: caixasFechados } = await supabase
       .from("caixa_diario")
       .select("*")
       .eq("status", "fechado")
-      .eq("data", today);
-    if (empresaId) caixaQuery.eq("empresa_id", empresaId);
-    const { data: caixasFechados } = await caixaQuery;
+      .eq("data", today)
+      .eq("empresa_id", empresaId);
 
     if (caixasFechados) {
       for (const caixa of caixasFechados) {
         const dif = Math.abs(Number(caixa.diferenca) || 0);
-        if (dif > 1) { // Tolerance of R$1
+        if (dif > 1) {
           inconsistencias.push({
             tipo: "CAIXA_DIVERGENTE",
             descricao: `Caixa ${caixa.id.slice(0, 8)} fechado com diferença de R$${dif.toFixed(2)} (contado vs teórico)`,
@@ -197,31 +184,20 @@ Deno.serve(async (req) => {
     if (inconsistencias.length > 0) {
       const gravidadeToNivel: Record<string, string> = { alta: "critico", media: "alto", baixa: "medio" };
 
-      // Determine target empresas
-      const targetEmpresas = empresaId ? [empresaId] : 
-        [...new Set(inconsistencias.flatMap((i) => {
-          // Extract empresa_id from details if available
-          return [];
-        }))];
-
-      // If we have a specific empresa, log for it; otherwise use first empresa from DB
-      if (empresaId) {
-        const logs = inconsistencias.map((i) => ({
-          empresa_id: empresaId,
-          tipo_problema: i.tipo,
-          descricao: `${i.descricao}${i.detalhes ? ` — ${i.detalhes}` : ""}`,
-          nivel_risco: gravidadeToNivel[i.gravidade] ?? "medio",
-        }));
-        await supabase.from("financial_integrity_logs").insert(logs);
-      }
+      const logs = inconsistencias.map((i) => ({
+        empresa_id: empresaId,
+        tipo_problema: i.tipo,
+        descricao: `${i.descricao}${i.detalhes ? ` — ${i.detalhes}` : ""}`,
+        nivel_risco: gravidadeToNivel[i.gravidade] ?? "medio",
+      }));
+      await supabase.from("financial_integrity_logs").insert(logs);
 
       // Notify admins
-      const adminQuery = supabase
+      const { data: admins } = await supabase
         .from("user_roles")
         .select("user_id, empresa_id")
-        .eq("role", "admin");
-      if (empresaId) adminQuery.eq("empresa_id", empresaId);
-      const { data: admins } = await adminQuery;
+        .eq("role", "admin")
+        .eq("empresa_id", empresaId);
 
       if (admins && admins.length > 0) {
         const mensagem = inconsistencias

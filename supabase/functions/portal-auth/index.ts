@@ -36,14 +36,25 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (error || !cliente?.email) {
-        // Generic error to prevent enumeration
         return new Response(JSON.stringify({ error: "Credenciais inválidas" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ email: cliente.email }), {
+      // Mask email to prevent full PII exposure: j***@g***.com
+      const email = cliente.email;
+      const [localPart, domain] = email.split("@");
+      const maskedLocal = localPart.length > 1
+        ? localPart[0] + "***"
+        : localPart;
+      const domainParts = domain.split(".");
+      const maskedDomain = domainParts[0].length > 1
+        ? domainParts[0][0] + "***." + domainParts.slice(1).join(".")
+        : domain;
+      const maskedEmail = `${maskedLocal}@${maskedDomain}`;
+
+      return new Response(JSON.stringify({ email: maskedEmail, hint: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -59,8 +70,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user: caller }, error: authErr } = await supabase.auth.getUser(token);
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const { data: { user: caller }, error: authErr } = await callerClient.auth.getUser();
       if (authErr || !caller) {
         return new Response(JSON.stringify({ error: "Não autorizado" }), {
           status: 401,
@@ -68,11 +83,21 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Check caller is admin or gerente
+      // Get caller's empresa_id for tenant scoping
+      const { data: callerEmpresaId } = await callerClient.rpc("get_my_empresa_id");
+      if (!callerEmpresaId) {
+        return new Response(JSON.stringify({ error: "Empresa não encontrada" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check caller is admin or gerente within their empresa
       const { data: callerRoles } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", caller.id);
+        .eq("user_id", caller.id)
+        .eq("empresa_id", callerEmpresaId);
 
       const isPrivileged = callerRoles?.some((r: any) => r.role === "admin" || r.role === "gerente");
       if (!isPrivileged) {
@@ -90,11 +115,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Fetch client record
+      // Fetch client record — scoped to caller's empresa
       const { data: clienteData, error: cErr } = await supabase
         .from("clientes")
         .select("id, nome, email, cpf_cnpj, empresa_id, user_id")
         .eq("id", cliente_id)
+        .eq("empresa_id", callerEmpresaId)
         .maybeSingle();
 
       if (cErr || !clienteData) {

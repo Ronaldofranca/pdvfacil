@@ -14,7 +14,7 @@ export interface SyncMeta {
 
 export interface QueueItem extends SyncMeta {
   table: string;
-  operation: "insert" | "update" | "delete";
+  operation: "insert" | "update" | "delete" | "rpc";
   payload: Record<string, unknown>;
   retries: number;
 }
