@@ -50,11 +50,10 @@ export default function PortalParcelasPage() {
     enabled: !!cliente?.empresa_id,
     queryFn: async () => {
       const { data } = await supabase
-        .from("configuracoes")
-        .select("pix_chave, pix_tipo")
-        .eq("empresa_id", cliente!.empresa_id)
-        .maybeSingle();
-      return data;
+        .rpc("get_pix_config", { _empresa_id: cliente!.empresa_id });
+      // RPC returns array, take first
+      const row = Array.isArray(data) ? data[0] : data;
+      return row as { pix_chave: string; pix_tipo: string } | null;
     },
   });
 
