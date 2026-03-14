@@ -121,7 +121,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
       // Vendas do período
       const { data: vendas } = await supabase
         .from("vendas")
-        .select("id, total, desconto_total, subtotal, data_venda, vendedor_id, cliente_id, clientes(nome)")
+        .select("id, total, desconto_total, subtotal, data_venda, vendedor_id, cliente_id, pagamentos, clientes(nome)")
         .gte("data_venda", inicio)
         .lte("data_venda", fim + "T23:59:59")
         .eq("status", "finalizada" as any)
