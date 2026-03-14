@@ -9,6 +9,7 @@ import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { exportReceiptPDF, shareReceiptWhatsApp, fmtR } from "@/lib/reportExport";
+import { getReceiptConfig } from "@/lib/receiptConfig";
 
 interface Props {
   open: boolean;
