@@ -150,7 +150,7 @@ export function useFinalizarVenda() {
       const hasCrediario = v.pagamentos.some((p) => p.forma === "crediario");
       const crediarioConfig = v.crediario;
 
-      // 1. Criar venda
+      // 1. Criar venda — set data_venda to current local time explicitly
       const { data: venda, error: vendaErr } = await supabase
         .from("vendas")
         .insert({
@@ -163,6 +163,7 @@ export function useFinalizarVenda() {
           total,
           pagamentos: v.pagamentos as any,
           observacoes: v.observacoes ?? "",
+          data_venda: new Date().toISOString(),
         })
         .select()
         .single();
