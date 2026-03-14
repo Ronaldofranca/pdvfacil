@@ -68,7 +68,7 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
 
     const saldoRestante = Number(parcela.saldo);
     const pixConfig = config?.pix_chave && config?.pix_tipo && saldoRestante > 0
-      ? { chave: config.pix_chave, tipo: config.pix_tipo, valor: saldoRestante }
+      ? { chave: config.pix_chave, tipo: config.pix_tipo, valor: saldoRestante, nome_recebedor: (config as any)?.pix_nome_recebedor || undefined, cidade_recebedor: (config as any)?.pix_cidade_recebedor || undefined }
       : undefined;
 
     return {

@@ -14,8 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   User, Building2, Palette, ShoppingCart, CreditCard, CalendarDays,
-  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award
+  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award, Sun, Moon, Monitor, Globe
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEmpresas, useUpdateEmpresa } from "@/hooks/useEmpresas";
 import {
   useConfiguracoes, useUpsertConfiguracoes,
@@ -38,6 +40,7 @@ const TABS = [
   { id: "vendedores", label: "Vendedores", icon: Users },
   { id: "indicacoes", label: "Indicações", icon: Award },
   { id: "catalogo", label: "Catálogo", icon: BookOpen },
+  { id: "portal", label: "Portal", icon: Globe },
   { id: "notificacoes", label: "Notificações", icon: Bell },
   { id: "backup", label: "Backup", icon: HardDrive },
   { id: "seguranca", label: "Segurança", icon: Shield },
@@ -187,9 +190,11 @@ export default function ConfiguracoesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Identidade Visual</CardTitle>
-              <CardDescription>Cores usadas no sistema e catálogo</CardDescription>
+              <CardDescription>Cores e tema do sistema</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <ThemeSelector />
+              <Separator />
               {["cor_primaria", "cor_secundaria", "cor_botoes", "cor_fundo"].map((key) => {
                 const labels: Record<string, string> = {
                   cor_primaria: "Cor Principal",
@@ -232,38 +237,96 @@ export default function ConfiguracoesPage() {
           </Card>
         </TabsContent>
 
-        {/* 5. FORMAS DE PAGAMENTO */}
+        {/* 5. FORMAS DE PAGAMENTO + PIX */}
         <TabsContent value="pagamento">
-          <Card>
-            <CardHeader>
-              <CardTitle>Formas de Pagamento</CardTitle>
-              <CardDescription>Gerencie as formas de pagamento aceitas</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input placeholder="Nova forma de pagamento" value={novaForma} onChange={(e) => setNovaForma(e.target.value)} />
-                <Button onClick={() => { if (novaForma.trim()) { addForma.mutate(novaForma.trim()); setNovaForma(""); } }}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {formas?.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={f.ativa} onCheckedChange={(v) => toggleForma.mutate({ id: f.id, ativa: v })} />
-                      <span className={cn("text-sm", !f.ativa && "line-through text-muted-foreground")}>{f.nome}</span>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => deleteForma.mutate(f.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações PIX</CardTitle>
+                <CardDescription>Configure a chave PIX para recebimentos, QR Codes e recibos</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tipo de Chave PIX</Label>
+                    <Select
+                      defaultValue={config?.pix_tipo || ""}
+                      onValueChange={(v) => saveConfig({ pix_tipo: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cpf">CPF</SelectItem>
+                        <SelectItem value="cnpj">CNPJ</SelectItem>
+                        <SelectItem value="telefone">Telefone</SelectItem>
+                        <SelectItem value="email">E-mail</SelectItem>
+                        <SelectItem value="aleatoria">Chave Aleatória</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                ))}
-                {(!formas || formas.length === 0) && (
-                  <p className="text-sm text-muted-foreground">Nenhuma forma de pagamento cadastrada. Adicione acima.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="space-y-2">
+                    <Label>Chave PIX</Label>
+                    <Input
+                      defaultValue={config?.pix_chave ?? ""}
+                      placeholder="Digite sua chave PIX"
+                      onBlur={(e) => saveConfig({ pix_chave: e.target.value.trim() })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nome do Recebedor</Label>
+                    <Input
+                      defaultValue={(config as any)?.pix_nome_recebedor ?? ""}
+                      placeholder="Nome que aparece no PIX"
+                      onBlur={(e) => saveConfig({ pix_nome_recebedor: e.target.value.trim() })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cidade do Recebedor</Label>
+                    <Input
+                      defaultValue={(config as any)?.pix_cidade_recebedor ?? ""}
+                      placeholder="Ex: São Paulo"
+                      onBlur={(e) => saveConfig({ pix_cidade_recebedor: e.target.value.trim() })}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Essas informações são usadas para gerar QR Codes PIX e códigos copiáveis em recibos e cobranças.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Formas de Pagamento</CardTitle>
+                <CardDescription>Gerencie as formas de pagamento aceitas</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input placeholder="Nova forma de pagamento" value={novaForma} onChange={(e) => setNovaForma(e.target.value)} />
+                  <Button onClick={() => { if (novaForma.trim()) { addForma.mutate(novaForma.trim()); setNovaForma(""); } }}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {formas?.map((f) => (
+                    <div key={f.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={f.ativa} onCheckedChange={(v) => toggleForma.mutate({ id: f.id, ativa: v })} />
+                        <span className={cn("text-sm", !f.ativa && "line-through text-muted-foreground")}>{f.nome}</span>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => deleteForma.mutate(f.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  {(!formas || formas.length === 0) && (
+                    <p className="text-sm text-muted-foreground">Nenhuma forma de pagamento cadastrada. Adicione acima.</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* 6. PARCELAS */}
@@ -423,7 +486,50 @@ export default function ConfiguracoesPage() {
           </Card>
         </TabsContent>
 
-        {/* 10. NOTIFICAÇÕES */}
+        {/* PORTAL DO CLIENTE */}
+        <TabsContent value="portal">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações do Portal do Cliente</CardTitle>
+              <CardDescription>Personalize o portal de acesso dos seus clientes</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Título do Portal</Label>
+                  <Input
+                    defaultValue={(config as any)?.portal_titulo ?? "Portal do Cliente"}
+                    onBlur={(e) => saveConfig({ portal_titulo: e.target.value.trim() || "Portal do Cliente" })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Texto do Rodapé</Label>
+                  <Input
+                    defaultValue={(config as any)?.portal_rodape ?? ""}
+                    placeholder="Ex: © 2026 Minha Empresa"
+                    onBlur={(e) => saveConfig({ portal_rodape: e.target.value.trim() })}
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Mensagem de Boas-vindas</Label>
+                  <Input
+                    defaultValue={(config as any)?.portal_mensagem_boas_vindas ?? ""}
+                    placeholder="Mensagem exibida na página inicial do portal"
+                    onBlur={(e) => saveConfig({ portal_mensagem_boas_vindas: e.target.value.trim() })}
+                  />
+                </div>
+              </div>
+              <Separator />
+              <p className="text-sm font-semibold">Seções Visíveis no Portal</p>
+              <div className="divide-y">
+                <SwitchRow label="Mostrar Pedidos" description="Permite ao cliente ver e criar pedidos" checked={(config as any)?.portal_mostrar_pedidos ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pedidos: v })} />
+                <SwitchRow label="Mostrar Parcelas" description="Permite ao cliente ver parcelas e saldos" checked={(config as any)?.portal_mostrar_parcelas ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_parcelas: v })} />
+                <SwitchRow label="Mostrar Histórico de Compras" description="Permite ao cliente ver compras anteriores" checked={(config as any)?.portal_mostrar_compras ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_compras: v })} />
+                <SwitchRow label="Mostrar Chave PIX" description="Exibe a chave PIX para pagamento no portal" checked={(config as any)?.portal_mostrar_pix ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pix: v })} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
         <TabsContent value="notificacoes">
           <Card>
             <CardHeader>
@@ -508,6 +614,39 @@ export default function ConfiguracoesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Theme selector component
+function ThemeSelector() {
+  const { theme, setTheme } = useTheme();
+  const options = [
+    { value: "dark" as const, label: "Escuro", icon: Moon },
+    { value: "light" as const, label: "Claro", icon: Sun },
+    { value: "system" as const, label: "Sistema", icon: Monitor },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <Label>Tema da Interface</Label>
+      <div className="flex gap-2">
+        {options.map((opt) => (
+          <Button
+            key={opt.value}
+            variant={theme === opt.value ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 flex-1"
+            onClick={() => setTheme(opt.value)}
+          >
+            <opt.icon className="h-4 w-4" />
+            {opt.label}
+          </Button>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {theme === "system" ? "O tema seguirá a preferência do seu sistema operacional." : `Tema ${theme === "dark" ? "escuro" : "claro"} ativo.`}
+      </p>
     </div>
   );
 }

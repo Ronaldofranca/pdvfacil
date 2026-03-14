@@ -651,8 +651,17 @@ export type Database = {
           permitir_desconto: boolean
           permitir_venda_sem_estoque: boolean
           pix_chave: string
+          pix_cidade_recebedor: string
+          pix_nome_recebedor: string
           pix_tipo: string
           pontos_por_indicacao: number
+          portal_mensagem_boas_vindas: string
+          portal_mostrar_compras: boolean
+          portal_mostrar_parcelas: boolean
+          portal_mostrar_pedidos: boolean
+          portal_mostrar_pix: boolean
+          portal_rodape: string
+          portal_titulo: string
           sessao_expiracao_horas: number
           updated_at: string
           valor_minimo_indicacao: number
@@ -681,8 +690,17 @@ export type Database = {
           permitir_desconto?: boolean
           permitir_venda_sem_estoque?: boolean
           pix_chave?: string
+          pix_cidade_recebedor?: string
+          pix_nome_recebedor?: string
           pix_tipo?: string
           pontos_por_indicacao?: number
+          portal_mensagem_boas_vindas?: string
+          portal_mostrar_compras?: boolean
+          portal_mostrar_parcelas?: boolean
+          portal_mostrar_pedidos?: boolean
+          portal_mostrar_pix?: boolean
+          portal_rodape?: string
+          portal_titulo?: string
           sessao_expiracao_horas?: number
           updated_at?: string
           valor_minimo_indicacao?: number
@@ -711,8 +729,17 @@ export type Database = {
           permitir_desconto?: boolean
           permitir_venda_sem_estoque?: boolean
           pix_chave?: string
+          pix_cidade_recebedor?: string
+          pix_nome_recebedor?: string
           pix_tipo?: string
           pontos_por_indicacao?: number
+          portal_mensagem_boas_vindas?: string
+          portal_mostrar_compras?: boolean
+          portal_mostrar_parcelas?: boolean
+          portal_mostrar_pedidos?: boolean
+          portal_mostrar_pix?: boolean
+          portal_rodape?: string
+          portal_titulo?: string
           sessao_expiracao_horas?: number
           updated_at?: string
           valor_minimo_indicacao?: number

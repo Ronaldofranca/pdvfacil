@@ -2,22 +2,47 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, ShoppingBag, DollarSign, History, User, LogOut, Plus, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { to: "/portal", icon: Home, label: "Início", end: true },
-  { to: "/portal/pedidos", icon: ShoppingBag, label: "Meus Pedidos" },
-  { to: "/portal/novo-pedido", icon: Plus, label: "Novo Pedido" },
-  { to: "/portal/parcelas", icon: DollarSign, label: "Minhas Parcelas" },
-  { to: "/portal/compras", icon: History, label: "Últimas Compras" },
-  { to: "/portal/dados", icon: User, label: "Meus Dados" },
+const allNavItems = [
+  { to: "/portal", icon: Home, label: "Início", end: true, key: "home" },
+  { to: "/portal/pedidos", icon: ShoppingBag, label: "Meus Pedidos", key: "pedidos" },
+  { to: "/portal/novo-pedido", icon: Plus, label: "Novo Pedido", key: "pedidos" },
+  { to: "/portal/parcelas", icon: DollarSign, label: "Minhas Parcelas", key: "parcelas" },
+  { to: "/portal/compras", icon: History, label: "Últimas Compras", key: "compras" },
+  { to: "/portal/dados", icon: User, label: "Meus Dados", key: "dados" },
 ];
 
 export function PortalLayout() {
   const { cliente, signOut } = usePortalAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const { data: config } = useQuery({
+    queryKey: ["portal-layout-config", cliente?.empresa_id],
+    enabled: !!cliente?.empresa_id,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("configuracoes")
+        .select("portal_titulo, portal_mostrar_pedidos, portal_mostrar_parcelas, portal_mostrar_compras")
+        .eq("empresa_id", (cliente as any)!.empresa_id)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const portalTitle = config?.portal_titulo || "Portal do Cliente";
+
+  const navItems = allNavItems.filter((item) => {
+    if (item.key === "home" || item.key === "dados") return true;
+    if (item.key === "pedidos") return config?.portal_mostrar_pedidos ?? true;
+    if (item.key === "parcelas") return config?.portal_mostrar_parcelas ?? true;
+    if (item.key === "compras") return config?.portal_mostrar_compras ?? true;
+    return true;
+  });
 
   const handleLogout = async () => {
     await signOut();
@@ -33,7 +58,7 @@ export function PortalLayout() {
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
-            <h1 className="text-lg font-bold text-foreground">Portal do Cliente</h1>
+            <h1 className="text-lg font-bold text-foreground">{portalTitle}</h1>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground hidden sm:inline">{cliente?.nome}</span>

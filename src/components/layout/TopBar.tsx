@@ -1,4 +1,4 @@
-import { Menu, Bell, Building2, LogOut, User, ChevronDown } from "lucide-react";
+import { Menu, Bell, Building2, LogOut, User, ChevronDown, Sun, Moon, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmpresas } from "@/hooks/useEmpresas";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface TopBarProps {
   onMenuToggle: () => void;
@@ -21,6 +22,7 @@ export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
   const { profile } = useAuth();
   const { data: empresas } = useEmpresas();
   const empresaNome = empresas?.[0]?.nome || "Empresa";
+  const { theme, setTheme, resolvedTheme } = useTheme();
 
   const initials = profile?.nome
     ? profile.nome
@@ -30,6 +32,14 @@ export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
         .join("")
         .toUpperCase()
     : "U";
+
+  const cycleTheme = () => {
+    const order = ["dark", "light", "system"] as const;
+    const idx = order.indexOf(theme as any);
+    setTheme(order[(idx + 1) % order.length]);
+  };
+
+  const ThemeIcon = theme === "system" ? Monitor : resolvedTheme === "dark" ? Moon : Sun;
 
   return (
     <header className="flex items-center justify-between h-14 px-4 border-b border-border bg-card shrink-0">
@@ -45,6 +55,10 @@ export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
         </div>
       </div>
       <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={cycleTheme} title={`Tema: ${theme}`}>
+          <ThemeIcon className="w-5 h-5" />
+        </Button>
+
         <Button variant="ghost" size="icon" className="text-muted-foreground relative">
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />

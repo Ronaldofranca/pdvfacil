@@ -147,11 +147,13 @@ export interface ReceiptPDFOptions {
     chave: string;
     tipo: string;
     valor?: number; // value for QR code
+    nome_recebedor?: string;
+    cidade_recebedor?: string;
   };
 }
 
 // ─── PIX QR Code generation ───
-function buildPixPayload(chave: string, tipo: string, valor?: number, nome?: string): string {
+function buildPixPayload(chave: string, tipo: string, valor?: number, nome?: string, cidade?: string): string {
   // Simplified EMV/BR Code PIX payload
   const formatField = (id: string, value: string) => {
     const len = value.length.toString().padStart(2, "0");
@@ -185,7 +187,8 @@ function buildPixPayload(chave: string, tipo: string, valor?: number, nome?: str
   payload += formatField("59", merchantName);
 
   // Merchant City
-  payload += formatField("60", "SAO PAULO");
+  const merchantCity = (cidade || "SAO PAULO").substring(0, 15).toUpperCase();
+  payload += formatField("60", merchantCity);
 
   // CRC16 placeholder
   payload += "6304";
@@ -211,9 +214,9 @@ function crc16ccitt(str: string): string {
   return crc.toString(16).toUpperCase().padStart(4, "0");
 }
 
-async function generatePixQRCodeDataUrl(chave: string, tipo: string, valor?: number, nome?: string): Promise<string | null> {
+async function generatePixQRCodeDataUrl(chave: string, tipo: string, valor?: number, nome?: string, cidade?: string): Promise<string | null> {
   try {
-    const pixPayload = buildPixPayload(chave, tipo, valor, nome);
+    const pixPayload = buildPixPayload(chave, tipo, valor, nome, cidade);
     const dataUrl = await QRCode.toDataURL(pixPayload, {
       width: 200,
       margin: 1,
@@ -224,6 +227,9 @@ async function generatePixQRCodeDataUrl(chave: string, tipo: string, valor?: num
     return null;
   }
 }
+
+// Export for reuse in components
+export { buildPixPayload, generatePixQRCodeDataUrl };
 
 // ─── Shared receipt CSS ───
 const RECEIPT_CSS = `
@@ -389,7 +395,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   if (pix?.chave) {
     const pixValor = pix.valor || (isVenda ? resumo.total : parcelaInfo?.saldoRestante) || 0;
     if (pixValor > 0) {
-      pixQrDataUrl = await generatePixQRCodeDataUrl(pix.chave, pix.tipo, pixValor, empresa);
+      pixQrDataUrl = await generatePixQRCodeDataUrl(pix.chave, pix.tipo, pixValor, pix.nome_recebedor || empresa, pix.cidade_recebedor);
     }
   }
 
