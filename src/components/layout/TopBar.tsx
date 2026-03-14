@@ -87,6 +87,9 @@ export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
             <DropdownMenuItem className="gap-2" disabled>
               <User className="w-4 h-4" /> Perfil
             </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2" onClick={cycleTheme}>
+              <ThemeIcon className="w-4 h-4" /> Tema: {theme === "system" ? "Auto" : theme === "dark" ? "Escuro" : "Claro"}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={onLogout}>
               <LogOut className="w-4 h-4" /> Sair
