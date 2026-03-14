@@ -91,34 +91,48 @@ export default function PortalNovoPedidoPage() {
   const total = cart.reduce((s, c) => s + c.preco * c.quantidade, 0);
 
   const submitOrder = async () => {
-    if (!cliente || cart.length === 0) return;
+    if (!cliente || cart.length === 0 || sending) return;
+
+    // Validate vendedor_id exists
+    if (!cliente.vendedor_id) {
+      toast.error("Não foi possível identificar o vendedor responsável. Entre em contato com o suporte.");
+      return;
+    }
+
+    // Validate cart items
+    if (cart.some((c) => c.quantidade <= 0 || c.preco < 0)) {
+      toast.error("Itens do carrinho com valores inválidos.");
+      return;
+    }
+
+    // Sanitize observations (max 500 chars, strip HTML)
+    const sanitizedObs = obs.replace(/<[^>]*>/g, "").trim().slice(0, 500);
+
     setSending(true);
 
     try {
-      // Insert pedido
       const { data: pedido, error: pErr } = await supabase
         .from("pedidos")
         .insert({
           empresa_id: cliente.empresa_id,
           cliente_id: cliente.id,
-          vendedor_id: cliente.vendedor_id || cliente.id, // fallback
+          vendedor_id: cliente.vendedor_id,
           data_prevista_entrega: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
           status: "aguardando_entrega" as any,
           subtotal: total,
           valor_total: total,
-          observacoes: obs || "Pedido feito pelo portal do cliente",
+          observacoes: sanitizedObs || "Pedido feito pelo portal do cliente",
         })
         .select("id")
         .single();
 
       if (pErr) throw pErr;
 
-      // Insert items
       const itens = cart.map((c) => ({
         empresa_id: cliente.empresa_id,
         pedido_id: pedido.id,
         produto_id: c.produto_id,
-        nome_produto: c.nome,
+        nome_produto: c.nome.slice(0, 200),
         quantidade: c.quantidade,
         preco_original: c.preco,
         preco_pedido: c.preco,
@@ -134,7 +148,8 @@ export default function PortalNovoPedidoPage() {
       setObs("");
       navigate("/portal/pedidos");
     } catch (err: any) {
-      toast.error(err.message || "Erro ao enviar pedido");
+      console.error("Erro ao criar pedido:", err);
+      toast.error("Erro ao enviar pedido. Tente novamente.");
     } finally {
       setSending(false);
     }
