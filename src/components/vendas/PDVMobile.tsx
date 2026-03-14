@@ -1117,36 +1117,56 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
 
 // ─── Helper Components ───
 
-function QuickProductCard({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
+function QuickProductCard({ product, onAdd, fmt, onDetail }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string; onDetail?: (id: string) => void }) {
+  const kitItemCount = product.is_kit ? product.kit_itens?.length ?? 0 : 0;
   return (
-    <button
-      type="button"
-      onClick={() => onAdd(product)}
-      className="w-full flex items-center justify-between p-4 rounded-2xl border-2 border-border bg-card active:bg-accent active:scale-[0.98] transition-all"
-    >
-      <div className="flex items-center gap-3 text-left">
+    <div className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 bg-card transition-all ${product.is_kit ? "border-primary/30" : "border-border"}`}>
+      <button
+        type="button"
+        onClick={() => {
+          if (product.is_kit && onDetail) {
+            onDetail(product._kit_id);
+          } else {
+            onAdd(product);
+          }
+        }}
+        className="flex items-center gap-3 text-left flex-1 active:opacity-70"
+      >
         {product.imagem_url ? (
           <img src={product.imagem_url} alt={product.nome} className="w-12 h-12 rounded-xl object-cover shrink-0" />
         ) : (
-          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${product.is_kit ? "bg-primary/10" : "bg-muted"}`}>
             {product.is_kit ? <Layers className="w-5 h-5 text-primary" /> : <Package className="w-5 h-5 text-muted-foreground" />}
           </div>
         )}
         <div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <p className="font-semibold text-foreground text-base">{product.nome}</p>
-            {product.is_kit && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Kit</Badge>}
+            {product.is_kit && (
+              <Badge className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary border-primary/30 gap-0.5">
+                <Layers className="w-2.5 h-2.5" /> Kit
+              </Badge>
+            )}
           </div>
           {product.codigo && <p className="text-xs text-muted-foreground mt-0.5">{product.codigo}</p>}
+          {product.is_kit && kitItemCount > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Contém {kitItemCount} {kitItemCount === 1 ? "item" : "itens"}
+            </p>
+          )}
         </div>
-      </div>
-      <div className="flex items-center gap-3">
+      </button>
+      <div className="flex items-center gap-2 shrink-0 ml-2">
         <span className="font-bold text-primary text-lg">{fmt(Number(product.preco))}</span>
-        <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+        <button
+          type="button"
+          onClick={() => onAdd(product)}
+          className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center active:scale-95 transition-transform"
+        >
           <Plus className="w-6 h-6 text-primary-foreground" />
-        </div>
+        </button>
       </div>
-    </button>
+    </div>
   );
 }
 
