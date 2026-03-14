@@ -2,18 +2,45 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 
-const hoje = () => format(new Date(), "yyyy-MM-dd");
+// Returns start/end of a local day as UTC ISO strings for proper timezone-aware filtering
+function localDayRange(date: Date): { start: string; end: string } {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+function localDayKey(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
 
 export type DashboardPeriodo = "hoje" | "7dias" | "30dias" | "mes";
 
-function getPeriodoDates(periodo: DashboardPeriodo): { inicio: string; fim: string } {
+function getPeriodoRange(periodo: DashboardPeriodo): { start: string; end: string } {
   const now = new Date();
-  const fim = format(now, "yyyy-MM-dd");
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   switch (periodo) {
-    case "hoje": return { inicio: fim, fim };
-    case "7dias": return { inicio: format(subDays(now, 7), "yyyy-MM-dd"), fim };
-    case "30dias": return { inicio: format(subDays(now, 30), "yyyy-MM-dd"), fim };
-    case "mes": return { inicio: format(startOfMonth(now), "yyyy-MM-dd"), fim: format(endOfMonth(now), "yyyy-MM-dd") };
+    case "hoje": return localDayRange(now);
+    case "7dias": {
+      const s = new Date(todayStart);
+      s.setDate(s.getDate() - 7);
+      const e = new Date(todayStart);
+      e.setDate(e.getDate() + 1);
+      return { start: s.toISOString(), end: e.toISOString() };
+    }
+    case "30dias": {
+      const s = new Date(todayStart);
+      s.setDate(s.getDate() - 30);
+      const e = new Date(todayStart);
+      e.setDate(e.getDate() + 1);
+      return { start: s.toISOString(), end: e.toISOString() };
+    }
+    case "mes": {
+      const s = startOfMonth(now);
+      const e = new Date(endOfMonth(now));
+      e.setDate(e.getDate() + 1);
+      return { start: new Date(s.getFullYear(), s.getMonth(), s.getDate()).toISOString(), end: new Date(e.getFullYear(), e.getMonth(), e.getDate()).toISOString() };
+    }
   }
 }
 
