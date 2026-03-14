@@ -165,20 +165,27 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     if (!kitsRaw) return [];
     return kitsRaw
       .filter((k: any) => k.ativo)
-      .map((k: any) => ({
-        id: `kit_${k.id}`,
-        _kit_id: k.id,
-        nome: `Kit ${k.nome}`,
-        preco: k.preco,
-        imagem_url: k.imagem_url,
-        codigo: "",
-        ativo: true,
-        is_kit: true,
-        kit_itens: (k.kit_itens || []).map((ki: any) => ({
-          produto_id: ki.produto_id,
-          quantidade: Number(ki.quantidade),
-        })),
-      }));
+      .map((k: any) => {
+        const kitCusto = (k.kit_itens || []).reduce((sum: number, ki: any) => {
+          const prodCusto = Number(ki.produtos?.custo ?? 0);
+          return sum + prodCusto * Number(ki.quantidade);
+        }, 0);
+        return {
+          id: `kit_${k.id}`,
+          _kit_id: k.id,
+          nome: `Kit ${k.nome}`,
+          preco: k.preco,
+          custo: kitCusto,
+          imagem_url: k.imagem_url,
+          codigo: "",
+          ativo: true,
+          is_kit: true,
+          kit_itens: (k.kit_itens || []).map((ki: any) => ({
+            produto_id: ki.produto_id,
+            quantidade: Number(ki.quantidade),
+          })),
+        };
+      });
   }, [kitsRaw]);
 
   const produtos = useMemo(() => [...(produtosRaw ?? []), ...kitsAsProducts], [produtosRaw, kitsAsProducts]);
