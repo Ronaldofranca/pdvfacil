@@ -60,6 +60,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
 
   const buildReceiptOptions = () => {
     const hasPixPayment = pagamentos.some((p: any) => p.forma === "pix");
+    const rc = getReceiptConfig(config);
     const pixConfig = config?.pix_chave && config?.pix_tipo
       ? {
           chave: config.pix_chave,
@@ -107,8 +108,10 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
       empresaInfo: {
         telefone: empresa?.telefone || undefined,
         endereco: empresa?.endereco || undefined,
+        cnpj: empresa?.cnpj || undefined,
       },
       pix: pixConfig,
+      receiptConfig: rc,
       cancelamento: venda.status === "cancelada" ? {
         motivo: (venda as any).motivo_cancelamento ?? "Não informado",
         data: (venda as any).cancelado_em ? format(new Date((venda as any).cancelado_em), "dd/MM/yyyy HH:mm", { locale: ptBR }) : undefined,
