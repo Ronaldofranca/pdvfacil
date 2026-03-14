@@ -619,10 +619,10 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Footer ───
   const footerHtml = `
     <div class="receipt-footer">
-      <div class="thanks">Obrigado pela preferência!</div>
+      ${mensagemFinal ? `<div class="thanks">${escapeHtml(mensagemFinal)}</div>` : ""}
       <div class="contact">Em caso de dúvidas, entre em contato.</div>
-      ${empresaInfo?.telefone ? `<div class="contact">📱 WhatsApp: ${escapeHtml(empresaInfo.telefone)}</div>` : ""}
-      <div class="legal">Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}. Este recibo não tem valor fiscal.</div>
+      ${showTelefone && empresaInfo?.telefone ? `<div class="contact">📱 WhatsApp: ${escapeHtml(empresaInfo.telefone)}</div>` : ""}
+      <div class="legal">Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}. ${escapeHtml(rodape)}</div>
     </div>
   `;
 
