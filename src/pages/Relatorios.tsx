@@ -150,7 +150,7 @@ export default function RelatoriosPage() {
   }, [vendas]);
   const totalPgtos = totalPgtosParcelas + totalAVista;
   const totalVencido = vencidas?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
-  const totalPendente = (todasParcelas ?? []).filter((p) => p.status === "pendente").reduce((s, p) => s + Number(p.saldo ?? 0), 0);
+  const totalPendente = (todasParcelas ?? []).filter((p) => p.status === "pendente" || p.status === "parcial").reduce((s, p) => s + Number(p.saldo ?? 0), 0);
 
   // Chart data
   const vendasPorDia = useMemo(() => {
