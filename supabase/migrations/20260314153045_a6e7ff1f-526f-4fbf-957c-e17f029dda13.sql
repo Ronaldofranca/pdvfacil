@@ -1,0 +1,1 @@
+ALTER TYPE status_parcela ADD VALUE IF NOT EXISTS 'cancelada';
