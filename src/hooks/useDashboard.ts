@@ -84,11 +84,11 @@ export function useDashboardData() {
         .order("vencimento");
       const totalVencido = vencidas?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
 
-      // Contas a receber
+      // Contas a receber (pendente + parcial + vencida)
       const { data: pendentes } = await supabase
         .from("parcelas")
-        .select("id, saldo")
-        .eq("status", "pendente" as any);
+        .select("id, saldo, status")
+        .in("status", ["pendente", "parcial"] as any);
       const totalAReceber = (pendentes?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0) + totalVencido;
 
       // Estoque baixo
