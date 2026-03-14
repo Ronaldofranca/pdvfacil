@@ -26,7 +26,7 @@ export function useRelVendasDetalhadas(inicio: string, fim: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendas")
-        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, cliente_id, clientes(nome), itens_venda(produto_id, nome_produto, quantidade, preco_vendido, preco_original, subtotal, desconto, bonus)")
+        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, cliente_id, clientes(nome), itens_venda(produto_id, nome_produto, quantidade, preco_vendido, preco_original, subtotal, desconto, bonus, custo_unitario)")
         .gte("data_venda", inicio)
         .lte("data_venda", fim + "T23:59:59")
         .eq("status", "finalizada" as any)
