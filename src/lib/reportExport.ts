@@ -514,7 +514,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   ` : "";
 
   // ─── Parcelas (crediário) ───
-  const parcelasHtml = parcelas && parcelas.length > 0 ? `
+  const parcelasHtml = showParcelas && parcelas && parcelas.length > 0 ? `
     <div class="section">
       <div class="section-title">Parcelas do Crediário</div>
       <table>
