@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { invalidateDashboardQueries } from "@/hooks/useVendas";
 
 export function useParcelas(filters?: { vendaId?: string; clienteId?: string; status?: string }) {
   return useQuery({
@@ -61,7 +62,7 @@ export function useGerarParcelas() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["parcelas"] });
+      invalidateDashboardQueries(qc);
       toast.success("Parcelas geradas!");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -97,8 +98,7 @@ export function useRegistrarPagamento() {
       return data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["parcelas"] });
-      qc.invalidateQueries({ queryKey: ["pagamentos"] });
+      invalidateDashboardQueries(qc);
       toast.success("Pagamento registrado!");
     },
     onError: (e: Error) => toast.error(e.message),
