@@ -93,7 +93,7 @@ export function useVendaItens(vendaId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("itens_venda")
-        .select("*")
+        .select("*, produtos(imagem_url)")
         .eq("venda_id", vendaId!)
         .order("created_at");
       if (error) throw error;
