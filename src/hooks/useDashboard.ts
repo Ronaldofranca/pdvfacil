@@ -136,7 +136,7 @@ export function useDashboardData() {
       return {
         totalVendasDia, qtdVendasDia, lucroDia, recebidoHoje,
         totalVencido, qtdVencidas: vencidas?.length ?? 0,
-        totalAReceber, qtdPendentes: pendentes?.length ?? 0,
+        totalAReceber, qtdPendentes: pendentesHoje?.length ?? 0,
         estoqueBaixo: estoqueBaixo ?? [],
         estoqueSemEstoque: (estoqueBaixo ?? []).filter((e: any) => Number(e.quantidade) <= 0).length,
         vendasRecentes: vendasHoje?.slice(0, 8) ?? [],
