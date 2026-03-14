@@ -753,7 +753,6 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                             })}
                           </div>
                         )}
-                        </p>
                       </div>
                       <span className="font-bold text-primary text-lg">
                         {item.bonus ? "R$ 0,00" : fmt(item.subtotal)}
