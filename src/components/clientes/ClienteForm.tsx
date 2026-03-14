@@ -110,6 +110,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
         longitude: cliente.longitude != null ? String(cliente.longitude) : "",
         observacoes: cliente.observacoes ?? "",
         ativo: cliente.ativo ?? true,
+        permitir_fiado: cliente.permitir_fiado ?? true,
         cliente_indicador_id: cliente.cliente_indicador_id ?? "",
       });
       // Load phones from the related table
