@@ -132,7 +132,8 @@ Deno.serve(async (req) => {
       });
 
       if (createErr) {
-        return new Response(JSON.stringify({ error: createErr.message }), {
+        console.error("Erro ao criar usuário do portal:", createErr.message);
+        return new Response(JSON.stringify({ error: "Não foi possível criar acesso. Verifique se o email já está em uso." }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
