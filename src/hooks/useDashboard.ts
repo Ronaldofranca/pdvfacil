@@ -130,7 +130,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
       if (vendaIds.length > 0) {
         const { data } = await supabase
           .from("itens_venda")
-          .select("produto_id, nome_produto, quantidade, subtotal")
+          .select("produto_id, nome_produto, quantidade, subtotal, custo_unitario")
           .in("venda_id", vendaIds);
         itens = data ?? [];
       }
