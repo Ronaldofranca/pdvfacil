@@ -68,6 +68,9 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const [searchProd, setSearchProd] = useState("");
   const [searchCliente, setSearchCliente] = useState("");
   const [editingItem, setEditingItem] = useState<number | null>(null);
+  const [filterType, setFilterType] = useState<"todos" | "produtos" | "kits">("todos");
+  const [kitDetailId, setKitDetailId] = useState<string | null>(null);
+  const [expandedCartKit, setExpandedCartKit] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>({
     entrada: 0,
