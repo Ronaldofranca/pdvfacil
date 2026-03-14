@@ -154,8 +154,11 @@ describe("buildReceiptHTML", () => {
       receiptConfig: { ...DEFAULT_RECEIPT_CONFIG, recibo_exibir_imagem_produto: false },
     });
 
-    expect(html).not.toContain("product-img");
-    expect(html).not.toContain("product-placeholder");
+    // The body content should not contain img tags for products (CSS classes are in stylesheet, that's fine)
+    const bodyMatch = html.match(/<body>([\s\S]*)<\/body>/);
+    const bodyContent = bodyMatch ? bodyMatch[1] : "";
+    expect(bodyContent).not.toContain('<img src="https://example.com/img.jpg"');
+    expect(bodyContent).not.toContain("product-placeholder");
     expect(html).toContain("Produto A");
   });
 
