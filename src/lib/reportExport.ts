@@ -438,16 +438,17 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   `;
 
   // ─── Client Info ───
-  const clienteHtml = `
+  const clienteHtml = showCliente ? `
     <div class="section">
       <div class="section-title">Dados do Cliente</div>
       <div class="info-grid">
         <div class="info-item full"><span class="label">Nome</span><span class="value">${escapeHtml(cliente.nome)}</span></div>
         <div class="info-item"><span class="label">Código</span><span class="value">${escapeHtml(cliente.id)}</span></div>
         <div class="info-item"><span class="label">Data</span><span class="value">${escapeHtml(data)}</span></div>
+        ${options.vendedorNome && (rc?.recibo_exibir_vendedor ?? false) ? `<div class="info-item"><span class="label">Vendedor</span><span class="value">${escapeHtml(options.vendedorNome)}</span></div>` : ""}
       </div>
     </div>
-  `;
+  ` : "";
 
   // ─── Items table ───
   const itensHtml = itens.length > 0 ? `
