@@ -27,7 +27,7 @@ export function useDashboardData() {
       // Vendas do dia
       const { data: vendasHoje } = await supabase
         .from("vendas")
-        .select("id, total, subtotal, data_venda, vendedor_id, clientes(nome)")
+        .select("id, total, subtotal, data_venda, vendedor_id, pagamentos, clientes(nome)")
         .gte("data_venda", hj)
         .lte("data_venda", hj + "T23:59:59")
         .eq("status", "finalizada" as any)
