@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { FileDown, Printer, Share2 } from "lucide-react";
+import { FileDown, Printer, MessageCircle } from "lucide-react";
 import { usePagamentosDaParcela, useParcelas } from "@/hooks/useParcelas";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
