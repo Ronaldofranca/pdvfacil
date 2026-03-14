@@ -719,8 +719,15 @@ async function htmlToPdfBlob(html: string): Promise<Blob> {
 }
 
 export async function exportReceiptPDF(options: ReceiptPDFOptions) {
+  // Preload all images to base64 before building HTML
+  const { preloadReceiptImages } = await import("@/lib/receiptConfig");
+  await preloadReceiptImages(options);
+
   const html = await buildReceiptHTML(options);
   const pdfBlob = await htmlToPdfBlob(html);
+
+  console.info("[Receipt] PDF generated:", pdfBlob.size, "bytes");
+
   const url = URL.createObjectURL(pdfBlob);
   const w = window.open(url, "_blank");
   if (!w) {
@@ -730,8 +737,15 @@ export async function exportReceiptPDF(options: ReceiptPDFOptions) {
 }
 
 export async function shareReceiptWhatsApp(options: ReceiptPDFOptions, phone?: string) {
+  // Preload all images to base64 before building HTML
+  const { preloadReceiptImages } = await import("@/lib/receiptConfig");
+  await preloadReceiptImages(options);
+
   const html = await buildReceiptHTML(options);
   const pdfBlob = await htmlToPdfBlob(html);
+  
+  console.info("[Receipt] PDF for sharing generated:", pdfBlob.size, "bytes");
+
   const fileName = options.type === "venda"
     ? `recibo_venda_${options.id}.pdf`
     : `recibo_pagamento_${options.id}.pdf`;
