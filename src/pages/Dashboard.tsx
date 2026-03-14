@@ -4,7 +4,7 @@ import {
   ShoppingCart, DollarSign, AlertTriangle, CreditCard, PackageX,
   TrendingUp, Target, BellRing, MapPin, PackageSearch, Users,
   FileDown, Calendar as CalendarIcon, UserCheck, BarChart3, Award, Star, MessageSquare, CalendarClock,
-  ClipboardList, Truck, Eye, EyeOff,
+  ClipboardList, Truck, Eye, EyeOff, XCircle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
