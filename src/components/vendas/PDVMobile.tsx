@@ -646,6 +646,11 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-base text-foreground">{item.nome}</span>
+                          {item.is_kit && (
+                            <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                              <Layers className="w-2.5 h-2.5" />Kit
+                            </Badge>
+                          )}
                           {item.bonus && (
                             <Badge variant="secondary" className="text-[10px] gap-0.5">
                               <Gift className="w-2.5 h-2.5" />Bônus
