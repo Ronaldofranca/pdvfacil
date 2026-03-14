@@ -65,6 +65,8 @@ function parsePagamentos(raw: unknown): Array<{ forma: string; valor: number }> 
 export function useDashboardData() {
   return useQuery({
     queryKey: ["dashboard", localDayKey(new Date())],
+    refetchOnWindowFocus: true,
+    staleTime: 30000, // Consider data stale after 30s
     queryFn: async () => {
       const { start: hjStart, end: hjEnd } = localDayRange(new Date());
 
