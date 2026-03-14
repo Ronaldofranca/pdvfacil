@@ -14,14 +14,46 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+    // Validate JWT — must be authenticated
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: userErr } = await callerClient.auth.getUser();
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get caller's empresa_id to scope notifications
+    const { data: empresaId } = await callerClient.rpc("get_my_empresa_id");
+    if (!empresaId) {
+      return new Response(JSON.stringify({ error: "Empresa não encontrada" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, serviceKey);
     const hoje = new Date().toISOString().split("T")[0];
 
-    // Fetch pending orders with delivery dates
+    // Fetch pending orders scoped to caller's empresa
     const { data: pedidos, error: pErr } = await supabase
       .from("pedidos")
       .select("id, empresa_id, vendedor_id, cliente_id, data_prevista_entrega, status, valor_total, clientes(nome)")
+      .eq("empresa_id", empresaId)
       .in("status", ["rascunho", "aguardando_entrega", "em_rota"]);
 
     if (pErr) throw pErr;
@@ -44,7 +76,6 @@ Deno.serve(async (req) => {
       const entrega = p.data_prevista_entrega;
 
       if (entrega < hoje) {
-        // Overdue
         notifications.push({
           empresa_id: p.empresa_id,
           usuario_id: p.vendedor_id,
@@ -53,7 +84,6 @@ Deno.serve(async (req) => {
           tipo: "warning",
         });
       } else if (entrega === hoje) {
-        // Today
         notifications.push({
           empresa_id: p.empresa_id,
           usuario_id: p.vendedor_id,
@@ -62,7 +92,6 @@ Deno.serve(async (req) => {
           tipo: "info",
         });
       } else {
-        // Tomorrow check
         const amanha = new Date(Date.now() + 86400000).toISOString().split("T")[0];
         if (entrega === amanha) {
           notifications.push({
@@ -75,7 +104,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // In-route not yet delivered
       if (p.status === "em_rota") {
         notifications.push({
           empresa_id: p.empresa_id,
@@ -108,7 +136,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    return new Response(JSON.stringify({ error: "Erro interno" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

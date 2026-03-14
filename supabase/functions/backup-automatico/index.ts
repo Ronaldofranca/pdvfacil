@@ -26,7 +26,7 @@ const CRITICAL_TABLES = [
   "audit_logs",
 ] as const;
 
-const GOOGLE_DRIVE_FOLDER_ID = "1u43SQstLrrdnU-Fd-AP91461sb5ijJC_";
+const GOOGLE_DRIVE_FOLDER_ID = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") || "";
 
 function toCsv(rows: Record<string, unknown>[]): string {
   if (rows.length === 0) return "";
