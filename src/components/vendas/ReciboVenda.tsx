@@ -73,7 +73,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
         desconto: Number(item.desconto),
         subtotal: Number(item.subtotal),
         bonus: item.bonus,
-        imagemUrl: undefined, // Will be enhanced if produto has imagem_url
+        imagemUrl: (item as any).produtos?.imagem_url || undefined,
       })) ?? [],
       resumo: {
         subtotal: Number(venda.subtotal),
