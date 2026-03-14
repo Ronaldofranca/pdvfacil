@@ -1071,12 +1071,12 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
               )}
               <Button
                 className="w-full h-16 text-xl gap-3 rounded-2xl font-bold"
-                disabled={isSubmitting || finalizar.isPending || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
+                disabled={isSubmitting || finalizar.isPending || finalizingRef.current || cart.length === 0 || (!hasCrediario && totalPago < total) || (hasCrediario && !clienteId)}
                 onClick={handleFinalizar}
               >
                 <Check className="w-7 h-7" />
-                {isSubmitting || finalizar.isPending
-                  ? "Finalizando..."
+                {isSubmitting || finalizar.isPending || finalizingRef.current
+                  ? (finalizingStep || "Finalizando...")
                   : `Finalizar ${fmt(total)}`}
               </Button>
             </div>
