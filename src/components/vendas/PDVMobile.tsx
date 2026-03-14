@@ -868,9 +868,9 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                             type="number"
                             step="0.01"
                             className="h-14 text-lg mt-1 rounded-xl"
-                            value={item.preco_vendido}
+                            value={item.preco_vendido || ""}
                             onChange={(e) =>
-                              updateItem(idx, { preco_vendido: parseFloat(e.target.value) || 0 })
+                              updateItem(idx, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })
                             }
                           />
                         </div>
