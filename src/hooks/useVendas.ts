@@ -295,85 +295,51 @@ export function useFinalizarVenda() {
   });
 }
 
+// Pre-check: get parcelas with payments for UI warning
+export function useVendaParcelas(vendaId: string | null) {
+  return useQuery({
+    queryKey: ["venda_parcelas_check", vendaId],
+    enabled: !!vendaId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("parcelas")
+        .select("id, status, valor_pago, valor_total")
+        .eq("venda_id", vendaId!);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useCancelarVenda() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ vendaId, motivo, userId }: { vendaId: string; motivo: string; userId: string }) => {
-      // 1. Cancel the venda with tracking fields
-      const { error } = await supabase
-        .from("vendas")
-        .update({
-          status: "cancelada" as any,
-          motivo_cancelamento: motivo,
-          cancelado_por: userId,
-          cancelado_em: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        } as any)
-        .eq("id", vendaId);
+      // Call atomic RPC — handles all steps in a single transaction
+      const { data, error } = await supabase.rpc("fn_cancelar_venda" as any, {
+        _venda_id: vendaId,
+        _motivo: motivo,
+        _usuario_id: userId,
+      });
       if (error) throw error;
-
-      // 2. Cancel unpaid parcelas linked to this venda
-      const { data: parcelas } = await supabase
-        .from("parcelas")
-        .select("id, status, valor_pago")
-        .eq("venda_id", vendaId);
-
-      if (parcelas && parcelas.length > 0) {
-        const unpaidIds = parcelas
-          .filter((p) => p.status !== "paga" && Number(p.valor_pago) === 0)
-          .map((p) => p.id);
-
-        if (unpaidIds.length > 0) {
-          await supabase
-            .from("parcelas")
-            .update({
-              status: "cancelada" as any,
-              observacoes: `Cancelada por cancelamento da venda #${vendaId.slice(0, 8)}`,
-              updated_at: new Date().toISOString(),
-            } as any)
-            .in("id", unpaidIds);
-        }
-      }
-
-      // 3. Generate estorno stock movements
-      const { data: itens } = await supabase
-        .from("itens_venda")
-        .select("produto_id, quantidade, kit_id, nome_produto, item_type")
-        .eq("venda_id", vendaId);
-
-      if (itens && itens.length > 0) {
-        // Get empresa_id from the venda
-        const { data: venda } = await supabase
-          .from("vendas")
-          .select("empresa_id, vendedor_id")
-          .eq("id", vendaId)
-          .single();
-
-        if (venda) {
-          const estornoMovimentos = itens
-            .filter((i) => i.item_type !== "kit") // kit components handled separately
-            .map((i) => ({
-              empresa_id: venda.empresa_id,
-              produto_id: i.produto_id,
-              vendedor_id: venda.vendedor_id,
-              tipo: "ajuste" as any,
-              quantidade: Number(i.quantidade),
-              observacoes: `Estorno - Cancelamento venda #${vendaId.slice(0, 8)} (${i.nome_produto})`,
-            }));
-
-          if (estornoMovimentos.length > 0) {
-            await supabase.from("movimentos_estoque").insert(estornoMovimentos);
-          }
-        }
-      }
+      return data as { success: boolean; parcelas_canceladas: number; parcelas_com_pagamento: number; valor_ja_pago: number; estornos_estoque: number };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["vendas"] });
       qc.invalidateQueries({ queryKey: ["parcelas"] });
       qc.invalidateQueries({ queryKey: ["estoque"] });
       qc.invalidateQueries({ queryKey: ["movimentos_estoque"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      toast.success("Venda cancelada com sucesso. Parcelas e estoque estornados.");
+      qc.invalidateQueries({ queryKey: ["dashboard_periodo"] });
+      
+      let msg = "Venda cancelada com sucesso.";
+      if (data?.parcelas_canceladas > 0) msg += ` ${data.parcelas_canceladas} parcela(s) cancelada(s).`;
+      if (data?.estornos_estoque > 0) msg += ` Estoque estornado (${data.estornos_estoque} movimento(s)).`;
+      if (data?.parcelas_com_pagamento > 0) {
+        const fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(data.valor_ja_pago);
+        msg += ` ⚠️ ${data.parcelas_com_pagamento} parcela(s) tinham pagamentos (${fmt}).`;
+      }
+      toast.success(msg);
     },
     onError: (e: Error) => toast.error(e.message),
   });

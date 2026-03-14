@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useVendas, useVendaItens, useCancelarVenda } from "@/hooks/useVendas";
+import { useVendas, useVendaItens, useCancelarVenda, useVendaParcelas } from "@/hooks/useVendas";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { PDVModal } from "@/components/vendas/PDVModal";
