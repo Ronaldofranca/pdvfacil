@@ -395,7 +395,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   if (pix?.chave) {
     const pixValor = pix.valor || (isVenda ? resumo.total : parcelaInfo?.saldoRestante) || 0;
     if (pixValor > 0) {
-      pixQrDataUrl = await generatePixQRCodeDataUrl(pix.chave, pix.tipo, pixValor, empresa);
+      pixQrDataUrl = await generatePixQRCodeDataUrl(pix.chave, pix.tipo, pixValor, pix.nome_recebedor || empresa, pix.cidade_recebedor);
     }
   }
 
