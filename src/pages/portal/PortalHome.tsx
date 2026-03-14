@@ -126,7 +126,7 @@ export default function PortalHomePage() {
         </Button>
         {vendedorProfile && (
           <Button variant="outline" className="gap-2" asChild>
-            <a href={`https://wa.me/55`} target="_blank" rel="noopener noreferrer">
+            <a href={`https://wa.me/55${(vendedorProfile.telefone || "").replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="w-4 h-4 text-green-600" /> Falar com {vendedorProfile.nome?.split(" ")[0]}
             </a>
           </Button>
