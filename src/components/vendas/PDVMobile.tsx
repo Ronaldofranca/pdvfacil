@@ -68,6 +68,9 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const [searchProd, setSearchProd] = useState("");
   const [searchCliente, setSearchCliente] = useState("");
   const [editingItem, setEditingItem] = useState<number | null>(null);
+  const [filterType, setFilterType] = useState<"todos" | "produtos" | "kits">("todos");
+  const [kitDetailId, setKitDetailId] = useState<string | null>(null);
+  const [expandedCartKit, setExpandedCartKit] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>({
     entrada: 0,
@@ -361,13 +364,26 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     () =>
       (produtos as any[])
         ?.filter((p: any) => p.ativo !== false)
+        .filter((p: any) => {
+          if (filterType === "kits") return p.is_kit;
+          if (filterType === "produtos") return !p.is_kit;
+          return true;
+        })
         .filter(
           (p: any) =>
             p.nome.toLowerCase().includes(searchProd.toLowerCase()) ||
             p.codigo?.toLowerCase().includes(searchProd.toLowerCase())
         ),
-    [produtos, searchProd]
+    [produtos, searchProd, filterType]
   );
+
+  // Kit detail data for modal
+  const kitDetailData = useMemo(() => {
+    if (!kitDetailId) return null;
+    const kit = onlineKits?.find((k: any) => k.id === kitDetailId);
+    if (!kit) return null;
+    return kit;
+  }, [kitDetailId, onlineKits]);
 
   const filteredClientes = useMemo(
     () =>
@@ -602,16 +618,33 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                   autoFocus
                 />
               </div>
+              {/* Filter tabs */}
+              <div className="flex items-center gap-1.5 px-4 pb-3 -mt-1">
+                {(["todos", "produtos", "kits"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setFilterType(t)}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors
+                      ${filterType === t
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                      }`}
+                  >
+                    {t === "todos" ? "Todos" : t === "produtos" ? "Produtos" : "Kits"}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex-1 p-4 space-y-4">
-              {searchProd.trim() ? (
+              {searchProd.trim() || filterType !== "todos" ? (
                 <div className="space-y-2">
                   {filteredProdutos?.map((p) => (
-                    <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                    <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} onDetail={setKitDetailId} />
                   ))}
                   {!filteredProdutos?.length && (
-                    <p className="text-muted-foreground text-center py-12">Nenhum produto encontrado</p>
+                    <p className="text-muted-foreground text-center py-12">Nenhum {filterType === "kits" ? "kit" : "produto"} encontrado</p>
                   )}
                 </div>
               ) : (
@@ -651,7 +684,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Todos os produtos</p>
                     <div className="space-y-2">
                       {(produtos as any[])?.filter((p: any) => p.ativo !== false).map((p: any) => (
-                        <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                        <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} onDetail={setKitDetailId} />
                       ))}
                     </div>
                   </div>
@@ -682,7 +715,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-base text-foreground">{item.nome}</span>
                           {item.is_kit && (
-                            <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                            <Badge className="text-[10px] gap-0.5 px-1.5 py-0 bg-primary/15 text-primary border-primary/30">
                               <Layers className="w-2.5 h-2.5" />Kit
                             </Badge>
                           )}
@@ -696,6 +729,30 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                           {item.quantidade}x {fmt(item.preco_vendido)}
                           {item.desconto > 0 && ` (desc: ${fmt(item.desconto)})`}
                         </p>
+                        {/* Expandable kit composition */}
+                        {item.is_kit && item.kit_itens && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedCartKit(expandedCartKit === item.produto_id ? null : item.produto_id)}
+                            className="text-xs text-primary mt-1 flex items-center gap-1"
+                          >
+                            <Package className="w-3 h-3" />
+                            {item.kit_itens.length} {item.kit_itens.length === 1 ? "item" : "itens"}
+                            <ChevronRight className={`w-3 h-3 transition-transform ${expandedCartKit === item.produto_id ? "rotate-90" : ""}`} />
+                          </button>
+                        )}
+                        {item.is_kit && expandedCartKit === item.produto_id && item.kit_itens && (
+                          <div className="mt-2 ml-1 space-y-1 border-l-2 border-primary/20 pl-3">
+                            {item.kit_itens.map((ki) => {
+                              const prod = (onlineProdutos as any[])?.find((p: any) => p.id === ki.produto_id);
+                              return (
+                                <p key={ki.produto_id} className="text-xs text-muted-foreground">
+                                  {prod?.nome ?? ki.produto_id.slice(0, 8)} × {ki.quantidade * item.quantidade}
+                                </p>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                       <span className="font-bold text-primary text-lg">
                         {item.bonus ? "R$ 0,00" : fmt(item.subtotal)}
@@ -995,42 +1052,121 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
           </Button>
         </div>
       )}
+
+      {/* ─── Kit Detail Modal ─── */}
+      {kitDetailData && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end justify-center" onClick={() => setKitDetailId(null)}>
+          <div
+            className="bg-background w-full max-w-lg rounded-t-3xl p-6 space-y-4 max-h-[70vh] overflow-y-auto animate-in slide-in-from-bottom"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-primary/15 text-primary border-primary/30 gap-1">
+                  <Layers className="w-3 h-3" /> Kit
+                </Badge>
+                <h3 className="font-bold text-lg text-foreground">{kitDetailData.nome}</h3>
+              </div>
+              <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setKitDetailId(null)}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            {kitDetailData.imagem_url && (
+              <img src={kitDetailData.imagem_url} alt={kitDetailData.nome} className="w-full h-40 object-cover rounded-2xl" />
+            )}
+            {kitDetailData.descricao && (
+              <p className="text-sm text-muted-foreground">{kitDetailData.descricao}</p>
+            )}
+            <p className="text-2xl font-bold text-primary">{fmt(Number(kitDetailData.preco))}</p>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Composição do kit</p>
+              <div className="space-y-2">
+                {(kitDetailData as any).kit_itens?.map((ki: any) => (
+                  <div key={ki.produto_id} className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      {ki.produtos?.imagem_url ? (
+                        <img src={ki.produtos.imagem_url} className="w-10 h-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="text-sm font-medium text-foreground">{ki.produtos?.nome ?? "Produto"}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-muted-foreground">×{Number(ki.quantidade)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Button
+              className="w-full h-14 text-lg gap-2 rounded-2xl font-bold"
+              onClick={() => {
+                const kitProduct = kitsAsProducts.find((k: any) => k._kit_id === kitDetailData.id);
+                if (kitProduct) addToCart(kitProduct);
+                setKitDetailId(null);
+              }}
+            >
+              <Plus className="w-6 h-6" /> Adicionar ao carrinho
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── Helper Components ───
 
-function QuickProductCard({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
+function QuickProductCard({ product, onAdd, fmt, onDetail }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string; onDetail?: (id: string) => void }) {
+  const kitItemCount = product.is_kit ? product.kit_itens?.length ?? 0 : 0;
   return (
-    <button
-      type="button"
-      onClick={() => onAdd(product)}
-      className="w-full flex items-center justify-between p-4 rounded-2xl border-2 border-border bg-card active:bg-accent active:scale-[0.98] transition-all"
-    >
-      <div className="flex items-center gap-3 text-left">
+    <div className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 bg-card transition-all ${product.is_kit ? "border-primary/30" : "border-border"}`}>
+      <button
+        type="button"
+        onClick={() => {
+          if (product.is_kit && onDetail) {
+            onDetail(product._kit_id);
+          } else {
+            onAdd(product);
+          }
+        }}
+        className="flex items-center gap-3 text-left flex-1 active:opacity-70"
+      >
         {product.imagem_url ? (
           <img src={product.imagem_url} alt={product.nome} className="w-12 h-12 rounded-xl object-cover shrink-0" />
         ) : (
-          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${product.is_kit ? "bg-primary/10" : "bg-muted"}`}>
             {product.is_kit ? <Layers className="w-5 h-5 text-primary" /> : <Package className="w-5 h-5 text-muted-foreground" />}
           </div>
         )}
         <div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <p className="font-semibold text-foreground text-base">{product.nome}</p>
-            {product.is_kit && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Kit</Badge>}
+            {product.is_kit && (
+              <Badge className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary border-primary/30 gap-0.5">
+                <Layers className="w-2.5 h-2.5" /> Kit
+              </Badge>
+            )}
           </div>
           {product.codigo && <p className="text-xs text-muted-foreground mt-0.5">{product.codigo}</p>}
+          {product.is_kit && kitItemCount > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Contém {kitItemCount} {kitItemCount === 1 ? "item" : "itens"}
+            </p>
+          )}
         </div>
-      </div>
-      <div className="flex items-center gap-3">
+      </button>
+      <div className="flex items-center gap-2 shrink-0 ml-2">
         <span className="font-bold text-primary text-lg">{fmt(Number(product.preco))}</span>
-        <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+        <button
+          type="button"
+          onClick={() => onAdd(product)}
+          className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center active:scale-95 transition-transform"
+        >
           <Plus className="w-6 h-6 text-primary-foreground" />
-        </div>
+        </button>
       </div>
-    </button>
+    </div>
   );
 }
 
