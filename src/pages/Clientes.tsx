@@ -12,6 +12,7 @@ import { useClientes, useDeleteCliente } from "@/hooks/useClientes";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
 import { HistoricoCompras } from "@/components/clientes/HistoricoCompras";
+import { HabilitarPortalDialog } from "@/components/clientes/HabilitarPortalDialog";
 import { ImportarContatos } from "@/components/clientes/ImportarContatos";
 import { IndicacoesCliente } from "@/components/clientes/IndicacoesCliente";
 import { PDVModal } from "@/components/vendas/PDVModal";
