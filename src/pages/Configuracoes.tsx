@@ -28,6 +28,7 @@ import {
   useAllNiveisRecompensa, useAddNivelRecompensa, useUpdateNivelRecompensa, useDeleteNivelRecompensa,
   type NivelRecompensa,
 } from "@/hooks/useNiveisRecompensa";
+import { ReciboConfig } from "@/components/configuracoes/ReciboConfig";
 
 const TABS = [
   { id: "perfil", label: "Perfil", icon: User },
