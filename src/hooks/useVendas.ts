@@ -298,16 +298,82 @@ export function useFinalizarVenda() {
 export function useCancelarVenda() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vendaId: string) => {
+    mutationFn: async ({ vendaId, motivo, userId }: { vendaId: string; motivo: string; userId: string }) => {
+      // 1. Cancel the venda with tracking fields
       const { error } = await supabase
         .from("vendas")
-        .update({ status: "cancelada" as any, updated_at: new Date().toISOString() })
+        .update({
+          status: "cancelada" as any,
+          motivo_cancelamento: motivo,
+          cancelado_por: userId,
+          cancelado_em: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any)
         .eq("id", vendaId);
       if (error) throw error;
+
+      // 2. Cancel unpaid parcelas linked to this venda
+      const { data: parcelas } = await supabase
+        .from("parcelas")
+        .select("id, status, valor_pago")
+        .eq("venda_id", vendaId);
+
+      if (parcelas && parcelas.length > 0) {
+        const unpaidIds = parcelas
+          .filter((p) => p.status !== "paga" && Number(p.valor_pago) === 0)
+          .map((p) => p.id);
+
+        if (unpaidIds.length > 0) {
+          await supabase
+            .from("parcelas")
+            .update({
+              status: "cancelada" as any,
+              observacoes: `Cancelada por cancelamento da venda #${vendaId.slice(0, 8)}`,
+              updated_at: new Date().toISOString(),
+            } as any)
+            .in("id", unpaidIds);
+        }
+      }
+
+      // 3. Generate estorno stock movements
+      const { data: itens } = await supabase
+        .from("itens_venda")
+        .select("produto_id, quantidade, kit_id, nome_produto, item_type")
+        .eq("venda_id", vendaId);
+
+      if (itens && itens.length > 0) {
+        // Get empresa_id from the venda
+        const { data: venda } = await supabase
+          .from("vendas")
+          .select("empresa_id, vendedor_id")
+          .eq("id", vendaId)
+          .single();
+
+        if (venda) {
+          const estornoMovimentos = itens
+            .filter((i) => i.item_type !== "kit") // kit components handled separately
+            .map((i) => ({
+              empresa_id: venda.empresa_id,
+              produto_id: i.produto_id,
+              vendedor_id: venda.vendedor_id,
+              tipo: "ajuste" as any,
+              quantidade: Number(i.quantidade),
+              observacoes: `Estorno - Cancelamento venda #${vendaId.slice(0, 8)} (${i.nome_produto})`,
+            }));
+
+          if (estornoMovimentos.length > 0) {
+            await supabase.from("movimentos_estoque").insert(estornoMovimentos);
+          }
+        }
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vendas"] });
-      toast.success("Venda cancelada.");
+      qc.invalidateQueries({ queryKey: ["parcelas"] });
+      qc.invalidateQueries({ queryKey: ["estoque"] });
+      qc.invalidateQueries({ queryKey: ["movimentos_estoque"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      toast.success("Venda cancelada com sucesso. Parcelas e estoque estornados.");
     },
     onError: (e: Error) => toast.error(e.message),
   });

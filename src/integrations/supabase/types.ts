@@ -478,6 +478,7 @@ export type Database = {
           longitude: number | null
           nome: string
           observacoes: string
+          permitir_fiado: boolean
           pontos_indicacao: number
           rua: string
           telefone: string
@@ -505,6 +506,7 @@ export type Database = {
           longitude?: number | null
           nome: string
           observacoes?: string
+          permitir_fiado?: boolean
           pontos_indicacao?: number
           rua?: string
           telefone?: string
@@ -532,6 +534,7 @@ export type Database = {
           longitude?: number | null
           nome?: string
           observacoes?: string
+          permitir_fiado?: boolean
           pontos_indicacao?: number
           rua?: string
           telefone?: string
@@ -2479,12 +2482,15 @@ export type Database = {
       }
       vendas: {
         Row: {
+          cancelado_em: string | null
+          cancelado_por: string | null
           cliente_id: string | null
           created_at: string
           data_venda: string
           desconto_total: number
           empresa_id: string
           id: string
+          motivo_cancelamento: string | null
           observacoes: string
           pagamentos: Json
           status: Database["public"]["Enums"]["status_venda"]
@@ -2494,12 +2500,15 @@ export type Database = {
           vendedor_id: string
         }
         Insert: {
+          cancelado_em?: string | null
+          cancelado_por?: string | null
           cliente_id?: string | null
           created_at?: string
           data_venda?: string
           desconto_total?: number
           empresa_id: string
           id?: string
+          motivo_cancelamento?: string | null
           observacoes?: string
           pagamentos?: Json
           status?: Database["public"]["Enums"]["status_venda"]
@@ -2509,12 +2518,15 @@ export type Database = {
           vendedor_id: string
         }
         Update: {
+          cancelado_em?: string | null
+          cancelado_por?: string | null
           cliente_id?: string | null
           created_at?: string
           data_venda?: string
           desconto_total?: number
           empresa_id?: string
           id?: string
+          motivo_cancelamento?: string | null
           observacoes?: string
           pagamentos?: Json
           status?: Database["public"]["Enums"]["status_venda"]

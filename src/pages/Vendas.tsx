@@ -7,8 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useVendas, useVendaItens, useCancelarVenda } from "@/hooks/useVendas";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/contexts/AuthContext";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { ReciboVenda } from "@/components/vendas/ReciboVenda";
 import { format } from "date-fns";
@@ -23,6 +27,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
 
 export default function VendasPage() {
   const { canCreateVenda, isAdmin } = usePermissions();
+  const { user } = useAuth();
   const { data: vendas, isLoading } = useVendas();
   const cancelar = useCancelarVenda();
 
@@ -31,6 +36,10 @@ export default function VendasPage() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [reciboVenda, setReciboVenda] = useState<any>(null);
   const { data: itensDetail } = useVendaItens(detailId);
+
+  // Cancellation dialog
+  const [cancelDialogVendaId, setCancelDialogVendaId] = useState<string | null>(null);
+  const [cancelMotivo, setCancelMotivo] = useState("");
 
   const vendaDetail = vendas?.find((v) => v.id === detailId);
 
@@ -41,6 +50,14 @@ export default function VendasPage() {
     (v as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) ||
     v.id.includes(search)
   );
+
+  const handleConfirmCancel = () => {
+    if (!cancelDialogVendaId || !user) return;
+    cancelar.mutate(
+      { vendaId: cancelDialogVendaId, motivo: cancelMotivo, userId: user.id },
+      { onSuccess: () => { setCancelDialogVendaId(null); setCancelMotivo(""); } }
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -102,7 +119,7 @@ export default function VendasPage() {
                           <Receipt className="w-4 h-4" />
                         </Button>
                         {isAdmin && v.status === "finalizada" && (
-                          <Button variant="ghost" size="icon" onClick={() => cancelar.mutate(v.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => setCancelDialogVendaId(v.id)} title="Cancelar venda">
                             <XCircle className="w-4 h-4 text-destructive" />
                           </Button>
                         )}
@@ -126,6 +143,40 @@ export default function VendasPage() {
         venda={reciboVenda}
       />
 
+      {/* Cancellation confirmation dialog */}
+      <Dialog open={!!cancelDialogVendaId} onOpenChange={(o) => { if (!o) { setCancelDialogVendaId(null); setCancelMotivo(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Cancelar Venda</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Esta ação cancelará a venda, estornará parcelas não pagas e reverterá o estoque.
+              O histórico será preservado.
+            </p>
+            <div>
+              <Label>Motivo do cancelamento *</Label>
+              <Textarea
+                value={cancelMotivo}
+                onChange={(e) => setCancelMotivo(e.target.value)}
+                placeholder="Informe o motivo do cancelamento..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelDialogVendaId(null); setCancelMotivo(""); }}>Voltar</Button>
+            <Button
+              variant="destructive"
+              disabled={!cancelMotivo.trim() || cancelar.isPending}
+              onClick={handleConfirmCancel}
+            >
+              {cancelar.isPending ? "Cancelando..." : "Confirmar Cancelamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Detalhes da venda */}
       <Sheet open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -140,6 +191,17 @@ export default function VendasPage() {
                 <div><span className="text-muted-foreground">Cliente:</span> {(vendaDetail as any).clientes?.nome ?? "—"}</div>
                 <div><span className="text-muted-foreground">Data:</span> {format(new Date(vendaDetail.data_venda), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
               </div>
+              {vendaDetail.status === "cancelada" && (vendaDetail as any).motivo_cancelamento && (
+                <div className="bg-destructive/10 p-3 rounded-lg text-sm space-y-1">
+                  <p className="font-semibold text-destructive">Venda Cancelada</p>
+                  <p className="text-muted-foreground">Motivo: {(vendaDetail as any).motivo_cancelamento}</p>
+                  {(vendaDetail as any).cancelado_em && (
+                    <p className="text-xs text-muted-foreground">
+                      Em: {format(new Date((vendaDetail as any).cancelado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </p>
+                  )}
+                </div>
+              )}
               <Separator />
               <div className="space-y-2">
                 <p className="text-sm font-semibold">Itens</p>

@@ -340,9 +340,13 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
       }
     }
 
-    // For crediário, entrada counts as payment
+    // Check fiado restriction
     if (hasCrediario) {
       if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");
+      const clienteFiado = clientes?.find((c) => c.id === clienteId);
+      if (clienteFiado && (clienteFiado as any).permitir_fiado === false) {
+        return toast.error("Este cliente está restrito para compras fiado. Permitir apenas pagamento à vista.");
+      }
       if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
     } else {
       if (totalPago < total) return toast.error("Valor pago insuficiente");
@@ -434,10 +438,20 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>
                   {clientes?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nome}
+                      {(c as any).permitir_fiado === false && " ⚠️ (Restrito fiado)"}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {/* Fiado restriction warning */}
+              {clienteId && clienteSel && (clienteSel as any).permitir_fiado === false && (
+                <div className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg bg-destructive/10 text-destructive">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span className="font-semibold">Cliente restrito para compras fiado — apenas à vista</span>
+                </div>
+              )}
               {/* Score badge */}
               {clienteId && clienteScore && (
                 <div className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg ${

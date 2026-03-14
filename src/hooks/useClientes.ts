@@ -41,6 +41,7 @@ export interface ClienteInput {
   longitude?: number | null;
   observacoes?: string;
   ativo?: boolean;
+  permitir_fiado?: boolean;
   cliente_indicador_id?: string | null;
 }
 
@@ -95,6 +96,7 @@ export function useUpsertCliente() {
         longitude: c.longitude ?? null,
         observacoes: c.observacoes ?? "",
         ativo: c.ativo ?? true,
+        permitir_fiado: (raw as any).permitir_fiado ?? true,
         updated_at: new Date().toISOString(),
       };
       if ((raw as any).cliente_indicador_id !== undefined) {
