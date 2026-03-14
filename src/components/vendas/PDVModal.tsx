@@ -545,8 +545,8 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                           type="number"
                           step="0.01"
                           className="h-7 w-20 text-xs"
-                          value={item.preco_vendido}
-                          onChange={(e) => updateItem(idx, { preco_vendido: parseFloat(e.target.value) || 0 })}
+                          value={item.preco_vendido || ""}
+                          onChange={(e) => updateItem(idx, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
                         />
                       </div>
                       {/* Desconto */}
