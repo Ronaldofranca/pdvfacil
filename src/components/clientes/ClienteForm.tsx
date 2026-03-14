@@ -56,6 +56,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
     longitude: "",
     observacoes: "",
     ativo: true,
+    permitir_fiado: true,
     cliente_indicador_id: "",
   };
 
