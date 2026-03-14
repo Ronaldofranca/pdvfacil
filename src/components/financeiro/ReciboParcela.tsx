@@ -8,7 +8,7 @@ import { useEmpresas } from "@/hooks/useEmpresas";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { exportReceiptPDF, fmtR } from "@/lib/reportExport";
+import { exportReceiptPDF, shareReceiptWhatsApp, fmtR } from "@/lib/reportExport";
 
 interface Props {
   open: boolean;
