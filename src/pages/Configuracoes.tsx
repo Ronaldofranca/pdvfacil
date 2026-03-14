@@ -33,6 +33,7 @@ const TABS = [
   { id: "perfil", label: "Perfil", icon: User },
   { id: "empresa", label: "Empresa", icon: Building2 },
   { id: "visual", label: "Visual", icon: Palette },
+  { id: "recibo", label: "Recibo", icon: FileDown },
   { id: "pdv", label: "PDV", icon: ShoppingCart },
   { id: "pagamento", label: "Pagamento", icon: CreditCard },
   { id: "parcelas", label: "Parcelas", icon: CalendarDays },
