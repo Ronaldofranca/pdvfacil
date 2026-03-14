@@ -1212,6 +1212,8 @@ export type Database = {
           custo_unitario: number
           desconto: number
           id: string
+          item_type: string
+          kit_id: string | null
           nome_produto: string
           preco_original: number
           preco_vendido: number
@@ -1226,6 +1228,8 @@ export type Database = {
           custo_unitario?: number
           desconto?: number
           id?: string
+          item_type?: string
+          kit_id?: string | null
           nome_produto: string
           preco_original?: number
           preco_vendido?: number
@@ -1240,6 +1244,8 @@ export type Database = {
           custo_unitario?: number
           desconto?: number
           id?: string
+          item_type?: string
+          kit_id?: string | null
           nome_produto?: string
           preco_original?: number
           preco_vendido?: number
@@ -1249,6 +1255,13 @@ export type Database = {
           venda_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "itens_venda_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "kits"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "itens_venda_produto_id_fkey"
             columns: ["produto_id"]
@@ -1442,6 +1455,7 @@ export type Database = {
           data: string
           empresa_id: string
           id: string
+          kit_id: string | null
           observacoes: string
           produto_id: string
           quantidade: number
@@ -1453,6 +1467,7 @@ export type Database = {
           data?: string
           empresa_id: string
           id?: string
+          kit_id?: string | null
           observacoes?: string
           produto_id: string
           quantidade: number
@@ -1464,6 +1479,7 @@ export type Database = {
           data?: string
           empresa_id?: string
           id?: string
+          kit_id?: string | null
           observacoes?: string
           produto_id?: string
           quantidade?: number
@@ -1476,6 +1492,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_estoque_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "kits"
             referencedColumns: ["id"]
           },
           {
