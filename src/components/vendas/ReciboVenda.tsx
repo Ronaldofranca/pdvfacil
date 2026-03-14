@@ -163,23 +163,40 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
           <div className="space-y-2">
             <p className="text-sm font-semibold">Itens da Venda</p>
             {itens?.map((item) => (
-              <div key={item.id} className="flex items-start gap-3 p-2 rounded border text-sm">
-                <div className="w-10 h-10 rounded bg-muted flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
-                  <img 
-                    src={(item as any).produtos?.imagem_url || "/placeholder.svg"} 
-                    alt={item.nome_produto}
-                    className="w-full h-full object-cover"
-                  />
+              <div key={item.id} className="p-2 rounded border text-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded bg-muted flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
+                    <img 
+                      src={(item as any).produtos?.imagem_url || "/placeholder.svg"} 
+                      alt={item.nome_produto}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium truncate">{item.nome_produto}</p>
+                      {(item as any).item_type === "kit" && (
+                        <Badge variant="outline" className="text-[10px] px-1 py-0">Kit</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {Number(item.quantidade)}x {fmtR(Number(item.preco_vendido))}
+                      {item.bonus && " (Bônus)"}
+                      {Number(item.desconto) > 0 && ` — Desc: ${fmtR(Number(item.desconto))}`}
+                    </p>
+                  </div>
+                  <span className="font-medium whitespace-nowrap">{fmtR(Number(item.subtotal))}</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{item.nome_produto}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {Number(item.quantidade)}x {fmtR(Number(item.preco_vendido))}
-                    {item.bonus && " (Bônus)"}
-                    {Number(item.desconto) > 0 && ` — Desc: ${fmtR(Number(item.desconto))}`}
-                  </p>
-                </div>
-                <span className="font-medium whitespace-nowrap">{fmtR(Number(item.subtotal))}</span>
+                {/* Kit composition details */}
+                {(item as any)._kit_composicao?.length > 0 && (
+                  <div className="mt-1.5 ml-13 pl-3 border-l-2 border-muted space-y-0.5">
+                    {(item as any)._kit_composicao.map((comp: any, idx: number) => (
+                      <p key={idx} className="text-[11px] text-muted-foreground">
+                        • {comp.quantidade}x {comp.produto_nome}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

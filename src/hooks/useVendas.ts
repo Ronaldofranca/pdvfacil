@@ -113,7 +113,26 @@ export function useVendaItens(vendaId: string | null) {
         .eq("venda_id", vendaId!)
         .order("created_at");
       if (error) throw error;
-      return data;
+
+      // For kit items, fetch kit composition for display
+      const kitIds = data?.filter((i: any) => i.kit_id).map((i: any) => i.kit_id) ?? [];
+      let kitCompositions = new Map<string, { produto_nome: string; quantidade: number }[]>();
+      if (kitIds.length > 0) {
+        const { data: kitItens } = await supabase
+          .from("kit_itens")
+          .select("kit_id, quantidade, produtos(nome)")
+          .in("kit_id", kitIds);
+        for (const ki of kitItens ?? []) {
+          const list = kitCompositions.get(ki.kit_id) ?? [];
+          list.push({ produto_nome: (ki as any).produtos?.nome ?? "", quantidade: Number(ki.quantidade) });
+          kitCompositions.set(ki.kit_id, list);
+        }
+      }
+
+      return data?.map((item: any) => ({
+        ...item,
+        _kit_composicao: item.kit_id ? kitCompositions.get(item.kit_id) ?? [] : [],
+      })) ?? [];
     },
   });
 }
