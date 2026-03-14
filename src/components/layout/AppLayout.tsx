@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { TopBar } from "./TopBar";
@@ -10,41 +10,65 @@ import { useRoutePersistence } from "@/hooks/useRoutePersistence";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
- * Ensures body scroll is never locked by stale modals/sheets on route change.
+ * Cleans up stale body locks (overflow:hidden, pointer-events:none)
+ * left behind by Radix dialogs/sheets on EVERY route change.
+ * Also runs a periodic check as a safety net for PWA resume scenarios.
  */
 function useScrollLockCleanup() {
+  const location = useLocation();
+
+  // Clean up on every route change
   useEffect(() => {
-    // On mount and when the component re-renders (route changes),
-    // ensure body is scrollable. Radix/shadcn dialogs set overflow:hidden
-    // and pointer-events:none on body which can get stuck.
-    return () => {
-      // Cleanup on unmount: remove any stale body locks
+    const body = document.body;
+    if (body.style.overflow === "hidden") {
+      body.style.overflow = "";
+    }
+    if (body.style.pointerEvents === "none") {
+      body.style.pointerEvents = "";
+    }
+    // Also remove any Radix-injected data attributes that block interaction
+    body.removeAttribute("data-scroll-locked");
+  }, [location.pathname]);
+
+  // Safety net: periodic check every 3s for stuck body locks
+  // This catches edge cases like PWA resume where no route change fires
+  useEffect(() => {
+    const interval = setInterval(() => {
       const body = document.body;
-      if (body.style.overflow === "hidden") {
-        body.style.overflow = "";
+      // Only clean if no open dialogs/sheets exist in the DOM
+      const hasOpenOverlay = document.querySelector(
+        "[data-state='open'][role='dialog'], [data-state='open'][role='alertdialog']"
+      );
+      if (!hasOpenOverlay) {
+        if (body.style.overflow === "hidden") {
+          body.style.overflow = "";
+        }
+        if (body.style.pointerEvents === "none") {
+          body.style.pointerEvents = "";
+        }
       }
-      if (body.style.pointerEvents === "none") {
-        body.style.pointerEvents = "";
-      }
-    };
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, []);
 }
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
+  const location = useLocation();
   const { handleLogout, extendSession, showExpiryWarning, expiryCountdown } = useSessionManager();
   useRoutePersistence();
   useScrollLockCleanup();
 
   const doLogout = () => handleLogout("manual");
 
-  // Close sidebar on route change (mobile)
+  // Close sidebar on EVERY route change (mobile) — not just when isMobile changes
   useEffect(() => {
-    if (isMobile && sidebarOpen) {
+    if (isMobile) {
       setSidebarOpen(false);
     }
-  }, [isMobile]);
+  }, [location.pathname, isMobile]);
 
   return (
     <div className="flex h-dvh bg-background text-foreground overflow-hidden">

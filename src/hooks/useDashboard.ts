@@ -177,6 +177,8 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
   const { start: inicio, end: fim } = getPeriodoRange(periodo);
   return useQuery({
     queryKey: ["dashboard_periodo", inicio, fim],
+    refetchOnWindowFocus: true,
+    staleTime: 30000,
     queryFn: async () => {
       // Vendas do período
       const { data: vendas } = await supabase
