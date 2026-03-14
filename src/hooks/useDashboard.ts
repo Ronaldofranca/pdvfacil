@@ -47,16 +47,16 @@ function getPeriodoRange(periodo: DashboardPeriodo): { start: string; end: strin
 // Main dashboard data (today's KPIs - always loaded)
 export function useDashboardData() {
   return useQuery({
-    queryKey: ["dashboard", hoje()],
+    queryKey: ["dashboard", localDayKey(new Date())],
     queryFn: async () => {
-      const hj = hoje();
+      const { start: hjStart, end: hjEnd } = localDayRange(new Date());
 
       // Vendas do dia
       const { data: vendasHoje } = await supabase
         .from("vendas")
         .select("id, total, subtotal, data_venda, vendedor_id, pagamentos, clientes(nome)")
-        .gte("data_venda", hj)
-        .lte("data_venda", hj + "T23:59:59")
+        .gte("data_venda", hjStart)
+        .lt("data_venda", hjEnd)
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
 
