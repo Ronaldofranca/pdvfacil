@@ -42,7 +42,7 @@ export function useOfflinePDV() {
     try {
       const { data: produtos } = await supabase
         .from("produtos")
-        .select("id, nome, codigo, preco, ativo, categoria_id, categorias(nome)")
+        .select("id, nome, codigo, preco, custo, ativo, categoria_id, categorias(nome)")
         .eq("ativo", true)
         .order("nome");
 
