@@ -61,6 +61,62 @@ export type Database = {
           },
         ]
       }
+      backup_logs: {
+        Row: {
+          arquivo_url: string | null
+          created_at: string
+          empresa_id: string
+          erro: string | null
+          id: string
+          registros_total: number | null
+          status: string
+          tabelas: string[]
+          tamanho_bytes: number | null
+          tipo: string
+          updated_at: string
+          verificado: boolean
+          verificado_em: string | null
+        }
+        Insert: {
+          arquivo_url?: string | null
+          created_at?: string
+          empresa_id: string
+          erro?: string | null
+          id?: string
+          registros_total?: number | null
+          status?: string
+          tabelas?: string[]
+          tamanho_bytes?: number | null
+          tipo?: string
+          updated_at?: string
+          verificado?: boolean
+          verificado_em?: string | null
+        }
+        Update: {
+          arquivo_url?: string | null
+          created_at?: string
+          empresa_id?: string
+          erro?: string | null
+          id?: string
+          registros_total?: number | null
+          status?: string
+          tabelas?: string[]
+          tamanho_bytes?: number | null
+          tipo?: string
+          updated_at?: string
+          verificado?: boolean
+          verificado_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_logs_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       caixa_diario: {
         Row: {
           aberto_em: string
