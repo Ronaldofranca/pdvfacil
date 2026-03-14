@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
   DollarSign, X, Package, CreditCard, Check, WifiOff,
-  RotateCcw, Users, ChevronRight, Zap, Star, Award
+  RotateCcw, Users, ChevronRight, Zap, Star, Award, Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
