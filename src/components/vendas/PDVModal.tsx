@@ -558,7 +558,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                           className="h-7 w-20 text-xs"
                           placeholder="Desc."
                           value={item.desconto || ""}
-                          onChange={(e) => updateItem(idx, { desconto: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) => updateItem(idx, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
                         />
                       </div>
                       {/* Bônus */}
