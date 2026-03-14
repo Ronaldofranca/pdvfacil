@@ -202,6 +202,7 @@ export default function ClientesPage() {
       <HistoricoCompras open={historicoState.open} onOpenChange={(v) => setHistoricoState({ open: v })} cliente={historicoState.data} />
       <ImportarContatos open={importOpen} onOpenChange={setImportOpen} />
       <IndicacoesCliente open={indicacoesState.open} onOpenChange={(v) => setIndicacoesState({ open: v })} cliente={indicacoesState.data} />
+      <HabilitarPortalDialog open={portalState.open} onOpenChange={(v) => setPortalState({ open: v })} cliente={portalState.data} />
       <PDVModal
         open={pdvState.open}
         onOpenChange={(v) => setPdvState({ open: v })}
