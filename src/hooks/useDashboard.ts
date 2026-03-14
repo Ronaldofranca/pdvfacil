@@ -54,13 +54,27 @@ export function useDashboardData() {
         }
       }
 
-      // Recebido hoje
+      // Recebido hoje = pagamentos de parcelas + vendas à vista (não-crediário)
       const { data: pgtosHoje } = await supabase
         .from("pagamentos")
         .select("valor_pago")
         .gte("data_pagamento", hj)
         .lte("data_pagamento", hj + "T23:59:59");
-      const recebidoHoje = pgtosHoje?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+      const recebidoParcelas = pgtosHoje?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+
+      // Somar valores à vista das vendas do dia (excluindo parcela crediário)
+      let recebidoAVista = 0;
+      for (const venda of vendasHoje ?? []) {
+        const pgtos = (venda as any).pagamentos;
+        if (Array.isArray(pgtos)) {
+          for (const pg of pgtos) {
+            if (pg.forma !== "crediario") {
+              recebidoAVista += Number(pg.valor ?? 0);
+            }
+          }
+        }
+      }
+      const recebidoHoje = recebidoParcelas + recebidoAVista;
 
       // Parcelas vencidas
       const { data: vencidas } = await supabase
