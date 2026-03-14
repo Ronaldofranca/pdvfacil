@@ -190,9 +190,11 @@ export default function ConfiguracoesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Identidade Visual</CardTitle>
-              <CardDescription>Cores usadas no sistema e catálogo</CardDescription>
+              <CardDescription>Cores e tema do sistema</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <ThemeSelector />
+              <Separator />
               {["cor_primaria", "cor_secundaria", "cor_botoes", "cor_fundo"].map((key) => {
                 const labels: Record<string, string> = {
                   cor_primaria: "Cor Principal",
