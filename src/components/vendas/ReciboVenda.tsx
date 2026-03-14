@@ -266,7 +266,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
               <Printer className="w-4 h-4" /> Imprimir
             </Button>
             <Button variant="outline" className="gap-1.5" onClick={handleShare}>
-              <Share2 className="w-4 h-4" />
+              <MessageCircle className="w-4 h-4" /> WhatsApp
             </Button>
           </div>
         </div>
