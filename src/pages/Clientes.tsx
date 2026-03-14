@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star, ShieldCheck, ClipboardList, Eye } from "lucide-react";
+import { Users, Search, Pencil, Trash2, MapPin, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star, ShieldCheck, ClipboardList, Eye, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { useClientes, useDeleteCliente } from "@/hooks/useClientes";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
 import { HistoricoCompras } from "@/components/clientes/HistoricoCompras";
+import { HabilitarPortalDialog } from "@/components/clientes/HabilitarPortalDialog";
 import { ImportarContatos } from "@/components/clientes/ImportarContatos";
 import { IndicacoesCliente } from "@/components/clientes/IndicacoesCliente";
 import { PDVModal } from "@/components/vendas/PDVModal";
@@ -49,6 +50,7 @@ export default function ClientesPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [pdvState, setPdvState] = useState<{ open: boolean; clienteId?: string; cart?: CartItem[] }>({ open: false });
   const [indicacoesState, setIndicacoesState] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [portalState, setPortalState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [pedidosClienteId, setPedidosClienteId] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -160,6 +162,16 @@ export default function ClientesPage() {
                           </a>
                         </Button>
                       )}
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={c.user_id ? "Portal ativo" : "Habilitar Portal"}
+                          onClick={() => setPortalState({ open: true, data: c })}
+                        >
+                          <UserCheck className={`w-4 h-4 ${c.user_id ? "text-green-600" : "text-muted-foreground"}`} />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" title="Repetir última venda" onClick={() => setPdvState({ open: true, clienteId: c.id })}>
                         <RotateCcw className="w-4 h-4" />
                       </Button>
@@ -190,6 +202,7 @@ export default function ClientesPage() {
       <HistoricoCompras open={historicoState.open} onOpenChange={(v) => setHistoricoState({ open: v })} cliente={historicoState.data} />
       <ImportarContatos open={importOpen} onOpenChange={setImportOpen} />
       <IndicacoesCliente open={indicacoesState.open} onOpenChange={(v) => setIndicacoesState({ open: v })} cliente={indicacoesState.data} />
+      <HabilitarPortalDialog open={portalState.open} onOpenChange={(v) => setPortalState({ open: v })} cliente={portalState.data} />
       <PDVModal
         open={pdvState.open}
         onOpenChange={(v) => setPdvState({ open: v })}

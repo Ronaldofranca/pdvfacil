@@ -1,4 +1,4 @@
-import { ShoppingBag, DollarSign, AlertTriangle, CheckCircle, Plus, MessageCircle, Copy } from "lucide-react";
+import { ShoppingBag, DollarSign, AlertTriangle, CheckCircle, Plus, MessageCircle, Copy, History } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,20 @@ export default function PortalHomePage() {
     },
   });
 
+  const { data: vendas } = useQuery({
+    queryKey: ["portal-compras-recentes", cliente?.id],
+    enabled: !!cliente?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("vendas")
+        .select("id, data_venda, total, status")
+        .eq("cliente_id", cliente!.id)
+        .order("data_venda", { ascending: false })
+        .limit(5);
+      return data ?? [];
+    },
+  });
+
   const { data: vendedorProfile } = useQuery({
     queryKey: ["portal-vendedor", cliente?.vendedor_id],
     enabled: !!cliente?.vendedor_id,
@@ -72,7 +86,7 @@ export default function PortalHomePage() {
 
   const abertas = parcelas?.filter((p) => p.status === "pendente" || p.status === "parcial") ?? [];
   const vencidas = parcelas?.filter((p) => p.status === "vencida") ?? [];
-  const totalAberto = abertas.reduce((s, p) => s + Number(p.saldo ?? 0), 0);
+  const totalAberto = [...abertas, ...vencidas].reduce((s, p) => s + Number(p.saldo ?? 0), 0);
   const totalVencido = vencidas.reduce((s, p) => s + Number(p.saldo ?? 0), 0);
   const totalPago = parcelas?.filter((p) => p.status === "paga").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
 
@@ -87,6 +101,7 @@ export default function PortalHomePage() {
 
   const showPedidos = config?.portal_mostrar_pedidos ?? true;
   const showParcelas = config?.portal_mostrar_parcelas ?? true;
+  const showCompras = config?.portal_mostrar_compras ?? true;
   const showPix = config?.portal_mostrar_pix ?? true;
   const welcomeMsg = config?.portal_mensagem_boas_vindas || "Aqui está o resumo da sua conta.";
 
@@ -108,17 +123,17 @@ export default function PortalHomePage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {showParcelas && (
           <>
-            <Card>
+            <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate("/portal/parcelas")}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <DollarSign className="w-4 h-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Em aberto</span>
                 </div>
                 <p className="text-lg font-bold">{fmtR(totalAberto)}</p>
-                <p className="text-xs text-muted-foreground">{abertas.length} parcela{abertas.length !== 1 ? "s" : ""}</p>
+                <p className="text-xs text-muted-foreground">{abertas.length + vencidas.length} parcela{(abertas.length + vencidas.length) !== 1 ? "s" : ""}</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cursor-pointer hover:border-destructive/30 transition-colors" onClick={() => navigate("/portal/parcelas")}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <AlertTriangle className="w-4 h-4 text-destructive" />
@@ -140,7 +155,7 @@ export default function PortalHomePage() {
           </>
         )}
         {showPedidos && (
-          <Card>
+          <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate("/portal/pedidos")}>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-1">
                 <ShoppingBag className="w-4 h-4 text-muted-foreground" />
@@ -155,14 +170,21 @@ export default function PortalHomePage() {
       {/* PIX Copy */}
       {showPix && config?.pix_chave && totalAberto > 0 && (
         <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Pague via PIX</p>
-              <p className="text-xs text-muted-foreground">Valor em aberto: {fmtR(totalAberto)}</p>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Pague via PIX</p>
+                <p className="text-xs text-muted-foreground">Valor em aberto: {fmtR(totalAberto)}</p>
+              </div>
+              <Button size="sm" className="gap-1.5" onClick={handleCopyPix}>
+                <Copy className="w-4 h-4" /> Copiar PIX
+              </Button>
             </div>
-            <Button size="sm" className="gap-1.5" onClick={handleCopyPix}>
-              <Copy className="w-4 h-4" /> Copiar PIX
-            </Button>
+            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                📋 Após realizar o pagamento, envie o comprovante no WhatsApp para confirmação.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -203,6 +225,39 @@ export default function PortalHomePage() {
                   </Badge>
                 </div>
                 <p className="text-sm font-bold">{fmtR(Number(p.valor_total))}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Purchases */}
+      {showCompras && vendas && vendas.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <History className="w-4 h-4" /> Últimas Compras
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/portal/compras")}>
+                Ver todas
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {vendas.map((v) => (
+              <div
+                key={v.id}
+                className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate("/portal/compras")}
+              >
+                <div>
+                  <p className="text-sm font-medium">{format(new Date(v.data_venda), "dd/MM/yyyy")}</p>
+                  <Badge variant="outline" className="text-[10px] mt-1">
+                    {v.status === "finalizada" ? "Finalizada" : v.status}
+                  </Badge>
+                </div>
+                <p className="text-sm font-bold">{fmtR(Number(v.total))}</p>
               </div>
             ))}
           </CardContent>
