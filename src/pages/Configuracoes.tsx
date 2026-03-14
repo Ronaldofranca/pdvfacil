@@ -618,6 +618,39 @@ export default function ConfiguracoesPage() {
   );
 }
 
+// Theme selector component
+function ThemeSelector() {
+  const { theme, setTheme } = useTheme();
+  const options = [
+    { value: "dark" as const, label: "Escuro", icon: Moon },
+    { value: "light" as const, label: "Claro", icon: Sun },
+    { value: "system" as const, label: "Sistema", icon: Monitor },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <Label>Tema da Interface</Label>
+      <div className="flex gap-2">
+        {options.map((opt) => (
+          <Button
+            key={opt.value}
+            variant={theme === opt.value ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 flex-1"
+            onClick={() => setTheme(opt.value)}
+          >
+            <opt.icon className="h-4 w-4" />
+            {opt.label}
+          </Button>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {theme === "system" ? "O tema seguirá a preferência do seu sistema operacional." : `Tema ${theme === "dark" ? "escuro" : "claro"} ativo.`}
+      </p>
+    </div>
+  );
+}
+
 // Sub-component for reward levels management
 function NiveisRecompensaManager() {
   const { data: niveis } = useAllNiveisRecompensa();
