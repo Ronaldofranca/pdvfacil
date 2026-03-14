@@ -868,9 +868,9 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                             type="number"
                             step="0.01"
                             className="h-14 text-lg mt-1 rounded-xl"
-                            value={item.preco_vendido}
+                            value={item.preco_vendido || ""}
                             onChange={(e) =>
-                              updateItem(idx, { preco_vendido: parseFloat(e.target.value) || 0 })
+                              updateItem(idx, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })
                             }
                           />
                         </div>
@@ -883,7 +883,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                             value={item.desconto || ""}
                             placeholder="0,00"
                             onChange={(e) =>
-                              updateItem(idx, { desconto: parseFloat(e.target.value) || 0 })
+                              updateItem(idx, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })
                             }
                           />
                         </div>
@@ -1017,7 +1017,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                       step="0.01"
                       className="h-12 text-lg flex-1 rounded-xl"
                       value={pag.valor || ""}
-                      onChange={(e) => updatePagamento(idx, "valor", parseFloat(e.target.value) || 0)}
+                      onChange={(e) => updatePagamento(idx, "valor", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                       placeholder="R$ 0,00"
                     />
                     {pagamentos.length > 1 && (

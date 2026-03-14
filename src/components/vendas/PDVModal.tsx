@@ -545,8 +545,8 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                           type="number"
                           step="0.01"
                           className="h-7 w-20 text-xs"
-                          value={item.preco_vendido}
-                          onChange={(e) => updateItem(idx, { preco_vendido: parseFloat(e.target.value) || 0 })}
+                          value={item.preco_vendido || ""}
+                          onChange={(e) => updateItem(idx, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
                         />
                       </div>
                       {/* Desconto */}
@@ -558,7 +558,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                           className="h-7 w-20 text-xs"
                           placeholder="Desc."
                           value={item.desconto || ""}
-                          onChange={(e) => updateItem(idx, { desconto: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) => updateItem(idx, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
                         />
                       </div>
                       {/* Bônus */}
@@ -631,7 +631,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                     step="0.01"
                     className="h-8 text-xs flex-1"
                     value={pag.valor || ""}
-                    onChange={(e) => updatePagamento(idx, "valor", parseFloat(e.target.value) || 0)}
+                    onChange={(e) => updatePagamento(idx, "valor", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                     placeholder="R$ 0,00"
                   />
                   {pagamentos.length > 1 && (
