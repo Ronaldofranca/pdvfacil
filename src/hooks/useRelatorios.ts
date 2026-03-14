@@ -37,7 +37,7 @@ export function useRelVendasDetalhadas(inicio: string, fim: string) {
   });
 }
 
-// ─── Produtos vendidos ───
+// ─── Produtos vendidos (com custo e lucro) ───
 export function useRelProdutosVendidos(inicio: string, fim: string) {
   return useQuery({
     queryKey: ["rel_produtos_vendidos", inicio, fim],
@@ -54,16 +54,20 @@ export function useRelProdutosVendidos(inicio: string, fim: string) {
       const vendaIds = vendas.map((v) => v.id);
       const { data, error } = await supabase
         .from("itens_venda")
-        .select("produto_id, nome_produto, quantidade, preco_vendido, subtotal, bonus")
+        .select("produto_id, nome_produto, quantidade, preco_vendido, subtotal, bonus, custo_unitario")
         .in("venda_id", vendaIds);
       if (error) throw error;
 
-      const map = new Map<string, { nome: string; qtd: number; receita: number }>();
+      const map = new Map<string, { nome: string; qtd: number; receita: number; custo: number; lucro: number }>();
       for (const item of data ?? []) {
         const key = item.produto_id;
-        const curr = map.get(key) ?? { nome: item.nome_produto, qtd: 0, receita: 0 };
+        const curr = map.get(key) ?? { nome: item.nome_produto, qtd: 0, receita: 0, custo: 0, lucro: 0 };
+        const itemReceita = Number(item.subtotal);
+        const itemCusto = Number(item.custo_unitario ?? 0) * Number(item.quantidade);
         curr.qtd += Number(item.quantidade);
-        curr.receita += Number(item.subtotal);
+        curr.receita += itemReceita;
+        curr.custo += itemCusto;
+        curr.lucro += itemReceita - itemCusto;
         map.set(key, curr);
       }
 
