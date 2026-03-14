@@ -2,12 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { FileDown, Printer } from "lucide-react";
-import { usePagamentosDaParcela } from "@/hooks/useParcelas";
+import { FileDown, Printer, Share2 } from "lucide-react";
+import { usePagamentosDaParcela, useParcelas } from "@/hooks/useParcelas";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { exportPDF, fmtR } from "@/lib/reportExport";
+import { exportReceiptPDF, fmtR } from "@/lib/reportExport";
 
 interface Props {
   open: boolean;
@@ -22,52 +22,103 @@ const STATUS_LABELS: Record<string, string> = {
   vencida: "Vencida",
 };
 
+const FORMA_LABELS: Record<string, string> = {
+  dinheiro: "Dinheiro",
+  pix: "PIX",
+  cartao_credito: "Cartão de Crédito",
+  cartao_debito: "Cartão de Débito",
+  crediario: "Crediário",
+  boleto: "Boleto",
+  transferencia: "Transferência",
+  outro: "Outro",
+};
+
 export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
   const { data: pagamentos } = usePagamentosDaParcela(parcela?.id ?? null);
   const { data: empresas } = useEmpresas();
-  const empresaNome = empresas?.[0]?.nome ?? "Empresa";
+  const empresa = empresas?.[0];
+  
+  // Fetch sibling parcelas for the same venda to show remaining
+  const { data: todasParcelas } = useParcelas(
+    parcela?.venda_id ? { vendaId: parcela.venda_id } : undefined
+  );
 
   if (!parcela) return null;
 
   const clienteNome = (parcela as any).clientes?.nome ?? "Cliente não identificado";
   const vendaId = parcela.venda_id ? `#${parcela.venda_id.slice(0, 8)}` : "—";
 
+  // Calculate saldo anterior (before latest payment)
+  const ultimoPagamento = pagamentos?.[0]; // already ordered DESC
+  const valorPagoAntes = ultimoPagamento
+    ? Number(parcela.valor_pago) - Number(ultimoPagamento.valor_pago)
+    : Number(parcela.valor_pago);
+  const saldoAnterior = Number(parcela.valor_total) - Math.max(0, valorPagoAntes);
+
+  // Remaining parcelas (not this one, still pending)
+  const parcelasRestantes = todasParcelas?.filter(
+    (p) => p.id !== parcela.id && (p.status === "pendente" || p.status === "parcial" || p.status === "vencida")
+  );
+
   const handleExportPDF = () => {
-    const rows: string[][] = [];
-    
-    rows.push(["Cliente", clienteNome]);
-    rows.push(["Venda", vendaId]);
-    rows.push(["Parcela", `${parcela.numero}ª`]);
-    rows.push(["Vencimento", format(new Date(parcela.vencimento + "T12:00:00"), "dd/MM/yyyy")]);
-    rows.push(["---", "---"]);
-    rows.push(["Valor Total", fmtR(Number(parcela.valor_total))]);
-    rows.push(["Valor Pago", fmtR(Number(parcela.valor_pago))]);
-    rows.push(["Saldo Restante", fmtR(Number(parcela.saldo))]);
-    rows.push(["Status", STATUS_LABELS[parcela.status] ?? parcela.status]);
+    const pagamentosList = pagamentos?.map((pg) => ({
+      forma: FORMA_LABELS[pg.forma_pagamento] ?? pg.forma_pagamento.replace(/_/g, " "),
+      valor: Number(pg.valor_pago),
+      data: format(new Date(pg.data_pagamento), "dd/MM/yyyy HH:mm"),
+    })) ?? [];
 
-    if (pagamentos?.length) {
-      rows.push(["---", "---"]);
-      rows.push(["PAGAMENTOS", ""]);
-      pagamentos.forEach((pg) => {
-        rows.push([
-          format(new Date(pg.data_pagamento), "dd/MM/yyyy HH:mm"),
-          `${fmtR(Number(pg.valor_pago))} (${pg.forma_pagamento.replace(/_/g, " ")})`,
-        ]);
-      });
-    }
-
-    exportPDF({
-      title: `Recibo - Parcela ${parcela.numero}ª`,
-      periodo: format(new Date(), "dd/MM/yyyy"),
-      empresa: empresaNome,
-      headers: ["Campo", "Valor"],
-      rows,
+    exportReceiptPDF({
+      type: "pagamento",
+      id: parcela.id.slice(0, 8),
+      empresa: empresa?.nome ?? "Empresa",
+      logoUrl: empresa?.logo_url ?? undefined,
+      data: ultimoPagamento
+        ? format(new Date(ultimoPagamento.data_pagamento), "dd/MM/yyyy HH:mm", { locale: ptBR })
+        : format(new Date(), "dd/MM/yyyy HH:mm"),
+      cliente: {
+        nome: clienteNome,
+        id: parcela.cliente_id?.slice(0, 8) ?? "—",
+      },
+      itens: [],
+      resumo: {
+        subtotal: Number(parcela.valor_total),
+        descontos: 0,
+        total: Number(parcela.valor_total),
+      },
+      pagamentos: pagamentosList.map((p) => ({ forma: p.forma, valor: p.valor })),
+      parcelaInfo: {
+        numero: parcela.numero,
+        vencimento: format(new Date(parcela.vencimento + "T12:00:00"), "dd/MM/yyyy"),
+        valorTotal: Number(parcela.valor_total),
+        valorPago: Number(parcela.valor_pago),
+        saldoAnterior,
+        saldoRestante: Number(parcela.saldo),
+        status: STATUS_LABELS[parcela.status] ?? parcela.status,
+        vendaId: parcela.venda_id?.slice(0, 8) ?? "—",
+      },
+      parcelasRestantes: parcelasRestantes?.map((p) => ({
+        numero: p.numero,
+        valor: Number(p.valor_total),
+        vencimento: format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy"),
+        status: STATUS_LABELS[p.status] ?? p.status,
+      })),
     });
+  };
+
+  const handleShare = async () => {
+    const text = `Recibo de Pagamento\nCliente: ${clienteNome}\nParcela: ${parcela.numero}ª\nValor Pago: ${fmtR(Number(parcela.valor_pago))}\nSaldo: ${fmtR(Number(parcela.saldo))}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Recibo Parcela ${parcela.numero}ª`, text });
+      } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Recibo — Parcela {parcela.numero}ª
@@ -81,6 +132,12 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
               <span className="text-muted-foreground">Cliente</span>
               <span className="font-medium">{clienteNome}</span>
             </div>
+            {parcela.cliente_id && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Cód. Cliente</span>
+                <span className="font-mono text-xs">{parcela.cliente_id.slice(0, 8)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Venda</span>
               <span className="font-medium">{vendaId}</span>
@@ -94,10 +151,9 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status</span>
               <Badge variant={
-                parcela.status === "paga" ? "default" : 
-                parcela.status === "vencida" ? "destructive" : 
-                parcela.status === "parcial" ? "outline" :
-                "secondary"
+                parcela.status === "paga" ? "default" :
+                parcela.status === "vencida" ? "destructive" :
+                parcela.status === "parcial" ? "outline" : "secondary"
               }>
                 {STATUS_LABELS[parcela.status] ?? parcela.status}
               </Badge>
@@ -106,23 +162,26 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
 
           <Separator />
 
-          {/* Valores */}
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-lg bg-muted p-3">
-              <p className="text-xs text-muted-foreground">Total</p>
-              <p className="text-sm font-bold">{fmtR(Number(parcela.valor_total))}</p>
-            </div>
-            <div className="rounded-lg bg-muted p-3">
-              <p className="text-xs text-muted-foreground">Pago</p>
-              <p className="text-sm font-bold text-primary">{fmtR(Number(parcela.valor_pago))}</p>
-            </div>
-            <div className="rounded-lg bg-muted p-3">
-              <p className="text-xs text-muted-foreground">Saldo</p>
-              <p className="text-sm font-bold text-destructive">{fmtR(Number(parcela.saldo))}</p>
+          {/* Financial summary with saldo anterior */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold">Resumo Financeiro</p>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Saldo Anterior</p>
+                <p className="text-sm font-bold">{fmtR(saldoAnterior)}</p>
+              </div>
+              <div className="rounded-lg bg-primary/10 p-3">
+                <p className="text-xs text-muted-foreground">Pago</p>
+                <p className="text-sm font-bold text-primary">{fmtR(Number(parcela.valor_pago))}</p>
+              </div>
+              <div className="rounded-lg bg-destructive/10 p-3">
+                <p className="text-xs text-muted-foreground">Saldo Restante</p>
+                <p className="text-sm font-bold text-destructive">{fmtR(Number(parcela.saldo))}</p>
+              </div>
             </div>
           </div>
 
-          {/* Pagamentos */}
+          {/* Payment history */}
           {pagamentos && pagamentos.length > 0 && (
             <>
               <Separator />
@@ -137,7 +196,33 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
                       </p>
                     </div>
                     <Badge variant="outline" className="capitalize text-xs">
-                      {pg.forma_pagamento.replace(/_/g, " ")}
+                      {FORMA_LABELS[pg.forma_pagamento] ?? pg.forma_pagamento.replace(/_/g, " ")}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Remaining parcelas */}
+          {parcelasRestantes && parcelasRestantes.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Parcelas Restantes</p>
+                {parcelasRestantes.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-2 rounded border text-sm">
+                    <div>
+                      <p className="font-medium">{p.numero}ª — {fmtR(Number(p.valor_total))}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Venc: {format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy")}
+                      </p>
+                    </div>
+                    <Badge variant={
+                      p.status === "vencida" ? "destructive" :
+                      p.status === "parcial" ? "outline" : "secondary"
+                    } className="text-xs">
+                      {STATUS_LABELS[p.status] ?? p.status}
                     </Badge>
                   </div>
                 ))}
@@ -152,6 +237,9 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
             </Button>
             <Button variant="outline" className="gap-1.5" onClick={() => window.print()}>
               <Printer className="w-4 h-4" /> Imprimir
+            </Button>
+            <Button variant="outline" className="gap-1.5" onClick={handleShare}>
+              <Share2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
