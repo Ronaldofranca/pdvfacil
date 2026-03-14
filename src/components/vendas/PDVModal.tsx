@@ -98,7 +98,8 @@ function DesktopQuickSection({ title, items, allProducts, onAdd, fmt }: {
 export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const isMobile = useIsMobile();
   const { profile, user } = useAuth();
-  const { data: produtos } = useProdutos();
+  const { data: produtosRaw } = useProdutos();
+  const { data: kitsRaw } = useKits();
   const { data: clientes } = useClientes();
   const finalizar = useFinalizarVenda();
   const { data: maisVendidos } = useProdutosMaisVendidos();
