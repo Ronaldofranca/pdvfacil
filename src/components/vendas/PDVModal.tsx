@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle, Layers } from "lucide-react";
 import { usePDVPersistence } from "@/hooks/useFormPersistence";
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { useProdutos } from "@/hooks/useProdutos";
+import { useProdutos, useKits } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
-import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig } from "@/hooks/useVendas";
+import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -52,11 +52,14 @@ function DesktopProductButton({ product, onAdd, fmt }: { product: any; onAdd: (p
           <img src={product.imagem_url} alt={product.nome} className="w-8 h-8 rounded-md object-cover shrink-0" />
         ) : (
           <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
-            <Package className="w-3.5 h-3.5 text-muted-foreground" />
+            {product.is_kit ? <Layers className="w-3.5 h-3.5 text-primary" /> : <Package className="w-3.5 h-3.5 text-muted-foreground" />}
           </div>
         )}
         <div>
-          <p className="text-sm font-medium text-foreground">{product.nome}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium text-foreground">{product.nome}</p>
+            {product.is_kit && <Badge variant="secondary" className="text-[9px] px-1 py-0">Kit</Badge>}
+          </div>
           {product.codigo && <p className="text-xs text-muted-foreground">{product.codigo}</p>}
         </div>
       </div>
@@ -98,7 +101,8 @@ function DesktopQuickSection({ title, items, allProducts, onAdd, fmt }: {
 export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const isMobile = useIsMobile();
   const { profile, user } = useAuth();
-  const { data: produtos } = useProdutos();
+  const { data: produtosRaw } = useProdutos();
+  const { data: kitsRaw } = useKits();
   const { data: clientes } = useClientes();
   const finalizar = useFinalizarVenda();
   const { data: maisVendidos } = useProdutosMaisVendidos();
@@ -156,6 +160,29 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     }
   }, [cart, clienteId, observacoes, pagamentos, crediarioConfig]);
 
+  // Merge kits into product list
+  const kitsAsProducts = useMemo(() => {
+    if (!kitsRaw) return [];
+    return kitsRaw
+      .filter((k: any) => k.ativo)
+      .map((k: any) => ({
+        id: `kit_${k.id}`,
+        _kit_id: k.id,
+        nome: `Kit ${k.nome}`,
+        preco: k.preco,
+        imagem_url: k.imagem_url,
+        codigo: "",
+        ativo: true,
+        is_kit: true,
+        kit_itens: (k.kit_itens || []).map((ki: any) => ({
+          produto_id: ki.produto_id,
+          quantidade: Number(ki.quantidade),
+        })),
+      }));
+  }, [kitsRaw]);
+
+  const produtos = useMemo(() => [...(produtosRaw ?? []), ...kitsAsProducts], [produtosRaw, kitsAsProducts]);
+
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const clienteScore = useClienteScoreById(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
@@ -173,19 +200,21 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
             : i
         );
       }
-      return [
-        ...prev,
-        {
-          produto_id: produto.id,
-          nome: produto.nome,
-          quantidade: 1,
-          preco_original: Number(produto.preco),
-          preco_vendido: Number(produto.preco),
-          desconto: 0,
-          bonus: false,
-          subtotal: Number(produto.preco),
-        },
-      ];
+      const item: CartItem = {
+        produto_id: produto.id,
+        nome: produto.nome,
+        quantidade: 1,
+        preco_original: Number(produto.preco),
+        preco_vendido: Number(produto.preco),
+        desconto: 0,
+        bonus: false,
+        subtotal: Number(produto.preco),
+      };
+      if (produto.is_kit && produto.kit_itens) {
+        item.is_kit = true;
+        item.kit_itens = produto.kit_itens;
+      }
+      return [...prev, item];
     });
   };
 
@@ -406,6 +435,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">{item.nome}</span>
+                          {item.is_kit && <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0"><Layers className="w-2.5 h-2.5" />Kit</Badge>}
                           {item.bonus && <Badge variant="secondary" className="text-xs gap-1"><Gift className="w-3 h-3" />Bônus</Badge>}
                         </div>
                       </div>

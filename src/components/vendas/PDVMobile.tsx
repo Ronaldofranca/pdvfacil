@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
   DollarSign, X, Package, CreditCard, Check, WifiOff,
-  RotateCcw, Users, ChevronRight, Zap, Star, Award
+  RotateCcw, Users, ChevronRight, Zap, Star, Award, Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,9 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { useProdutos } from "@/hooks/useProdutos";
+import { useProdutos, useKits } from "@/hooks/useProdutos";
 import { useClientes } from "@/hooks/useClientes";
-import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig } from "@/hooks/useVendas";
+import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/useOfflinePDV";
 import { useOffline } from "@/contexts/OfflineContext";
@@ -48,6 +48,7 @@ interface Props {
 export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const { profile, user } = useAuth();
   const { data: onlineProdutos } = useProdutos();
+  const { data: onlineKits } = useKits();
   const { data: onlineClientes } = useClientes();
   const finalizar = useFinalizarVenda();
   const { data: maisVendidos } = useProdutosMaisVendidos();
@@ -129,7 +130,29 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
     }
   }, [cart, clienteId, observacoes, pagamentos, crediarioConfig, step]);
 
-  const produtos = isOnline && onlineProdutos ? onlineProdutos : cachedProdutos;
+  // Merge kits into product list for unified search
+  const kitsAsProducts = useMemo(() => {
+    if (!onlineKits) return [];
+    return onlineKits
+      .filter((k: any) => k.ativo)
+      .map((k: any) => ({
+        id: `kit_${k.id}`,
+        _kit_id: k.id,
+        nome: `Kit ${k.nome}`,
+        preco: k.preco,
+        imagem_url: k.imagem_url,
+        codigo: "",
+        ativo: true,
+        is_kit: true,
+        kit_itens: (k.kit_itens || []).map((ki: any) => ({
+          produto_id: ki.produto_id,
+          quantidade: Number(ki.quantidade),
+        })),
+      }));
+  }, [onlineKits]);
+
+  const produtosBase = isOnline && onlineProdutos ? onlineProdutos : cachedProdutos;
+  const produtos = useMemo(() => [...(produtosBase as any[] || []), ...kitsAsProducts], [produtosBase, kitsAsProducts]);
   const clientes = isOnline && onlineClientes ? onlineClientes : cachedClientes;
 
   const clienteSelecionado = clientes?.find((c) => c.id === clienteId);
@@ -148,19 +171,21 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
             : i
         );
       }
-      return [
-        ...prev,
-        {
-          produto_id: produto.id,
-          nome: produto.nome,
-          quantidade: 1,
-          preco_original: Number(produto.preco),
-          preco_vendido: Number(produto.preco),
-          desconto: 0,
-          bonus: false,
-          subtotal: Number(produto.preco),
-        },
-      ];
+      const item: CartItem = {
+        produto_id: produto.id,
+        nome: produto.nome,
+        quantidade: 1,
+        preco_original: Number(produto.preco),
+        preco_vendido: Number(produto.preco),
+        desconto: 0,
+        bonus: false,
+        subtotal: Number(produto.preco),
+      };
+      if (produto.is_kit && produto.kit_itens) {
+        item.is_kit = true;
+        item.kit_itens = produto.kit_itens;
+      }
+      return [...prev, item];
     });
     toast.success(`${produto.nome} adicionado`);
   };
@@ -621,6 +646,11 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-base text-foreground">{item.nome}</span>
+                          {item.is_kit && (
+                            <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
+                              <Layers className="w-2.5 h-2.5" />Kit
+                            </Badge>
+                          )}
                           {item.bonus && (
                             <Badge variant="secondary" className="text-[10px] gap-0.5">
                               <Gift className="w-2.5 h-2.5" />Bônus
@@ -948,11 +978,14 @@ function QuickProductCard({ product, onAdd, fmt }: { product: any; onAdd: (p: an
           <img src={product.imagem_url} alt={product.nome} className="w-12 h-12 rounded-xl object-cover shrink-0" />
         ) : (
           <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
-            <Package className="w-5 h-5 text-muted-foreground" />
+            {product.is_kit ? <Layers className="w-5 h-5 text-primary" /> : <Package className="w-5 h-5 text-muted-foreground" />}
           </div>
         )}
         <div>
-          <p className="font-semibold text-foreground text-base">{product.nome}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-semibold text-foreground text-base">{product.nome}</p>
+            {product.is_kit && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Kit</Badge>}
+          </div>
           {product.codigo && <p className="text-xs text-muted-foreground mt-0.5">{product.codigo}</p>}
         </div>
       </div>

@@ -3,8 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const cartItemSchema = z.object({
+const kitItemSchema = z.object({
   produto_id: z.string().uuid(),
+  quantidade: z.number().min(1),
+}).optional();
+
+const cartItemSchema = z.object({
+  produto_id: z.string().min(1),
   nome: z.string().min(1).max(200),
   quantidade: z.number().int().min(1),
   preco_original: z.number().min(0),
@@ -12,6 +17,8 @@ const cartItemSchema = z.object({
   desconto: z.number().min(0),
   bonus: z.boolean(),
   subtotal: z.number().min(0),
+  is_kit: z.boolean().optional(),
+  kit_itens: z.array(z.object({ produto_id: z.string().uuid(), quantidade: z.number().min(1) })).optional(),
 });
 
 const pagamentoSchema = z.object({
@@ -37,6 +44,11 @@ const vendaInputSchema = z.object({
 });
 
 // ─── Types ───
+export interface KitItemRef {
+  produto_id: string;
+  quantidade: number;
+}
+
 export interface CartItem {
   produto_id: string;
   nome: string;
@@ -46,6 +58,8 @@ export interface CartItem {
   desconto: number;
   bonus: boolean;
   subtotal: number;
+  is_kit?: boolean;
+  kit_itens?: KitItemRef[];
 }
 
 export interface Pagamento {
@@ -134,31 +148,64 @@ export function useFinalizarVenda() {
       if (vendaErr) throw vendaErr;
 
       // 2. Inserir itens
-      const itensPayload = v.itens.map((i) => ({
-        venda_id: venda.id,
-        produto_id: i.produto_id,
-        nome_produto: i.nome,
-        quantidade: i.quantidade,
-        preco_original: i.preco_original,
-        preco_vendido: i.preco_vendido,
-        desconto: i.desconto,
-        bonus: i.bonus,
-        subtotal: i.subtotal,
-      }));
+      const itensPayload = v.itens.map((i) => {
+        // For kits: use first component product_id for FK, but keep kit name as snapshot
+        let produtoIdForDb = i.produto_id;
+        if ((i as any).is_kit && (i as any).kit_itens?.length) {
+          produtoIdForDb = (i as any).kit_itens[0].produto_id;
+        }
+        return {
+          venda_id: venda.id,
+          produto_id: produtoIdForDb,
+          nome_produto: i.nome,
+          quantidade: i.quantidade,
+          preco_original: i.preco_original,
+          preco_vendido: i.preco_vendido,
+          desconto: i.desconto,
+          bonus: i.bonus,
+          subtotal: i.subtotal,
+        };
+      });
       const { error: itensErr } = await supabase.from("itens_venda").insert(itensPayload);
       if (itensErr) throw itensErr;
 
       // 3. Registrar movimentos de estoque (saída)
-      const movimentos = v.itens
-        .filter((i) => i.quantidade > 0)
-        .map((i) => ({
-          empresa_id: v.empresa_id,
-          produto_id: i.produto_id,
-          vendedor_id: v.vendedor_id,
-          tipo: "venda" as any,
-          quantidade: i.quantidade,
-          observacoes: `Venda #${venda.id.slice(0, 8)}`,
-        }));
+      // For kits: decompose into component products for stock
+      const movimentos: {
+        empresa_id: string;
+        produto_id: string;
+        vendedor_id: string;
+        tipo: "venda";
+        quantidade: number;
+        observacoes: string;
+      }[] = [];
+
+      for (const i of v.itens) {
+        if (i.quantidade <= 0) continue;
+        if ((i as any).is_kit && (i as any).kit_itens?.length) {
+          // Kit: create movements for each component product
+          for (const ki of (i as any).kit_itens) {
+            movimentos.push({
+              empresa_id: v.empresa_id,
+              produto_id: ki.produto_id,
+              vendedor_id: v.vendedor_id,
+              tipo: "venda" as any,
+              quantidade: ki.quantidade * i.quantidade,
+              observacoes: `Venda #${venda.id.slice(0, 8)} (Kit: ${i.nome})`,
+            });
+          }
+        } else {
+          movimentos.push({
+            empresa_id: v.empresa_id,
+            produto_id: i.produto_id,
+            vendedor_id: v.vendedor_id,
+            tipo: "venda" as any,
+            quantidade: i.quantidade,
+            observacoes: `Venda #${venda.id.slice(0, 8)}`,
+          });
+        }
+      }
+
       if (movimentos.length > 0) {
         await supabase.from("movimentos_estoque").insert(movimentos);
       }
