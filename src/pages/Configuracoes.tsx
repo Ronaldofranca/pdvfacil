@@ -237,38 +237,96 @@ export default function ConfiguracoesPage() {
           </Card>
         </TabsContent>
 
-        {/* 5. FORMAS DE PAGAMENTO */}
+        {/* 5. FORMAS DE PAGAMENTO + PIX */}
         <TabsContent value="pagamento">
-          <Card>
-            <CardHeader>
-              <CardTitle>Formas de Pagamento</CardTitle>
-              <CardDescription>Gerencie as formas de pagamento aceitas</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input placeholder="Nova forma de pagamento" value={novaForma} onChange={(e) => setNovaForma(e.target.value)} />
-                <Button onClick={() => { if (novaForma.trim()) { addForma.mutate(novaForma.trim()); setNovaForma(""); } }}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {formas?.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={f.ativa} onCheckedChange={(v) => toggleForma.mutate({ id: f.id, ativa: v })} />
-                      <span className={cn("text-sm", !f.ativa && "line-through text-muted-foreground")}>{f.nome}</span>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => deleteForma.mutate(f.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações PIX</CardTitle>
+                <CardDescription>Configure a chave PIX para recebimentos, QR Codes e recibos</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tipo de Chave PIX</Label>
+                    <Select
+                      defaultValue={config?.pix_tipo || ""}
+                      onValueChange={(v) => saveConfig({ pix_tipo: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cpf">CPF</SelectItem>
+                        <SelectItem value="cnpj">CNPJ</SelectItem>
+                        <SelectItem value="telefone">Telefone</SelectItem>
+                        <SelectItem value="email">E-mail</SelectItem>
+                        <SelectItem value="aleatoria">Chave Aleatória</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                ))}
-                {(!formas || formas.length === 0) && (
-                  <p className="text-sm text-muted-foreground">Nenhuma forma de pagamento cadastrada. Adicione acima.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="space-y-2">
+                    <Label>Chave PIX</Label>
+                    <Input
+                      defaultValue={config?.pix_chave ?? ""}
+                      placeholder="Digite sua chave PIX"
+                      onBlur={(e) => saveConfig({ pix_chave: e.target.value.trim() })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nome do Recebedor</Label>
+                    <Input
+                      defaultValue={(config as any)?.pix_nome_recebedor ?? ""}
+                      placeholder="Nome que aparece no PIX"
+                      onBlur={(e) => saveConfig({ pix_nome_recebedor: e.target.value.trim() })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cidade do Recebedor</Label>
+                    <Input
+                      defaultValue={(config as any)?.pix_cidade_recebedor ?? ""}
+                      placeholder="Ex: São Paulo"
+                      onBlur={(e) => saveConfig({ pix_cidade_recebedor: e.target.value.trim() })}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Essas informações são usadas para gerar QR Codes PIX e códigos copiáveis em recibos e cobranças.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Formas de Pagamento</CardTitle>
+                <CardDescription>Gerencie as formas de pagamento aceitas</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input placeholder="Nova forma de pagamento" value={novaForma} onChange={(e) => setNovaForma(e.target.value)} />
+                  <Button onClick={() => { if (novaForma.trim()) { addForma.mutate(novaForma.trim()); setNovaForma(""); } }}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {formas?.map((f) => (
+                    <div key={f.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={f.ativa} onCheckedChange={(v) => toggleForma.mutate({ id: f.id, ativa: v })} />
+                        <span className={cn("text-sm", !f.ativa && "line-through text-muted-foreground")}>{f.nome}</span>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => deleteForma.mutate(f.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  {(!formas || formas.length === 0) && (
+                    <p className="text-sm text-muted-foreground">Nenhuma forma de pagamento cadastrada. Adicione acima.</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* 6. PARCELAS */}
