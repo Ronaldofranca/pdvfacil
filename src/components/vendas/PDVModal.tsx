@@ -52,11 +52,14 @@ function DesktopProductButton({ product, onAdd, fmt }: { product: any; onAdd: (p
           <img src={product.imagem_url} alt={product.nome} className="w-8 h-8 rounded-md object-cover shrink-0" />
         ) : (
           <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
-            <Package className="w-3.5 h-3.5 text-muted-foreground" />
+            {product.is_kit ? <Layers className="w-3.5 h-3.5 text-primary" /> : <Package className="w-3.5 h-3.5 text-muted-foreground" />}
           </div>
         )}
         <div>
-          <p className="text-sm font-medium text-foreground">{product.nome}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium text-foreground">{product.nome}</p>
+            {product.is_kit && <Badge variant="secondary" className="text-[9px] px-1 py-0">Kit</Badge>}
+          </div>
           {product.codigo && <p className="text-xs text-muted-foreground">{product.codigo}</p>}
         </div>
       </div>
