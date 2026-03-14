@@ -58,6 +58,7 @@ export interface CartItem {
   desconto: number;
   bonus: boolean;
   subtotal: number;
+  custo_unitario?: number;
   is_kit?: boolean;
   kit_itens?: KitItemRef[];
 }
