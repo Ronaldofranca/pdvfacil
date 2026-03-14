@@ -96,6 +96,7 @@ export function useUpsertCliente() {
         longitude: c.longitude ?? null,
         observacoes: c.observacoes ?? "",
         ativo: c.ativo ?? true,
+        permitir_fiado: (raw as any).permitir_fiado ?? true,
         updated_at: new Date().toISOString(),
       };
       if ((raw as any).cliente_indicador_id !== undefined) {

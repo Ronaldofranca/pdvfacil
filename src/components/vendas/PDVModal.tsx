@@ -445,6 +445,13 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                   ))}
                 </SelectContent>
               </Select>
+              {/* Fiado restriction warning */}
+              {clienteId && clienteSel && (clienteSel as any).permitir_fiado === false && (
+                <div className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg bg-destructive/10 text-destructive">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span className="font-semibold">Cliente restrito para compras fiado — apenas à vista</span>
+                </div>
+              )}
               {/* Score badge */}
               {clienteId && clienteScore && (
                 <div className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg ${
