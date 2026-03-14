@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShoppingCart, Search, Plus, Eye, XCircle } from "lucide-react";
+import { ShoppingCart, Search, Plus, Eye, XCircle, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { useVendas, useVendaItens, useCancelarVenda } from "@/hooks/useVendas";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PDVModal } from "@/components/vendas/PDVModal";
+import { ReciboVenda } from "@/components/vendas/ReciboVenda";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -28,6 +29,7 @@ export default function VendasPage() {
   const [pdvOpen, setPdvOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [reciboVenda, setReciboVenda] = useState<any>(null);
   const { data: itensDetail } = useVendaItens(detailId);
 
   const vendaDetail = vendas?.find((v) => v.id === detailId);
@@ -73,7 +75,7 @@ export default function VendasPage() {
               <TableHead>Data</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-24" />
+              <TableHead className="w-32" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -96,6 +98,9 @@ export default function VendasPage() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => setDetailId(v.id)}><Eye className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setReciboVenda(v)} title="Recibo">
+                          <Receipt className="w-4 h-4" />
+                        </Button>
                         {isAdmin && v.status === "finalizada" && (
                           <Button variant="ghost" size="icon" onClick={() => cancelar.mutate(v.id)}>
                             <XCircle className="w-4 h-4 text-destructive" />
@@ -113,6 +118,13 @@ export default function VendasPage() {
 
       {/* PDV */}
       <PDVModal open={pdvOpen} onOpenChange={setPdvOpen} />
+
+      {/* Recibo de Venda */}
+      <ReciboVenda
+        open={!!reciboVenda}
+        onOpenChange={(o) => !o && setReciboVenda(null)}
+        venda={reciboVenda}
+      />
 
       {/* Detalhes da venda */}
       <Sheet open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
@@ -173,6 +185,12 @@ export default function VendasPage() {
                   <p className="text-sm text-muted-foreground">{vendaDetail.observacoes}</p>
                 </>
               )}
+
+              {/* Quick receipt button in detail view */}
+              <Separator />
+              <Button variant="outline" className="w-full gap-1.5" onClick={() => { setDetailId(null); setReciboVenda(vendaDetail); }}>
+                <Receipt className="w-4 h-4" /> Gerar Recibo
+              </Button>
             </div>
           )}
         </SheetContent>
