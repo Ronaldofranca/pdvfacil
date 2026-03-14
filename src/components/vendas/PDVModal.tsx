@@ -631,7 +631,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                     step="0.01"
                     className="h-8 text-xs flex-1"
                     value={pag.valor || ""}
-                    onChange={(e) => updatePagamento(idx, "valor", parseFloat(e.target.value) || 0)}
+                    onChange={(e) => updatePagamento(idx, "valor", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                     placeholder="R$ 0,00"
                   />
                   {pagamentos.length > 1 && (
