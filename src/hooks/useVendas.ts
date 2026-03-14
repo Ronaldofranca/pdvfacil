@@ -9,7 +9,7 @@ const kitItemSchema = z.object({
 }).optional();
 
 const cartItemSchema = z.object({
-  produto_id: z.string().uuid(),
+  produto_id: z.string().min(1),
   nome: z.string().min(1).max(200),
   quantidade: z.number().int().min(1),
   preco_original: z.number().min(0),
