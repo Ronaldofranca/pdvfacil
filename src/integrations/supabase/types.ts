@@ -2761,6 +2761,10 @@ export type Database = {
               total: number
             }[]
           }
+      fn_cancelar_venda: {
+        Args: { _motivo: string; _usuario_id: string; _venda_id: string }
+        Returns: Json
+      }
       get_my_cliente_id: { Args: never; Returns: string }
       get_my_empresa_id: { Args: never; Returns: string }
       get_pix_config: {
