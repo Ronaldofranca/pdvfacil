@@ -127,7 +127,7 @@ export default function DashboardPage() {
           <KPICard icon={ShoppingCart} label="Vendas" value={data ? v(fmtR(data.totalVendasDia)) : "—"} sub={data ? `${data.qtdVendasDia} venda(s)` : ""} color="text-primary" loading={isLoading} />
           <KPICard icon={DollarSign} label="Recebido Hoje" value={data ? v(fmtR(data.recebidoHoje)) : "—"} color="text-primary" loading={isLoading} />
           <KPICard icon={TrendingUp} label="Lucro Estimado" value={data ? v(fmtR(data.lucroDia)) : "—"} color="text-primary" loading={isLoading} />
-          <KPICard icon={CreditCard} label="Contas a Receber" value={data ? v(fmtR(data.totalAReceber)) : "—"} sub={data ? `${data.qtdPendentes} parcelas` : ""} loading={isLoading} />
+          <KPICard icon={CreditCard} label="A Receber Hoje" value={data ? v(fmtR(data.totalAReceber)) : "—"} sub={data ? `${data.qtdPendentes} parcela(s)` : ""} loading={isLoading} />
           <KPICard icon={AlertTriangle} label="Parcelas Vencidas" value={data ? v(fmtR(data.totalVencido)) : "—"} sub={data ? `${data.qtdVencidas} parcela(s)` : ""} color="text-destructive" loading={isLoading} />
         </div>
       </div>

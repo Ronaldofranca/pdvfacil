@@ -114,12 +114,14 @@ export function useDashboardData() {
         .order("vencimento");
       const totalVencido = vencidas?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
 
-      // Contas a receber (pendente + parcial + vencida)
-      const { data: pendentes } = await supabase
+      // Contas a receber HOJE (parcelas com vencimento hoje, pendente/parcial)
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const { data: pendentesHoje } = await supabase
         .from("parcelas")
-        .select("id, saldo, status")
-        .in("status", ["pendente", "parcial"] as any);
-      const totalAReceber = (pendentes?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0) + totalVencido;
+        .select("id, saldo, status, vencimento")
+        .in("status", ["pendente", "parcial"] as any)
+        .eq("vencimento", todayStr);
+      const totalAReceber = pendentesHoje?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
 
       // Estoque baixo
       const { data: estoqueBaixo } = await supabase
@@ -134,7 +136,7 @@ export function useDashboardData() {
       return {
         totalVendasDia, qtdVendasDia, lucroDia, recebidoHoje,
         totalVencido, qtdVencidas: vencidas?.length ?? 0,
-        totalAReceber, qtdPendentes: pendentes?.length ?? 0,
+        totalAReceber, qtdPendentes: pendentesHoje?.length ?? 0,
         estoqueBaixo: estoqueBaixo ?? [],
         estoqueSemEstoque: (estoqueBaixo ?? []).filter((e: any) => Number(e.quantidade) <= 0).length,
         vendasRecentes: vendasHoje?.slice(0, 8) ?? [],
