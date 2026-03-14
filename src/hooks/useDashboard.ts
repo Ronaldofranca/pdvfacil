@@ -2,34 +2,61 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 
-const hoje = () => format(new Date(), "yyyy-MM-dd");
+// Returns start/end of a local day as UTC ISO strings for proper timezone-aware filtering
+function localDayRange(date: Date): { start: string; end: string } {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+function localDayKey(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
 
 export type DashboardPeriodo = "hoje" | "7dias" | "30dias" | "mes";
 
-function getPeriodoDates(periodo: DashboardPeriodo): { inicio: string; fim: string } {
+function getPeriodoRange(periodo: DashboardPeriodo): { start: string; end: string } {
   const now = new Date();
-  const fim = format(now, "yyyy-MM-dd");
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   switch (periodo) {
-    case "hoje": return { inicio: fim, fim };
-    case "7dias": return { inicio: format(subDays(now, 7), "yyyy-MM-dd"), fim };
-    case "30dias": return { inicio: format(subDays(now, 30), "yyyy-MM-dd"), fim };
-    case "mes": return { inicio: format(startOfMonth(now), "yyyy-MM-dd"), fim: format(endOfMonth(now), "yyyy-MM-dd") };
+    case "hoje": return localDayRange(now);
+    case "7dias": {
+      const s = new Date(todayStart);
+      s.setDate(s.getDate() - 7);
+      const e = new Date(todayStart);
+      e.setDate(e.getDate() + 1);
+      return { start: s.toISOString(), end: e.toISOString() };
+    }
+    case "30dias": {
+      const s = new Date(todayStart);
+      s.setDate(s.getDate() - 30);
+      const e = new Date(todayStart);
+      e.setDate(e.getDate() + 1);
+      return { start: s.toISOString(), end: e.toISOString() };
+    }
+    case "mes": {
+      const s = startOfMonth(now);
+      const e = new Date(endOfMonth(now));
+      e.setDate(e.getDate() + 1);
+      return { start: new Date(s.getFullYear(), s.getMonth(), s.getDate()).toISOString(), end: new Date(e.getFullYear(), e.getMonth(), e.getDate()).toISOString() };
+    }
   }
 }
 
 // Main dashboard data (today's KPIs - always loaded)
 export function useDashboardData() {
   return useQuery({
-    queryKey: ["dashboard", hoje()],
+    queryKey: ["dashboard", localDayKey(new Date())],
     queryFn: async () => {
-      const hj = hoje();
+      const { start: hjStart, end: hjEnd } = localDayRange(new Date());
 
       // Vendas do dia
       const { data: vendasHoje } = await supabase
         .from("vendas")
         .select("id, total, subtotal, data_venda, vendedor_id, pagamentos, clientes(nome)")
-        .gte("data_venda", hj)
-        .lte("data_venda", hj + "T23:59:59")
+        .gte("data_venda", hjStart)
+        .lt("data_venda", hjEnd)
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
 
@@ -53,8 +80,8 @@ export function useDashboardData() {
       const { data: pgtosHoje } = await supabase
         .from("pagamentos")
         .select("valor_pago")
-        .gte("data_pagamento", hj)
-        .lte("data_pagamento", hj + "T23:59:59");
+        .gte("data_pagamento", hjStart)
+        .lt("data_pagamento", hjEnd);
       const recebidoParcelas = pgtosHoje?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
 
       // Somar valores à vista das vendas do dia (excluindo parcela crediário)
@@ -109,7 +136,7 @@ export function useDashboardData() {
 
 // Period-based data (vendas, products, clients, vendedores)
 export function useDashboardPeriodo(periodo: DashboardPeriodo) {
-  const { inicio, fim } = getPeriodoDates(periodo);
+  const { start: inicio, end: fim } = getPeriodoRange(periodo);
   return useQuery({
     queryKey: ["dashboard_periodo", inicio, fim],
     queryFn: async () => {
@@ -118,7 +145,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         .from("vendas")
         .select("id, total, desconto_total, subtotal, data_venda, vendedor_id, cliente_id, pagamentos, clientes(nome)")
         .gte("data_venda", inicio)
-        .lte("data_venda", fim + "T23:59:59")
+        .lt("data_venda", fim)
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
 
@@ -176,7 +203,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         .from("pagamentos")
         .select("valor_pago, forma_pagamento")
         .gte("data_pagamento", inicio)
-        .lte("data_pagamento", fim + "T23:59:59");
+        .lt("data_pagamento", fim);
       const porForma = new Map<string, number>();
       // 1. Pagamentos de parcelas
       pgtos?.forEach((p) => {
