@@ -162,6 +162,16 @@ export default function ClientesPage() {
                           </a>
                         </Button>
                       )}
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={c.user_id ? "Portal ativo" : "Habilitar Portal"}
+                          onClick={() => setPortalState({ open: true, data: c })}
+                        >
+                          <UserCheck className={`w-4 h-4 ${c.user_id ? "text-green-600" : "text-muted-foreground"}`} />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" title="Repetir última venda" onClick={() => setPdvState({ open: true, clienteId: c.id })}>
                         <RotateCcw className="w-4 h-4" />
                       </Button>
