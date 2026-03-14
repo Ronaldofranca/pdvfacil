@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 
 // Returns start/end of a local day as UTC ISO strings for proper timezone-aware filtering
 function localDayRange(date: Date): { start: string; end: string } {
@@ -44,6 +44,23 @@ function getPeriodoRange(periodo: DashboardPeriodo): { start: string; end: strin
   }
 }
 
+/**
+ * Safely parse the `pagamentos` JSON column from a venda.
+ * Handles: array, JSON string, null, undefined.
+ */
+function parsePagamentos(raw: unknown): Array<{ forma: string; valor: number }> {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return [];
+}
+
 // Main dashboard data (today's KPIs - always loaded)
 export function useDashboardData() {
   return useQuery({
@@ -79,8 +96,15 @@ export function useDashboardData() {
           .from("itens_venda")
           .select("produto_id, quantidade, subtotal, custo_unitario")
           .in("venda_id", vendaIds);
-        for (const item of itens ?? []) {
-          lucroDia += Number(item.subtotal) - Number(item.custo_unitario ?? 0) * Number(item.quantidade);
+
+        if (itens && itens.length > 0) {
+          for (const item of itens) {
+            lucroDia += Number(item.subtotal) - Number(item.custo_unitario ?? 0) * Number(item.quantidade);
+          }
+        } else if (vendaIds.length > 0) {
+          // Fallback: if no itens found (legacy sales without items), estimate lucro as total
+          console.warn("[Dashboard] Vendas sem itens_venda encontradas. Lucro estimado pelo total.");
+          lucroDia = totalVendasDia;
         }
       }
 
@@ -95,12 +119,10 @@ export function useDashboardData() {
       // Somar valores à vista das vendas do dia (excluindo parcela crediário)
       let recebidoAVista = 0;
       for (const venda of vendasHoje ?? []) {
-        const pgtos = (venda as any).pagamentos;
-        if (Array.isArray(pgtos)) {
-          for (const pg of pgtos) {
-            if (pg.forma !== "crediario") {
-              recebidoAVista += Number(pg.valor ?? 0);
-            }
+        const pgtos = parsePagamentos((venda as any).pagamentos);
+        for (const pg of pgtos) {
+          if (pg.forma !== "crediario") {
+            recebidoAVista += Number(pg.valor ?? 0);
           }
         }
       }
@@ -237,15 +259,13 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
       // 2. Vendas à vista (non-crediário portions)
       let recebidoAVistaP = 0;
       vendas?.forEach((v) => {
-        const vpgtos = (v as any).pagamentos;
-        if (Array.isArray(vpgtos)) {
-          for (const pg of vpgtos) {
-            if (pg.forma !== "crediario") {
-              const val = Number(pg.valor ?? 0);
-              recebidoAVistaP += val;
-              const f = (pg.forma || "outro").replace(/_/g, " ");
-              porForma.set(f, (porForma.get(f) ?? 0) + val);
-            }
+        const vpgtos = parsePagamentos((v as any).pagamentos);
+        for (const pg of vpgtos) {
+          if (pg.forma !== "crediario") {
+            const val = Number(pg.valor ?? 0);
+            recebidoAVistaP += val;
+            const f = (pg.forma || "outro").replace(/_/g, " ");
+            porForma.set(f, (porForma.get(f) ?? 0) + val);
           }
         }
       });
@@ -285,8 +305,13 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
 
       // Lucro do período — use custo_unitario snapshot
       let lucroPeriodo = 0;
-      for (const it of itens) {
-        lucroPeriodo += Number(it.subtotal) - Number(it.custo_unitario ?? 0) * Number(it.quantidade);
+      if (itens.length > 0) {
+        for (const it of itens) {
+          lucroPeriodo += Number(it.subtotal) - Number(it.custo_unitario ?? 0) * Number(it.quantidade);
+        }
+      } else if (vendas && vendas.length > 0) {
+        // Fallback for legacy sales without items
+        lucroPeriodo = totalVendas;
       }
 
       return {

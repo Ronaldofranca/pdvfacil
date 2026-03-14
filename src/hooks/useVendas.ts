@@ -3,11 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const kitItemSchema = z.object({
-  produto_id: z.string().uuid(),
-  quantidade: z.number().min(1),
-}).optional();
-
 const cartItemSchema = z.object({
   produto_id: z.string().min(1),
   nome: z.string().min(1).max(200),
@@ -91,6 +86,21 @@ export interface VendaInput {
 // ─── Idempotency key generator ───
 export function generateIdempotencyKey(): string {
   return `venda_${Date.now()}_${crypto.randomUUID()}`;
+}
+
+/**
+ * Invalidate all dashboard-related queries.
+ * Called after any operation that affects financial data.
+ */
+export function invalidateDashboardQueries(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["dashboard"] });
+  qc.invalidateQueries({ queryKey: ["dashboard_periodo"] });
+  qc.invalidateQueries({ queryKey: ["vendas"] });
+  qc.invalidateQueries({ queryKey: ["estoque"] });
+  qc.invalidateQueries({ queryKey: ["movimentos_estoque"] });
+  qc.invalidateQueries({ queryKey: ["parcelas"] });
+  qc.invalidateQueries({ queryKey: ["pagamentos"] });
+  qc.invalidateQueries({ queryKey: ["financial_ledger"] });
 }
 
 // ─── Queries ───
@@ -181,6 +191,15 @@ export function useFinalizarVenda() {
 
       const hasCrediario = v.pagamentos.some((p) => p.forma === "crediario");
 
+      // Build pagamentos payload — pass as object, NOT JSON.stringify
+      const pagamentosPayload = hasCrediario
+        ? [{ forma: "crediario", valor: total }]
+        : v.pagamentos.filter((p) => p.valor > 0);
+
+      // Use local ISO for data_venda to ensure correct day attribution
+      const now = new Date();
+      const localISO = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).toISOString();
+
       // Call atomic RPC - everything in a single transaction
       const { data, error } = await supabase.rpc("fn_finalizar_venda_atomica" as any, {
         _idempotency_key: idempotencyKey,
@@ -190,9 +209,9 @@ export function useFinalizarVenda() {
         _subtotal: subtotalBruto,
         _desconto_total: v.desconto_total,
         _total: total,
-        _pagamentos: JSON.stringify(hasCrediario ? [{ forma: "crediario", valor: total }] : v.pagamentos.filter((p) => p.valor > 0)),
+        _pagamentos: JSON.stringify(pagamentosPayload),
         _observacoes: v.observacoes ?? "",
-        _data_venda: new Date().toISOString(),
+        _data_venda: localISO,
         _itens: JSON.stringify(itensPayload),
         _crediario: hasCrediario && v.crediario ? JSON.stringify(v.crediario) : null,
       });
@@ -207,11 +226,9 @@ export function useFinalizarVenda() {
       return { id: result.id, already_processed: result.already_processed };
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["vendas"] });
-      qc.invalidateQueries({ queryKey: ["estoque"] });
-      qc.invalidateQueries({ queryKey: ["movimentos_estoque"] });
-      qc.invalidateQueries({ queryKey: ["parcelas"] });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      // Comprehensive invalidation of all affected queries
+      invalidateDashboardQueries(qc);
+
       if (data?.already_processed) {
         toast.info("Venda já havia sido processada. Nenhuma duplicidade criada.");
       } else {
@@ -251,12 +268,8 @@ export function useCancelarVenda() {
       return data as { success: boolean; parcelas_canceladas: number; parcelas_com_pagamento: number; valor_ja_pago: number; estornos_estoque: number };
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["vendas"] });
-      qc.invalidateQueries({ queryKey: ["parcelas"] });
-      qc.invalidateQueries({ queryKey: ["estoque"] });
-      qc.invalidateQueries({ queryKey: ["movimentos_estoque"] });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-      qc.invalidateQueries({ queryKey: ["dashboard_periodo"] });
+      // Comprehensive invalidation of all affected queries
+      invalidateDashboardQueries(qc);
       
       let msg = "Venda cancelada com sucesso.";
       if (data?.parcelas_canceladas > 0) msg += ` ${data.parcelas_canceladas} parcela(s) cancelada(s).`;
