@@ -461,6 +461,13 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
               <Switch checked={form.ativo} onCheckedChange={(v) => set("ativo", v)} />
               <Label>Ativo</Label>
             </div>
+            <div className="col-span-2 flex items-center gap-2">
+              <Switch checked={form.permitir_fiado ?? true} onCheckedChange={(v) => set("permitir_fiado", v)} />
+              <Label>Permitir compra fiado (crediário)</Label>
+              {form.permitir_fiado === false && (
+                <Badge variant="destructive" className="text-[10px]">Restrito</Badge>
+              )}
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
