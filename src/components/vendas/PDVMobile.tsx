@@ -883,7 +883,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                             value={item.desconto || ""}
                             placeholder="0,00"
                             onChange={(e) =>
-                              updateItem(idx, { desconto: parseFloat(e.target.value) || 0 })
+                              updateItem(idx, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })
                             }
                           />
                         </div>
