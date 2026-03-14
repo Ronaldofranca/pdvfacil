@@ -113,7 +113,26 @@ export function useVendaItens(vendaId: string | null) {
         .eq("venda_id", vendaId!)
         .order("created_at");
       if (error) throw error;
-      return data;
+
+      // For kit items, fetch kit composition for display
+      const kitIds = data?.filter((i: any) => i.kit_id).map((i: any) => i.kit_id) ?? [];
+      let kitCompositions = new Map<string, { produto_nome: string; quantidade: number }[]>();
+      if (kitIds.length > 0) {
+        const { data: kitItens } = await supabase
+          .from("kit_itens")
+          .select("kit_id, quantidade, produtos(nome)")
+          .in("kit_id", kitIds);
+        for (const ki of kitItens ?? []) {
+          const list = kitCompositions.get(ki.kit_id) ?? [];
+          list.push({ produto_nome: (ki as any).produtos?.nome ?? "", quantidade: Number(ki.quantidade) });
+          kitCompositions.set(ki.kit_id, list);
+        }
+      }
+
+      return data?.map((item: any) => ({
+        ...item,
+        _kit_composicao: item.kit_id ? kitCompositions.get(item.kit_id) ?? [] : [],
+      })) ?? [];
     },
   });
 }
@@ -151,14 +170,21 @@ export function useFinalizarVenda() {
 
       // 2. Inserir itens
       const itensPayload = v.itens.map((i) => {
-        // For kits: use first component product_id for FK, but keep kit name as snapshot
+        const isKit = !!(i as any).is_kit;
+        const kitItens = (i as any).kit_itens as KitItemRef[] | undefined;
+        // For kits: use first component product_id for FK, store real kit_id separately
         let produtoIdForDb = i.produto_id;
-        if (i.is_kit && i.kit_itens?.length) {
-          produtoIdForDb = i.kit_itens[0].produto_id;
+        let kitIdForDb: string | null = null;
+        if (isKit && kitItens?.length) {
+          produtoIdForDb = kitItens[0].produto_id;
+          // Extract real kit UUID from "kit_<uuid>" format
+          kitIdForDb = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
         }
         return {
           venda_id: venda.id,
           produto_id: produtoIdForDb,
+          kit_id: kitIdForDb,
+          item_type: isKit ? "kit" : "produto",
           nome_produto: i.nome,
           quantidade: i.quantidade,
           preco_original: i.preco_original,
@@ -181,13 +207,17 @@ export function useFinalizarVenda() {
         tipo: "venda";
         quantidade: number;
         observacoes: string;
+        kit_id?: string | null;
       }[] = [];
 
       for (const i of v.itens) {
         if (i.quantidade <= 0) continue;
-        if ((i as any).is_kit && (i as any).kit_itens?.length) {
+        const isKit = !!(i as any).is_kit;
+        const kitItens = (i as any).kit_itens as KitItemRef[] | undefined;
+        if (isKit && kitItens?.length) {
+          const realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
           // Kit: create movements for each component product
-          for (const ki of (i as any).kit_itens) {
+          for (const ki of kitItens) {
             movimentos.push({
               empresa_id: v.empresa_id,
               produto_id: ki.produto_id,
@@ -195,6 +225,7 @@ export function useFinalizarVenda() {
               tipo: "venda" as any,
               quantidade: ki.quantidade * i.quantidade,
               observacoes: `Venda #${venda.id.slice(0, 8)} (Kit: ${i.nome})`,
+              kit_id: realKitId,
             });
           }
         } else {
