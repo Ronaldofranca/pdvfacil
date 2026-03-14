@@ -147,6 +147,8 @@ export interface ReceiptPDFOptions {
     chave: string;
     tipo: string;
     valor?: number; // value for QR code
+    nome_recebedor?: string;
+    cidade_recebedor?: string;
   };
 }
 
