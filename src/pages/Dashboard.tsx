@@ -48,6 +48,7 @@ const PERIODOS: { value: DashboardPeriodo; label: string }[] = [
 const MASKED = "R$ •••••";
 
 export default function DashboardPage() {
+  useRouteRestore();
   const [periodo, setPeriodo] = useState<DashboardPeriodo>("mes");
   const [showValues, setShowValues] = useState(true);
   const { isAdmin, isVendedor } = useAuth();
