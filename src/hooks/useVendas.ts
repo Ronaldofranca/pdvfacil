@@ -168,7 +168,7 @@ export function useFinalizarVenda() {
         empresa_id: string;
         produto_id: string;
         vendedor_id: string;
-        tipo: string;
+        tipo: "venda";
         quantidade: number;
         observacoes: string;
       }[] = [];
