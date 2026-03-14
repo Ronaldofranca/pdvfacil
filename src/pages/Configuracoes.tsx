@@ -486,7 +486,50 @@ export default function ConfiguracoesPage() {
           </Card>
         </TabsContent>
 
-        {/* 10. NOTIFICAÇÕES */}
+        {/* PORTAL DO CLIENTE */}
+        <TabsContent value="portal">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações do Portal do Cliente</CardTitle>
+              <CardDescription>Personalize o portal de acesso dos seus clientes</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Título do Portal</Label>
+                  <Input
+                    defaultValue={(config as any)?.portal_titulo ?? "Portal do Cliente"}
+                    onBlur={(e) => saveConfig({ portal_titulo: e.target.value.trim() || "Portal do Cliente" })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Texto do Rodapé</Label>
+                  <Input
+                    defaultValue={(config as any)?.portal_rodape ?? ""}
+                    placeholder="Ex: © 2026 Minha Empresa"
+                    onBlur={(e) => saveConfig({ portal_rodape: e.target.value.trim() })}
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Mensagem de Boas-vindas</Label>
+                  <Input
+                    defaultValue={(config as any)?.portal_mensagem_boas_vindas ?? ""}
+                    placeholder="Mensagem exibida na página inicial do portal"
+                    onBlur={(e) => saveConfig({ portal_mensagem_boas_vindas: e.target.value.trim() })}
+                  />
+                </div>
+              </div>
+              <Separator />
+              <p className="text-sm font-semibold">Seções Visíveis no Portal</p>
+              <div className="divide-y">
+                <SwitchRow label="Mostrar Pedidos" description="Permite ao cliente ver e criar pedidos" checked={(config as any)?.portal_mostrar_pedidos ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pedidos: v })} />
+                <SwitchRow label="Mostrar Parcelas" description="Permite ao cliente ver parcelas e saldos" checked={(config as any)?.portal_mostrar_parcelas ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_parcelas: v })} />
+                <SwitchRow label="Mostrar Histórico de Compras" description="Permite ao cliente ver compras anteriores" checked={(config as any)?.portal_mostrar_compras ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_compras: v })} />
+                <SwitchRow label="Mostrar Chave PIX" description="Exibe a chave PIX para pagamento no portal" checked={(config as any)?.portal_mostrar_pix ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pix: v })} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
         <TabsContent value="notificacoes">
           <Card>
             <CardHeader>
