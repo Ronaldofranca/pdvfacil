@@ -14,8 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   User, Building2, Palette, ShoppingCart, CreditCard, CalendarDays,
-  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award
+  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award, Sun, Moon, Monitor, Globe
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEmpresas, useUpdateEmpresa } from "@/hooks/useEmpresas";
 import {
   useConfiguracoes, useUpsertConfiguracoes,
