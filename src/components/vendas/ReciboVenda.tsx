@@ -152,7 +152,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
                 {/* Product image placeholder */}
                 <div className="w-10 h-10 rounded bg-muted flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
                   <img 
-                    src="/placeholder.svg" 
+                    src={(item as any).produtos?.imagem_url || "/placeholder.svg"} 
                     alt={item.nome_produto}
                     className="w-full h-full object-cover"
                   />
