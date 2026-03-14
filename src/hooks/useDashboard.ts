@@ -203,7 +203,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         .from("pagamentos")
         .select("valor_pago, forma_pagamento")
         .gte("data_pagamento", inicio)
-        .lte("data_pagamento", fim + "T23:59:59");
+        .lt("data_pagamento", fim);
       const porForma = new Map<string, number>();
       // 1. Pagamentos de parcelas
       pgtos?.forEach((p) => {
