@@ -690,7 +690,7 @@ async function htmlToPdfBlob(html: string): Promise<Blob> {
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
   try {
-    const blob: Blob = await html2pdf()
+    const blob: Blob = await (html2pdf() as any)
       .set({
         margin: [5, 5, 10, 5],
         filename: "recibo.pdf",
