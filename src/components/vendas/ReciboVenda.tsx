@@ -108,6 +108,10 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
         endereco: empresa?.endereco || undefined,
       },
       pix: pixConfig,
+      cancelamento: venda.status === "cancelada" ? {
+        motivo: (venda as any).motivo_cancelamento ?? "Não informado",
+        data: (venda as any).cancelado_em ? format(new Date((venda as any).cancelado_em), "dd/MM/yyyy HH:mm", { locale: ptBR }) : undefined,
+      } : undefined,
     };
   };
 
