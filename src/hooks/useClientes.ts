@@ -41,6 +41,7 @@ export interface ClienteInput {
   longitude?: number | null;
   observacoes?: string;
   ativo?: boolean;
+  permitir_fiado?: boolean;
   cliente_indicador_id?: string | null;
 }
 
