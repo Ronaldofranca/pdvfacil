@@ -136,20 +136,27 @@ export interface ReceiptPDFOptions {
     vendaId: string;
   };
   parcelasRestantes?: { numero: number; valor: number; vencimento: string; status: string }[];
-  // New fields for enhanced receipt
   empresaInfo?: {
     telefone?: string;
     endereco?: string;
     cidade?: string;
     uf?: string;
+    cnpj?: string;
   };
+  vendedorNome?: string;
   pix?: {
     chave: string;
     tipo: string;
-    valor?: number; // value for QR code
+    valor?: number;
     nome_recebedor?: string;
     cidade_recebedor?: string;
   };
+  cancelamento?: {
+    motivo: string;
+    data?: string;
+  };
+  // Receipt visual config
+  receiptConfig?: import("@/lib/receiptConfig").ReceiptConfig;
 }
 
 // ─── PIX QR Code generation ───
