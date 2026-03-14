@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useProdutos, useKits } from "@/hooks/useProdutos";
+import { useEstoque } from "@/hooks/useEstoque";
 import { useClientes } from "@/hooks/useClientes";
 import { useFinalizarVenda, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
@@ -100,10 +101,11 @@ function DesktopQuickSection({ title, items, allProducts, onAdd, fmt }: {
 
 export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const isMobile = useIsMobile();
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
   const { data: produtosRaw } = useProdutos();
   const { data: kitsRaw } = useKits();
   const { data: clientes } = useClientes();
+  const { data: estoqueData } = useEstoque(user?.id);
   const finalizar = useFinalizarVenda();
   const { data: maisVendidos } = useProdutosMaisVendidos();
   const { data: recentes } = useProdutosRecentes();
@@ -165,20 +167,27 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     if (!kitsRaw) return [];
     return kitsRaw
       .filter((k: any) => k.ativo)
-      .map((k: any) => ({
-        id: `kit_${k.id}`,
-        _kit_id: k.id,
-        nome: `Kit ${k.nome}`,
-        preco: k.preco,
-        imagem_url: k.imagem_url,
-        codigo: "",
-        ativo: true,
-        is_kit: true,
-        kit_itens: (k.kit_itens || []).map((ki: any) => ({
-          produto_id: ki.produto_id,
-          quantidade: Number(ki.quantidade),
-        })),
-      }));
+      .map((k: any) => {
+        const kitCusto = (k.kit_itens || []).reduce((sum: number, ki: any) => {
+          const prodCusto = Number(ki.produtos?.custo ?? 0);
+          return sum + prodCusto * Number(ki.quantidade);
+        }, 0);
+        return {
+          id: `kit_${k.id}`,
+          _kit_id: k.id,
+          nome: `Kit ${k.nome}`,
+          preco: k.preco,
+          custo: kitCusto,
+          imagem_url: k.imagem_url,
+          codigo: "",
+          ativo: true,
+          is_kit: true,
+          kit_itens: (k.kit_itens || []).map((ki: any) => ({
+            produto_id: ki.produto_id,
+            quantidade: Number(ki.quantidade),
+          })),
+        };
+      });
   }, [kitsRaw]);
 
   const produtos = useMemo(() => [...(produtosRaw ?? []), ...kitsAsProducts], [produtosRaw, kitsAsProducts]);
@@ -209,6 +218,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
         desconto: 0,
         bonus: false,
         subtotal: Number(produto.preco),
+        custo_unitario: Number(produto.custo ?? 0),
       };
       if (produto.is_kit && produto.kit_itens) {
         item.is_kit = true;
@@ -288,6 +298,30 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
     
+    // Validate kit component stock for non-admin users
+    if (!isAdmin) {
+      const estoqueMap = new Map<string, number>();
+      for (const e of estoqueData ?? []) {
+        estoqueMap.set(e.produto_id, Number(e.quantidade));
+      }
+      for (const item of cart) {
+        if (item.is_kit && item.kit_itens) {
+          const missing: string[] = [];
+          for (const ki of item.kit_itens) {
+            const saldo = estoqueMap.get(ki.produto_id) ?? 0;
+            if (saldo < ki.quantidade * item.quantidade) {
+              const prod = (produtosRaw as any[])?.find((p: any) => p.id === ki.produto_id);
+              missing.push(prod?.nome ?? ki.produto_id.slice(0, 8));
+            }
+          }
+          if (missing.length > 0) {
+            toast.error(`Kit "${item.nome}" sem estoque: ${missing.join(", ")}`);
+            return;
+          }
+        }
+      }
+    }
+
     // For crediário, entrada counts as payment
     if (hasCrediario) {
       if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");

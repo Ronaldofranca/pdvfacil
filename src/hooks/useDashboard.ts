@@ -36,21 +36,16 @@ export function useDashboardData() {
       const totalVendasDia = vendasHoje?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
       const qtdVendasDia = vendasHoje?.length ?? 0;
 
-      // Lucro do dia
+      // Lucro do dia — use custo_unitario snapshot from itens_venda
       const vendaIds = vendasHoje?.map((v) => v.id) ?? [];
       let lucroDia = 0;
       if (vendaIds.length > 0) {
         const { data: itens } = await supabase
           .from("itens_venda")
-          .select("produto_id, quantidade, subtotal")
+          .select("produto_id, quantidade, subtotal, custo_unitario")
           .in("venda_id", vendaIds);
-        const prodIds = [...new Set((itens ?? []).map((i) => i.produto_id))];
-        if (prodIds.length > 0) {
-          const { data: produtos } = await supabase.from("produtos").select("id, custo").in("id", prodIds);
-          const custoMap = new Map(produtos?.map((p) => [p.id, Number(p.custo)]) ?? []);
-          for (const item of itens ?? []) {
-            lucroDia += Number(item.subtotal) - (custoMap.get(item.produto_id) ?? 0) * Number(item.quantidade);
-          }
+        for (const item of itens ?? []) {
+          lucroDia += Number(item.subtotal) - Number(item.custo_unitario ?? 0) * Number(item.quantidade);
         }
       }
 
@@ -135,7 +130,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
       if (vendaIds.length > 0) {
         const { data } = await supabase
           .from("itens_venda")
-          .select("produto_id, nome_produto, quantidade, subtotal")
+          .select("produto_id, nome_produto, quantidade, subtotal, custo_unitario")
           .in("venda_id", vendaIds);
         itens = data ?? [];
       }
@@ -237,15 +232,10 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         return { ...v, metaValor, pctMeta, comissao };
       });
 
-      // Lucro do período
+      // Lucro do período — use custo_unitario snapshot
       let lucroPeriodo = 0;
-      if (itens.length > 0) {
-        const prodIds = [...new Set(itens.map((i) => i.produto_id))];
-        const { data: prods } = await supabase.from("produtos").select("id, custo").in("id", prodIds);
-        const custoMap = new Map(prods?.map((p) => [p.id, Number(p.custo)]) ?? []);
-        for (const it of itens) {
-          lucroPeriodo += Number(it.subtotal) - (custoMap.get(it.produto_id) ?? 0) * Number(it.quantidade);
-        }
+      for (const it of itens) {
+        lucroPeriodo += Number(it.subtotal) - Number(it.custo_unitario ?? 0) * Number(it.quantidade);
       }
 
       return {

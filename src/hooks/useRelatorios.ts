@@ -178,25 +178,16 @@ export function useRelLucroProduto(inicio: string, fim: string) {
       const vendaIds = vendas.map((v) => v.id);
       const { data: itens, error: iErr } = await supabase
         .from("itens_venda")
-        .select("produto_id, nome_produto, quantidade, preco_vendido, subtotal")
+        .select("produto_id, nome_produto, quantidade, preco_vendido, subtotal, custo_unitario")
         .in("venda_id", vendaIds);
       if (iErr) throw iErr;
-
-      const prodIds = [...new Set((itens ?? []).map((i) => i.produto_id))];
-      const { data: produtos, error: pErr } = await supabase
-        .from("produtos")
-        .select("id, custo")
-        .in("id", prodIds);
-      if (pErr) throw pErr;
-
-      const custoMap = new Map(produtos?.map((p) => [p.id, Number(p.custo)]) ?? []);
 
       const map = new Map<string, { nome: string; receita: number; custo: number; lucro: number; qtd: number }>();
       for (const item of itens ?? []) {
         const key = item.produto_id;
         const curr = map.get(key) ?? { nome: item.nome_produto, receita: 0, custo: 0, lucro: 0, qtd: 0 };
         const itemReceita = Number(item.subtotal);
-        const itemCusto = (custoMap.get(key) ?? 0) * Number(item.quantidade);
+        const itemCusto = Number(item.custo_unitario ?? 0) * Number(item.quantidade);
         curr.receita += itemReceita;
         curr.custo += itemCusto;
         curr.lucro += itemReceita - itemCusto;

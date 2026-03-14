@@ -134,7 +134,7 @@ export function useKits() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("kits")
-        .select("*, kit_itens(*, produtos(nome))")
+        .select("*, kit_itens(*, produtos(nome, custo))")
         .order("nome");
       if (error) throw error;
       return data;
