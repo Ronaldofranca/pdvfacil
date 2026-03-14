@@ -55,7 +55,7 @@ export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={cycleTheme} title={`Tema: ${theme}`}>
+        <Button variant="ghost" size="icon" className="text-muted-foreground shrink-0" onClick={cycleTheme} title={`Tema: ${theme}`}>
           <ThemeIcon className="w-5 h-5" />
         </Button>
 
