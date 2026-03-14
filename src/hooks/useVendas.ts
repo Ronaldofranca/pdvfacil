@@ -163,16 +163,42 @@ export function useFinalizarVenda() {
       if (itensErr) throw itensErr;
 
       // 3. Registrar movimentos de estoque (saída)
-      const movimentos = v.itens
-        .filter((i) => i.quantidade > 0)
-        .map((i) => ({
-          empresa_id: v.empresa_id,
-          produto_id: i.produto_id,
-          vendedor_id: v.vendedor_id,
-          tipo: "venda" as any,
-          quantidade: i.quantidade,
-          observacoes: `Venda #${venda.id.slice(0, 8)}`,
-        }));
+      // For kits: decompose into component products for stock
+      const movimentos: {
+        empresa_id: string;
+        produto_id: string;
+        vendedor_id: string;
+        tipo: string;
+        quantidade: number;
+        observacoes: string;
+      }[] = [];
+
+      for (const i of v.itens) {
+        if (i.quantidade <= 0) continue;
+        if ((i as any).is_kit && (i as any).kit_itens?.length) {
+          // Kit: create movements for each component product
+          for (const ki of (i as any).kit_itens) {
+            movimentos.push({
+              empresa_id: v.empresa_id,
+              produto_id: ki.produto_id,
+              vendedor_id: v.vendedor_id,
+              tipo: "venda" as any,
+              quantidade: ki.quantidade * i.quantidade,
+              observacoes: `Venda #${venda.id.slice(0, 8)} (Kit: ${i.nome})`,
+            });
+          }
+        } else {
+          movimentos.push({
+            empresa_id: v.empresa_id,
+            produto_id: i.produto_id,
+            vendedor_id: v.vendedor_id,
+            tipo: "venda" as any,
+            quantidade: i.quantidade,
+            observacoes: `Venda #${venda.id.slice(0, 8)}`,
+          });
+        }
+      }
+
       if (movimentos.length > 0) {
         await supabase.from("movimentos_estoque").insert(movimentos);
       }
