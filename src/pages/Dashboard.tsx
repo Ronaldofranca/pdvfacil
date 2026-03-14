@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useRouteRestore } from "@/hooks/useRouteRestore";
 import {
   ShoppingCart, DollarSign, AlertTriangle, CreditCard, PackageX,
   TrendingUp, Target, BellRing, MapPin, PackageSearch, Users,
@@ -47,6 +48,7 @@ const PERIODOS: { value: DashboardPeriodo; label: string }[] = [
 const MASKED = "R$ •••••";
 
 export default function DashboardPage() {
+  useRouteRestore();
   const [periodo, setPeriodo] = useState<DashboardPeriodo>("mes");
   const [showValues, setShowValues] = useState(true);
   const { isAdmin, isVendedor } = useAuth();

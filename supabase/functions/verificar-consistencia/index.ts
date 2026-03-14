@@ -169,6 +169,30 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 7) Reconciliação automática de caixa — verificar divergências do dia
+    const today = new Date().toISOString().split("T")[0];
+    const caixaQuery = supabase
+      .from("caixa_diario")
+      .select("*")
+      .eq("status", "fechado")
+      .eq("data", today);
+    if (empresaId) caixaQuery.eq("empresa_id", empresaId);
+    const { data: caixasFechados } = await caixaQuery;
+
+    if (caixasFechados) {
+      for (const caixa of caixasFechados) {
+        const dif = Math.abs(Number(caixa.diferenca) || 0);
+        if (dif > 1) { // Tolerance of R$1
+          inconsistencias.push({
+            tipo: "CAIXA_DIVERGENTE",
+            descricao: `Caixa ${caixa.id.slice(0, 8)} fechado com diferença de R$${dif.toFixed(2)} (contado vs teórico)`,
+            gravidade: dif > 50 ? "alta" : "media",
+            detalhes: `Teórico: R$${Number(caixa.saldo_teorico).toFixed(2)}, Contado: R$${Number(caixa.valor_contado).toFixed(2)}`,
+          });
+        }
+      }
+    }
+
     // Log findings to financial_integrity_logs
     if (inconsistencias.length > 0) {
       const gravidadeToNivel: Record<string, string> = { alta: "critico", media: "alto", baixa: "medio" };

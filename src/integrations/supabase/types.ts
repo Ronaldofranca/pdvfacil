@@ -1058,6 +1058,68 @@ export type Database = {
           },
         ]
       }
+      financial_ledger: {
+        Row: {
+          caixa_id: string | null
+          cliente_id: string | null
+          created_at: string
+          created_by: string | null
+          descricao: string
+          empresa_id: string
+          id: string
+          natureza: string
+          pagamento_id: string | null
+          parcela_id: string | null
+          referencia_id: string | null
+          referencia_tipo: string
+          tipo_evento: string
+          valor: number
+          venda_id: string | null
+        }
+        Insert: {
+          caixa_id?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string
+          empresa_id: string
+          id?: string
+          natureza: string
+          pagamento_id?: string | null
+          parcela_id?: string | null
+          referencia_id?: string | null
+          referencia_tipo?: string
+          tipo_evento: string
+          valor?: number
+          venda_id?: string | null
+        }
+        Update: {
+          caixa_id?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          natureza?: string
+          pagamento_id?: string | null
+          parcela_id?: string | null
+          referencia_id?: string | null
+          referencia_tipo?: string
+          tipo_evento?: string
+          valor?: number
+          venda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_ledger_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       formas_pagamento: {
         Row: {
           ativa: boolean
@@ -1083,6 +1145,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "formas_pagamento_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fraud_detection_logs: {
+        Row: {
+          created_at: string
+          descricao: string
+          empresa_id: string
+          id: string
+          nivel_risco: string
+          payload_detectado: Json | null
+          registro_id: string | null
+          registro_tipo: string
+          status: string
+          tipo_alerta: string
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          nivel_risco?: string
+          payload_detectado?: Json | null
+          registro_id?: string | null
+          registro_tipo?: string
+          status?: string
+          tipo_alerta: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          nivel_risco?: string
+          payload_detectado?: Json | null
+          registro_id?: string | null
+          registro_tipo?: string
+          status?: string
+          tipo_alerta?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fraud_detection_logs_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
