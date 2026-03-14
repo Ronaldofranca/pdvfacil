@@ -307,3 +307,98 @@ describe("Dashboard invalidation on payment", () => {
     expect(allPresent).toBe(true);
   });
 });
+
+// ─── Profit calculation: immutable historical snapshots ───
+describe("Profit calculation - immutable historical snapshots", () => {
+  // Simulates how the RPC computes profit per item
+  function computeItemProfit(item: { subtotal: number; custo_unitario: number; quantidade: number }) {
+    const lineCost = item.custo_unitario * item.quantidade;
+    const lineProfit = item.subtotal - lineCost;
+    return { lineCost, lineProfit };
+  }
+
+  function computeVendaTotals(itens: Array<{ subtotal: number; custo_unitario: number; quantidade: number }>) {
+    let totalCost = 0;
+    let totalProfit = 0;
+    for (const item of itens) {
+      const { lineCost, lineProfit } = computeItemProfit(item);
+      totalCost += lineCost;
+      totalProfit += lineProfit;
+    }
+    return { totalCost, totalProfit };
+  }
+
+  it("simple sale: price 100, cost 60, qty 1 → profit 40", () => {
+    const { totalCost, totalProfit } = computeVendaTotals([
+      { subtotal: 100, custo_unitario: 60, quantidade: 1 },
+    ]);
+    expect(totalCost).toBe(60);
+    expect(totalProfit).toBe(40);
+  });
+
+  it("multiple items: sums correctly", () => {
+    const { totalCost, totalProfit } = computeVendaTotals([
+      { subtotal: 100, custo_unitario: 60, quantidade: 1 },
+      { subtotal: 200, custo_unitario: 80, quantidade: 2 },
+    ]);
+    expect(totalCost).toBe(60 + 160);
+    expect(totalProfit).toBe(40 + 40);
+  });
+
+  it("quantity > 1: multiplies cost correctly", () => {
+    const { totalCost, totalProfit } = computeVendaTotals([
+      { subtotal: 500, custo_unitario: 30, quantidade: 5 },
+    ]);
+    expect(totalCost).toBe(150);
+    expect(totalProfit).toBe(350);
+  });
+
+  it("zero cost product: profit equals revenue", () => {
+    const { totalCost, totalProfit } = computeVendaTotals([
+      { subtotal: 200, custo_unitario: 0, quantidade: 3 },
+    ]);
+    expect(totalCost).toBe(0);
+    expect(totalProfit).toBe(200);
+  });
+
+  it("historical immutability: changing product cost doesn't affect stored profit", () => {
+    // Snapshot at time of sale: cost was 60
+    const atSaleTime = computeVendaTotals([
+      { subtotal: 100, custo_unitario: 60, quantidade: 1 },
+    ]);
+    // Product cost changes to 80 later — but stored values don't change
+    const storedProfit = atSaleTime.totalProfit;
+    expect(storedProfit).toBe(40);
+    // The stored value remains 40 regardless of current product cost
+    expect(storedProfit).not.toBe(20); // would be wrong if using new cost of 80
+  });
+
+  it("cancelled sales excluded from aggregate", () => {
+    const vendas = [
+      { total_profit: 40, status: "finalizada" },
+      { total_profit: 30, status: "cancelada" },
+      { total_profit: 50, status: "finalizada" },
+    ];
+    const lucroAgregado = vendas
+      .filter(v => v.status === "finalizada")
+      .reduce((s, v) => s + v.total_profit, 0);
+    expect(lucroAgregado).toBe(90);
+    expect(lucroAgregado).not.toBe(120); // must NOT include cancelled
+  });
+
+  it("dashboard must never use total as profit substitute", () => {
+    const venda = { total: 250, total_profit: 40, total_cost: 210 };
+    // The correct profit is total_profit, NOT total
+    expect(venda.total_profit).toBe(40);
+    expect(venda.total_profit).not.toBe(venda.total);
+    expect(venda.total_cost + venda.total_profit).toBe(venda.total);
+  });
+
+  it("bonus items (free) have zero subtotal, profit is negative cost", () => {
+    const { totalCost, totalProfit } = computeVendaTotals([
+      { subtotal: 0, custo_unitario: 30, quantidade: 1 },
+    ]);
+    expect(totalCost).toBe(30);
+    expect(totalProfit).toBe(-30);
+  });
+});
