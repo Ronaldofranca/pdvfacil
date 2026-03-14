@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useRouteRestore } from "@/hooks/useRouteRestore";
 import {
   ShoppingCart, DollarSign, AlertTriangle, CreditCard, PackageX,
   TrendingUp, Target, BellRing, MapPin, PackageSearch, Users,
