@@ -55,7 +55,7 @@ export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={cycleTheme} title={`Tema: ${theme}`}>
+        <Button variant="ghost" size="icon" className="text-muted-foreground shrink-0" onClick={cycleTheme} title={`Tema: ${theme}`}>
           <ThemeIcon className="w-5 h-5" />
         </Button>
 
@@ -86,6 +86,9 @@ export function TopBar({ onMenuToggle, onLogout }: TopBarProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2" disabled>
               <User className="w-4 h-4" /> Perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2" onClick={cycleTheme}>
+              <ThemeIcon className="w-4 h-4" /> Tema: {theme === "system" ? "Auto" : theme === "dark" ? "Escuro" : "Claro"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={onLogout}>
