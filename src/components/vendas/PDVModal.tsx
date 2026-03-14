@@ -157,6 +157,29 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     }
   }, [cart, clienteId, observacoes, pagamentos, crediarioConfig]);
 
+  // Merge kits into product list
+  const kitsAsProducts = useMemo(() => {
+    if (!kitsRaw) return [];
+    return kitsRaw
+      .filter((k: any) => k.ativo)
+      .map((k: any) => ({
+        id: `kit_${k.id}`,
+        _kit_id: k.id,
+        nome: `Kit ${k.nome}`,
+        preco: k.preco,
+        imagem_url: k.imagem_url,
+        codigo: "",
+        ativo: true,
+        is_kit: true,
+        kit_itens: (k.kit_itens || []).map((ki: any) => ({
+          produto_id: ki.produto_id,
+          quantidade: Number(ki.quantidade),
+        })),
+      }));
+  }, [kitsRaw]);
+
+  const produtos = useMemo(() => [...(produtosRaw ?? []), ...kitsAsProducts], [produtosRaw, kitsAsProducts]);
+
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const clienteScore = useClienteScoreById(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);
@@ -174,19 +197,21 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
             : i
         );
       }
-      return [
-        ...prev,
-        {
-          produto_id: produto.id,
-          nome: produto.nome,
-          quantidade: 1,
-          preco_original: Number(produto.preco),
-          preco_vendido: Number(produto.preco),
-          desconto: 0,
-          bonus: false,
-          subtotal: Number(produto.preco),
-        },
-      ];
+      const item: CartItem = {
+        produto_id: produto.id,
+        nome: produto.nome,
+        quantidade: 1,
+        preco_original: Number(produto.preco),
+        preco_vendido: Number(produto.preco),
+        desconto: 0,
+        bonus: false,
+        subtotal: Number(produto.preco),
+      };
+      if (produto.is_kit && produto.kit_itens) {
+        item.is_kit = true;
+        item.kit_itens = produto.kit_itens;
+      }
+      return [...prev, item];
     });
   };
 
