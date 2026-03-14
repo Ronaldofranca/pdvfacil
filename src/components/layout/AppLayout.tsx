@@ -6,6 +6,7 @@ import { TopBar } from "./TopBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import { SessionExpiryWarning } from "@/components/session/SessionExpiryWarning";
+import { useRoutePersistence } from "@/hooks/useRoutePersistence";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
