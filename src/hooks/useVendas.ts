@@ -151,14 +151,21 @@ export function useFinalizarVenda() {
 
       // 2. Inserir itens
       const itensPayload = v.itens.map((i) => {
-        // For kits: use first component product_id for FK, but keep kit name as snapshot
+        const isKit = !!(i as any).is_kit;
+        const kitItens = (i as any).kit_itens as KitItemRef[] | undefined;
+        // For kits: use first component product_id for FK, store real kit_id separately
         let produtoIdForDb = i.produto_id;
-        if (i.is_kit && i.kit_itens?.length) {
-          produtoIdForDb = i.kit_itens[0].produto_id;
+        let kitIdForDb: string | null = null;
+        if (isKit && kitItens?.length) {
+          produtoIdForDb = kitItens[0].produto_id;
+          // Extract real kit UUID from "kit_<uuid>" format
+          kitIdForDb = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
         }
         return {
           venda_id: venda.id,
           produto_id: produtoIdForDb,
+          kit_id: kitIdForDb,
+          item_type: isKit ? "kit" : "produto",
           nome_produto: i.nome,
           quantidade: i.quantidade,
           preco_original: i.preco_original,
