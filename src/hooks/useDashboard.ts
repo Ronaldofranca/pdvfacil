@@ -282,15 +282,8 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         return { ...v, metaValor, pctMeta, comissao };
       });
 
-      // Lucro do período — use custo_unitario snapshot
-      let lucroPeriodo = 0;
-      if (itens.length > 0) {
-        for (const it of itens) {
-          lucroPeriodo += Number(it.subtotal) - Number(it.custo_unitario ?? 0) * Number(it.quantidade);
-        }
-      } else if (vendas && vendas.length > 0) {
-        lucroPeriodo = totalVendas;
-      }
+      // Lucro do período — use pre-computed total_profit (immutable historical snapshot)
+      const lucroPeriodo = vendas?.reduce((s, v) => s + Number((v as any).total_profit ?? 0), 0) ?? 0;
 
       return {
         totalVendas, qtdVendas: vendas?.length ?? 0, totalRecebido, lucroPeriodo,
