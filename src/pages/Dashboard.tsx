@@ -249,11 +249,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Period KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <KPICard icon={ShoppingCart} label={`Vendas (${PERIODOS.find(p=>p.value===periodo)?.label})`} value={pd ? v(fmtR(pd.totalVendas)) : "—"} sub={pd ? `${pd.qtdVendas} venda(s)` : ""} color="text-primary" loading={lPd} />
         <KPICard icon={DollarSign} label="Recebido" value={pd ? v(fmtR(pd.totalRecebido)) : "—"} color="text-primary" loading={lPd} />
         <KPICard icon={TrendingUp} label="Lucro Estimado" value={pd ? v(fmtR(pd.lucroPeriodo)) : "—"} color="text-primary" loading={lPd} />
         <KPICard icon={PackageX} label="Estoque Baixo" value={data ? `${data.estoqueBaixo.length}` : "—"} sub={`${data?.estoqueSemEstoque ?? 0} sem estoque`} color="text-destructive" loading={isLoading} />
+        <KPICard icon={XCircle} label="Canceladas" value={pd ? v(fmtR(pd.totalCancelado ?? 0)) : "—"} sub={pd ? `${pd.qtdCanceladas ?? 0} cancelada(s)` : ""} color="text-destructive" loading={lPd} />
       </div>
 
       {/* ═══ CHARTS ═══ */}
