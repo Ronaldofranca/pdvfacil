@@ -44,6 +44,11 @@ const vendaInputSchema = z.object({
 });
 
 // ─── Types ───
+export interface KitItemRef {
+  produto_id: string;
+  quantidade: number;
+}
+
 export interface CartItem {
   produto_id: string;
   nome: string;
@@ -53,6 +58,8 @@ export interface CartItem {
   desconto: number;
   bonus: boolean;
   subtotal: number;
+  is_kit?: boolean;
+  kit_itens?: KitItemRef[];
 }
 
 export interface Pagamento {
