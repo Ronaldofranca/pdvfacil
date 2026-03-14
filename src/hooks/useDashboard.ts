@@ -86,6 +86,14 @@ export function useDashboardData() {
       // Lucro do dia — use pre-computed total_profit (immutable historical snapshot)
       const lucroDia = vendasHoje?.reduce((s, v) => s + Number((v as any).total_profit ?? 0), 0) ?? 0;
 
+      // Vendas canceladas do dia
+      const { data: canceladasHoje } = await supabase
+        .from("vendas")
+        .select("id, total")
+        .gte("cancelado_em" as any, hjStart)
+        .lt("cancelado_em" as any, hjEnd)
+        .eq("status", "cancelada" as any);
+
       // Recebido hoje = pagamentos de parcelas + vendas à vista (não-crediário)
       const { data: pgtosHoje } = await supabase
         .from("pagamentos")
