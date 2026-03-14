@@ -48,6 +48,7 @@ interface Props {
 export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }: Props) {
   const { profile, user } = useAuth();
   const { data: onlineProdutos } = useProdutos();
+  const { data: onlineKits } = useKits();
   const { data: onlineClientes } = useClientes();
   const finalizar = useFinalizarVenda();
   const { data: maisVendidos } = useProdutosMaisVendidos();
