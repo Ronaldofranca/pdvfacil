@@ -48,7 +48,7 @@ function getPeriodoRange(periodo: DashboardPeriodo): { start: string; end: strin
  * Safely parse the `pagamentos` JSON column from a venda.
  * Handles: array, JSON string, null, undefined.
  */
-function parsePagamentos(raw: unknown): Array<{ forma: string; valor: number }> {
+export function parsePagamentos(raw: unknown): Array<{ forma: string; valor: number }> {
   if (Array.isArray(raw)) return raw;
   if (typeof raw === "string") {
     try {
@@ -66,7 +66,8 @@ export function useDashboardData() {
   return useQuery({
     queryKey: ["dashboard", localDayKey(new Date())],
     refetchOnWindowFocus: true,
-    staleTime: 30000, // Consider data stale after 30s
+    refetchOnMount: "always",
+    staleTime: 15_000, // 15s — short enough to catch post-sale updates
     queryFn: async () => {
       const { start: hjStart, end: hjEnd } = localDayRange(new Date());
 
@@ -103,9 +104,8 @@ export function useDashboardData() {
           for (const item of itens) {
             lucroDia += Number(item.subtotal) - Number(item.custo_unitario ?? 0) * Number(item.quantidade);
           }
-        } else if (vendaIds.length > 0) {
-          // Fallback: if no itens found (legacy sales without items), estimate lucro as total
-          console.warn("[Dashboard] Vendas sem itens_venda encontradas. Lucro estimado pelo total.");
+        } else {
+          // Fallback: sales without itens_venda (legacy pre-RPC sales) — estimate lucro as total
           lucroDia = totalVendasDia;
         }
       }
@@ -118,7 +118,7 @@ export function useDashboardData() {
         .lt("data_pagamento", hjEnd);
       const recebidoParcelas = pgtosHoje?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
 
-      // Somar valores à vista das vendas do dia (excluindo parcela crediário)
+      // Somar valores à vista das vendas do dia (excluindo crediário)
       let recebidoAVista = 0;
       for (const venda of vendasHoje ?? []) {
         const pgtos = parsePagamentos((venda as any).pagamentos);
@@ -178,7 +178,8 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
   return useQuery({
     queryKey: ["dashboard_periodo", inicio, fim],
     refetchOnWindowFocus: true,
-    staleTime: 30000,
+    refetchOnMount: "always",
+    staleTime: 15_000,
     queryFn: async () => {
       // Vendas do período
       const { data: vendas } = await supabase
@@ -255,12 +256,10 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         .gte("data_pagamento", inicio)
         .lt("data_pagamento", fim);
       const porForma = new Map<string, number>();
-      // 1. Pagamentos de parcelas
       pgtos?.forEach((p) => {
         const f = p.forma_pagamento || "outro";
         porForma.set(f, (porForma.get(f) ?? 0) + Number(p.valor_pago));
       });
-      // 2. Vendas à vista (non-crediário portions)
       let recebidoAVistaP = 0;
       vendas?.forEach((v) => {
         const vpgtos = parsePagamentos((v as any).pagamentos);
@@ -314,7 +313,6 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
           lucroPeriodo += Number(it.subtotal) - Number(it.custo_unitario ?? 0) * Number(it.quantidade);
         }
       } else if (vendas && vendas.length > 0) {
-        // Fallback for legacy sales without items
         lucroPeriodo = totalVendas;
       }
 
