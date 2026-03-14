@@ -2,14 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { FileDown, Printer, Share2 } from "lucide-react";
+import { FileDown, Printer, MessageCircle } from "lucide-react";
 import { useVendaItens } from "@/hooks/useVendas";
 import { useParcelas } from "@/hooks/useParcelas";
 import { useEmpresas } from "@/hooks/useEmpresas";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { exportReceiptPDF, fmtR } from "@/lib/reportExport";
+import { exportReceiptPDF, shareReceiptWhatsApp, fmtR } from "@/lib/reportExport";
 
 interface Props {
   open: boolean;
@@ -57,8 +57,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
   const pagamentos = Array.isArray(venda.pagamentos) ? (venda.pagamentos as any[]) : [];
   const hasCrediario = pagamentos.some((p: any) => p.forma === "crediario");
 
-  const handleExportPDF = async () => {
-    // Determine PIX value: for crediário, use saldo em aberto; for cash, no PIX needed
+  const buildReceiptOptions = () => {
     const hasPixPayment = pagamentos.some((p: any) => p.forma === "pix");
     const pixConfig = config?.pix_chave && config?.pix_tipo
       ? {
@@ -70,8 +69,8 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
         }
       : undefined;
 
-    await exportReceiptPDF({
-      type: "venda",
+    return {
+      type: "venda" as const,
       id: vendaId,
       empresa: empresa?.nome ?? "Empresa",
       logoUrl: empresa?.logo_url ?? undefined,
@@ -109,18 +108,16 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
         endereco: empresa?.endereco || undefined,
       },
       pix: pixConfig,
-    });
+    };
+  };
+
+  const handleExportPDF = async () => {
+    await exportReceiptPDF(buildReceiptOptions());
   };
 
   const handleShare = async () => {
-    const text = `Recibo de Venda #${vendaId}\nCliente: ${clienteNome}\nTotal: ${fmtR(Number(venda.total))}\nData: ${format(dataVenda, "dd/MM/yyyy HH:mm")}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Recibo #${vendaId}`, text });
-      } catch { /* user cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(text);
-    }
+    const clientePhone = (venda as any).clientes?.telefone;
+    await shareReceiptWhatsApp(buildReceiptOptions(), clientePhone);
   };
 
   return (
@@ -269,7 +266,7 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
               <Printer className="w-4 h-4" /> Imprimir
             </Button>
             <Button variant="outline" className="gap-1.5" onClick={handleShare}>
-              <Share2 className="w-4 h-4" />
+              <MessageCircle className="w-4 h-4" /> WhatsApp
             </Button>
           </div>
         </div>

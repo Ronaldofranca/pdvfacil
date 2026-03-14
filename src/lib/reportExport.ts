@@ -372,7 +372,7 @@ const RECEIPT_CSS = `
   }
 `;
 
-export async function exportReceiptPDF(options: ReceiptPDFOptions) {
+export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<string> {
   const {
     type, id, empresa, logoUrl, data, cliente,
     itens, resumo, pagamentos, parcelas,
@@ -625,6 +625,11 @@ export async function exportReceiptPDF(options: ReceiptPDFOptions) {
 </body>
 </html>`;
 
+  return html;
+}
+
+export async function exportReceiptPDF(options: ReceiptPDFOptions) {
+  const html = await buildReceiptHTML(options);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const w = window.open(url, "_blank");
@@ -632,6 +637,41 @@ export async function exportReceiptPDF(options: ReceiptPDFOptions) {
     w.onload = () => setTimeout(() => w.print(), 600);
   }
   setTimeout(() => URL.revokeObjectURL(url), 15000);
+}
+
+export async function shareReceiptWhatsApp(options: ReceiptPDFOptions, phone?: string) {
+  const html = await buildReceiptHTML(options);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const fileName = options.type === "venda"
+    ? `recibo_venda_${options.id}.html`
+    : `recibo_pagamento_${options.id}.html`;
+  const file = new File([blob], fileName, { type: "text/html" });
+
+  // Try Web Share API with file (works on mobile)
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        title: options.type === "venda" ? `Recibo de Venda #${options.id}` : `Recibo de Pagamento #${options.id}`,
+        files: [file],
+      });
+      return;
+    } catch {
+      // user cancelled or failed, fall through
+    }
+  }
+
+  // Fallback: open WhatsApp Web with text summary
+  const isVenda = options.type === "venda";
+  const text = isVenda
+    ? `📄 *Recibo de Venda #${options.id}*\n👤 Cliente: ${options.cliente.nome}\n💰 Total: ${fmtR(options.resumo.total)}\n📅 Data: ${options.data}`
+    : `📄 *Recibo de Pagamento #${options.id}*\n👤 Cliente: ${options.cliente.nome}\n💰 Valor Pago: ${fmtR(options.pagamentos.reduce((s, p) => s + p.valor, 0))}\n📅 Data: ${options.data}`;
+
+  const encoded = encodeURIComponent(text);
+  const cleanPhone = phone?.replace(/\D/g, "") || "";
+  const whatsappUrl = cleanPhone
+    ? `https://wa.me/${cleanPhone}?text=${encoded}`
+    : `https://wa.me/?text=${encoded}`;
+  window.open(whatsappUrl, "_blank");
 }
 
 function downloadBlob(blob: Blob, filename: string) {
