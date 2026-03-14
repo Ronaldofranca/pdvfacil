@@ -684,7 +684,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Todos os produtos</p>
                     <div className="space-y-2">
                       {(produtos as any[])?.filter((p: any) => p.ativo !== false).map((p: any) => (
-                        <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} />
+                        <QuickProductCard key={p.id} product={p} onAdd={addToCart} fmt={fmt} onDetail={setKitDetailId} />
                       ))}
                     </div>
                   </div>
