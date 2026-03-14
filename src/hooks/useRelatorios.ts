@@ -356,3 +356,63 @@ export function useRelPedidos(inicio: string, fim: string) {
     },
   });
 }
+
+// ─── Resumo de lucro do período (com sangrias/suprimentos) ───
+export function useRelLucroResumo(inicio: string, fim: string) {
+  return useQuery({
+    queryKey: ["rel_lucro_resumo", inicio, fim],
+    queryFn: async () => {
+      // 1. Vendas finalizadas no período
+      const { data: vendas } = await supabase
+        .from("vendas")
+        .select("id, total")
+        .gte("data_venda", inicio)
+        .lte("data_venda", fim + "T23:59:59")
+        .eq("status", "finalizada" as any);
+
+      const totalVendido = vendas?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
+      const vendaIds = vendas?.map((v) => v.id) ?? [];
+
+      // 2. Custo dos produtos vendidos
+      let custoTotal = 0;
+      if (vendaIds.length > 0) {
+        const { data: itens } = await supabase
+          .from("itens_venda")
+          .select("quantidade, custo_unitario")
+          .in("venda_id", vendaIds);
+        for (const item of itens ?? []) {
+          custoTotal += Number(item.custo_unitario ?? 0) * Number(item.quantidade);
+        }
+      }
+
+      const lucroBruto = totalVendido - custoTotal;
+
+      // 3. Sangrias e suprimentos do período (from caixa_movimentacoes)
+      const { data: movCaixa } = await supabase
+        .from("caixa_movimentacoes")
+        .select("tipo, valor, created_at")
+        .gte("created_at", inicio)
+        .lte("created_at", fim + "T23:59:59");
+
+      let totalSangrias = 0;
+      let totalSuprimentos = 0;
+      for (const mov of movCaixa ?? []) {
+        if (mov.tipo === "sangria") totalSangrias += Number(mov.valor);
+        else if (mov.tipo === "suprimento") totalSuprimentos += Number(mov.valor);
+      }
+
+      const lucroLiquido = lucroBruto - totalSangrias;
+
+      return {
+        totalVendido,
+        custoTotal,
+        lucroBruto,
+        totalSangrias,
+        totalSuprimentos,
+        lucroLiquido,
+        margemBruta: totalVendido > 0 ? (lucroBruto / totalVendido) * 100 : 0,
+        margemLiquida: totalVendido > 0 ? (lucroLiquido / totalVendido) * 100 : 0,
+      };
+    },
+  });
+}
