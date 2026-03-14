@@ -386,8 +386,9 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
     type, id, empresa, logoUrl, data, cliente,
     itens, resumo, pagamentos, parcelas,
     parcelaInfo, parcelasRestantes,
-    empresaInfo, pix,
+    empresaInfo, pix, receiptConfig: rc,
   } = options;
+  const showImages = rc?.recibo_exibir_imagem_produto ?? true;
 
   const isVenda = type === "venda";
   const title = isVenda ? `Recibo de Venda` : `Recibo de Pagamento`;
