@@ -192,6 +192,24 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
 
   const produtos = useMemo(() => [...(produtosRaw ?? []), ...kitsAsProducts], [produtosRaw, kitsAsProducts]);
 
+  // Hydrate missing cost snapshots in restored carts/legacy carts
+  useEffect(() => {
+    if (!produtos.length) return;
+    setCart((prev) => {
+      let changed = false;
+      const next = prev.map((item) => {
+        if (typeof item.custo_unitario === "number" && item.custo_unitario > 0) return item;
+        const source = (produtos as any[]).find((p: any) => p.id === item.produto_id);
+        if (!source) return item;
+        const custo = Number(source.custo ?? 0);
+        if (custo <= 0) return item;
+        changed = true;
+        return { ...item, custo_unitario: custo };
+      });
+      return changed ? next : prev;
+    });
+  }, [produtos]);
+
   const { data: produtosCliente } = useProdutosDoCliente(clienteId || null);
   const clienteScore = useClienteScoreById(clienteId || null);
   const { data: ultimaVendaItens } = useUltimaVendaCliente(clienteId || null);

@@ -42,6 +42,9 @@ export interface ItemPedido {
   subtotal: number;
   created_at: string;
   updated_at: string;
+  produtos?: {
+    custo: number | null;
+  } | null;
 }
 
 export interface PedidoInput {
@@ -83,7 +86,7 @@ export function usePedidoItens(pedidoId: string | null) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("itens_pedido")
-        .select("*")
+        .select("*, produtos(custo)")
         .eq("pedido_id", pedidoId!)
         .order("created_at");
       if (error) throw error;

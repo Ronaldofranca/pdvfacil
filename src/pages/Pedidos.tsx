@@ -73,6 +73,7 @@ export default function PedidosPage() {
       desconto: Number(i.desconto),
       bonus: i.bonus,
       subtotal: Number(i.subtotal),
+      custo_unitario: Number(i.produtos?.custo ?? 0),
     }));
     setPdvState({ open: true, cart, clienteId: pedido.cliente_id, pedidoId: pedido.id });
     setDetailId(null);
