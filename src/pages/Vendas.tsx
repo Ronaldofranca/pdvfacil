@@ -158,6 +158,20 @@ export default function VendasPage() {
               Esta ação cancelará a venda, estornará parcelas não pagas e reverterá o estoque.
               O histórico será preservado.
             </p>
+            {parcelasComPagamento.length > 0 && (
+              <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg text-sm space-y-1">
+                <p className="font-semibold text-destructive flex items-center gap-1.5">
+                  ⚠️ Atenção: Pagamentos Existentes
+                </p>
+                <p className="text-muted-foreground">
+                  Esta venda possui {parcelasComPagamento.length} parcela(s) com pagamentos já registrados
+                  totalizando <span className="font-semibold text-foreground">{fmt(valorJaPago)}</span>.
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Os pagamentos serão mantidos no histórico. Parcelas serão marcadas como canceladas com registro do estorno.
+                </p>
+              </div>
+            )}
             <div>
               <Label>Motivo do cancelamento *</Label>
               <Textarea
