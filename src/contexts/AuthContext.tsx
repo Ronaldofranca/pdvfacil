@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+  const rolesLoadedRef = useRef(false);
   const fetchSeqRef = useRef(0);
   const loadedUserIdRef = useRef<string | null>(null);
 
@@ -53,15 +54,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
     setPermissions([]);
     setRolesLoaded(true);
+    rolesLoadedRef.current = true;
+  };
+
+  const markRolesLoaded = (value: boolean) => {
+    setRolesLoaded(value);
+    rolesLoadedRef.current = value;
   };
 
   const fetchUserData = async (userId: string, seq: number) => {
-    setRolesLoaded(false);
+    markRolesLoaded(false);
 
     const fallbackTimer = window.setTimeout(() => {
       if (seq === fetchSeqRef.current) {
         console.warn("Timeout ao carregar profile/roles; liberando app com dados mínimos");
-        setRolesLoaded(true);
+        markRolesLoaded(true);
       }
     }, USER_DATA_TIMEOUT_MS);
 
@@ -124,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       window.clearTimeout(fallbackTimer);
       if (seq === fetchSeqRef.current) {
-        setRolesLoaded(true);
+        markRolesLoaded(true);
       }
     }
   };
@@ -136,11 +143,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const applySession = (nextSession: Session | null, options?: { refreshUserData?: boolean }) => {
       if (!mounted) return;
 
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-
       const nextUserId = nextSession?.user?.id ?? null;
       const userChanged = loadedUserIdRef.current !== nextUserId;
+
+      // Only update session/user state if they actually changed to avoid unnecessary re-renders
+      setSession((prev) => {
+        if (prev?.access_token === nextSession?.access_token) return prev;
+        return nextSession;
+      });
+      setUser((prev) => {
+        if (prev?.id === nextSession?.user?.id) return prev;
+        return nextSession?.user ?? null;
+      });
 
       if (!nextUserId) {
         loadedUserIdRef.current = null;
@@ -149,13 +163,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (userChanged || options?.refreshUserData) {
+      // Only fetch user data if user actually changed (not on token refresh)
+      if (userChanged) {
         loadedUserIdRef.current = nextUserId;
         const seq = ++fetchSeqRef.current;
         void fetchUserData(nextUserId, seq);
         return;
       }
 
+      // User is the same — data already loaded, don't reset rolesLoaded
+      if (!rolesLoadedRef.current && options?.refreshUserData) {
+        // First load hasn't finished yet, let it continue
+        return;
+      }
+
+      // Ensure rolesLoaded stays true (no flicker)
       setRolesLoaded(true);
     };
 
