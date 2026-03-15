@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       window.clearTimeout(fallbackTimer);
       if (seq === fetchSeqRef.current) {
-        setRolesLoaded(true);
+        markRolesLoaded(true);
       }
     }
   };
