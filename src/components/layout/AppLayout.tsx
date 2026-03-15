@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import { SessionExpiryWarning } from "@/components/session/SessionExpiryWarning";
 import { useRoutePersistence } from "@/hooks/useRoutePersistence";
+import { useRouteRestore } from "@/hooks/useRouteRestore";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
