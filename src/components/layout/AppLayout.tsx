@@ -73,6 +73,7 @@ export function AppLayout() {
   const location = useLocation();
   const { handleLogout, extendSession, showExpiryWarning, expiryCountdown } = useSessionManager();
   useRoutePersistence();
+  useRouteRestore();
   useScrollLockCleanup();
 
   const doLogout = () => handleLogout("manual");

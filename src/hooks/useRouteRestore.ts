@@ -1,23 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getLastRoute, clearLastRoute } from "./useRoutePersistence";
-
-// Session-level flag stored in sessionStorage (cleared on tab close, survives HMR)
-const SESSION_KEY = "app:route_restored";
-
-function wasRestoredThisSession(): boolean {
-  try {
-    return sessionStorage.getItem(SESSION_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function markRestoredThisSession(): void {
-  try {
-    sessionStorage.setItem(SESSION_KEY, "1");
-  } catch {}
-}
 
 // Valid internal routes that can be restored
 const VALID_ROUTE_PREFIXES = [
@@ -31,25 +14,29 @@ const VALID_ROUTE_PREFIXES = [
 ];
 
 function isValidRestoreRoute(route: string): boolean {
-  if (route === "/") return false; // Don't restore root (it's the default)
+  if (route === "/") return false;
   return VALID_ROUTE_PREFIXES.some((prefix) => route.startsWith(prefix));
 }
 
 /**
- * On first mount after login, navigates to the last saved route
- * if the user is currently at "/" (the default landing page).
- * Uses sessionStorage to prevent re-restore on HMR/remount.
+ * Restores the last visited route when the app lands on "/".
+ * Works after tab kill, PWA resume, and page reload.
+ * Placed in AppLayout so it runs once the user is authenticated.
  */
 export function useRouteRestore() {
   const navigate = useNavigate();
   const location = useLocation();
+  const restoredRef = useRef(false);
 
   useEffect(() => {
-    if (wasRestoredThisSession()) return;
-    markRestoredThisSession();
+    // Only attempt restore once per mount and only when at root
+    if (restoredRef.current) return;
+    if (location.pathname !== "/") {
+      restoredRef.current = true; // Already on a sub-page, no restore needed
+      return;
+    }
 
-    // Only restore if landing on the default route
-    if (location.pathname !== "/") return;
+    restoredRef.current = true;
 
     const lastRoute = getLastRoute();
     if (lastRoute && isValidRestoreRoute(lastRoute)) {
@@ -58,7 +45,6 @@ export function useRouteRestore() {
         navigate(lastRoute, { replace: true });
       } catch (err) {
         console.warn("[RouteRestore] Failed to restore route:", lastRoute, err);
-        // Navigation failed — stay on current page, don't block
       }
     }
   }, []);
