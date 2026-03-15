@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchUserData = async (userId: string, seq: number) => {
-    setRolesLoaded(false);
+    markRolesLoaded(false);
 
     const fallbackTimer = window.setTimeout(() => {
       if (seq === fetchSeqRef.current) {
