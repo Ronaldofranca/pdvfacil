@@ -205,7 +205,7 @@ export function useFinalizarVenda() {
       const localISO = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).toISOString();
 
       // Call atomic RPC - everything in a single transaction
-      const { data, error } = await supabase.rpc("fn_finalizar_venda_atomica" as any, {
+      const rpcParams = {
         _idempotency_key: idempotencyKey,
         _empresa_id: v.empresa_id,
         _cliente_id: v.cliente_id || null,
@@ -218,7 +218,11 @@ export function useFinalizarVenda() {
         _data_venda: localISO,
         _itens: itensPayload,
         _crediario: hasCrediario && v.crediario ? v.crediario : null,
-      });
+      };
+
+      console.log("[PDV] RPC params:", JSON.stringify({ itens_type: typeof rpcParams._itens, itens_isArray: Array.isArray(rpcParams._itens), itens_length: rpcParams._itens?.length, pagamentos_type: typeof rpcParams._pagamentos, first_item: rpcParams._itens?.[0] }));
+
+      const { data, error } = await supabase.rpc("fn_finalizar_venda_atomica" as any, rpcParams);
 
       if (error) throw error;
 
