@@ -54,6 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
     setPermissions([]);
     setRolesLoaded(true);
+    rolesLoadedRef.current = true;
+  };
+
+  const markRolesLoaded = (value: boolean) => {
+    setRolesLoaded(value);
+    rolesLoadedRef.current = value;
   };
 
   const fetchUserData = async (userId: string, seq: number) => {
