@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const fallbackTimer = window.setTimeout(() => {
       if (seq === fetchSeqRef.current) {
         console.warn("Timeout ao carregar profile/roles; liberando app com dados mínimos");
-        setRolesLoaded(true);
+        markRolesLoaded(true);
       }
     }, USER_DATA_TIMEOUT_MS);
 
