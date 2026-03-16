@@ -176,14 +176,20 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
 
           <Separator />
 
-          {/* Financial summary with saldo anterior */}
+          {/* Financial summary with valor original */}
           <div className="space-y-3">
             <p className="text-sm font-semibold">Resumo Financeiro</p>
-            <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Valor Original</p>
+                <p className="text-sm font-bold">{fmtR(Number(parcela.valor_total))}</p>
+              </div>
               <div className="rounded-lg bg-muted p-3">
                 <p className="text-xs text-muted-foreground">Saldo Anterior</p>
                 <p className="text-sm font-bold">{fmtR(saldoAnterior)}</p>
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-lg bg-primary/10 p-3">
                 <p className="text-xs text-muted-foreground">Pago</p>
                 <p className="text-sm font-bold text-primary">{fmtR(Number(parcela.valor_pago))}</p>
