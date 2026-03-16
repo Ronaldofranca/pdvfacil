@@ -41,9 +41,12 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
   const { data: config } = useConfiguracoes();
   const empresa = empresas?.[0];
   
-  const { data: todasParcelas } = useParcelas(
-    parcela?.venda_id ? { vendaId: parcela.venda_id } : undefined
-  );
+  const parcelasFilter = parcela?.venda_id
+    ? { vendaId: parcela.venda_id }
+    : parcela?.cliente_id
+      ? { clienteId: parcela.cliente_id }
+      : undefined;
+  const { data: todasParcelas } = useParcelas(parcelasFilter);
 
   if (!parcela) return null;
 
