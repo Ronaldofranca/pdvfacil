@@ -419,7 +419,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   const headerHtml = `
     <div class="receipt-header">
       <div class="brand">
-        ${showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" />` : ""}
+        ${showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" crossorigin="anonymous" />` : ""}
         <div class="brand-info">
           <h1>${escapeHtml(empresa)}</h1>
           ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
@@ -470,7 +470,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
               <td>
                 <div class="product-cell">
                   ${showImages ? (item.imagemUrl
-                    ? `<img src="${escapeHtml(item.imagemUrl)}" class="product-img" onerror="this.style.display='none'" />`
+                    ? `<img src="${escapeHtml(item.imagemUrl)}" class="product-img" crossorigin="anonymous" onerror="this.style.display='none'" />`
                     : `<div class="product-placeholder">IMG</div>`) : ""}
                   <span class="product-name">${escapeHtml(item.nome)}${item.bonus ? '<span class="bonus-tag">BÔNUS</span>' : ""}</span>
                 </div>
