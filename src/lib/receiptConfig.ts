@@ -60,68 +60,79 @@ export function getReceiptConfig(config: any): ReceiptConfig {
  * Returns the data URL on success, null on failure.
  * This is critical for PDF generation — external URLs often fail in html2canvas.
  */
-export async function imageToBase64(url: string, timeoutMs = 8000): Promise<string | null> {
+export async function imageToBase64(url: string, timeoutMs = 10000): Promise<string | null> {
   if (!url) return null;
-  // Already a data URL
   if (url.startsWith("data:")) return url;
-  
+
+  // Strategy 1: fetch blob directly (most reliable for same-origin & CORS-enabled)
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
-    
-    const response = await fetch(url, { 
+
+    const response = await fetch(url, {
       signal: controller.signal,
       mode: "cors",
-      cache: "force-cache",
+      cache: "no-store", // Avoid opaque cached responses that break blob reading
     });
     clearTimeout(timer);
-    
-    if (!response.ok) return null;
-    
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
+
+    if (response.ok) {
+      const blob = await response.blob();
+      if (blob.size > 0) {
+        const dataUrl = await new Promise<string | null>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        });
+        if (dataUrl) {
+          console.info("[imageToBase64] fetch OK:", url.slice(-40));
+          return dataUrl;
+        }
+      }
+    }
   } catch {
-    // Try canvas fallback for CORS-restricted images
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) { resolve(null); return; }
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL("image/jpeg", 0.85));
-        } catch {
-          resolve(null);
-        }
-      };
-      img.onerror = () => resolve(null);
-      const timeout = setTimeout(() => { img.src = ""; resolve(null); }, timeoutMs);
-      img.onload = function() {
-        clearTimeout(timeout);
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) { resolve(null); return; }
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL("image/jpeg", 0.85));
-        } catch {
-          resolve(null);
-        }
-      };
-      img.src = url;
-    });
+    // fetch failed, try canvas fallback
   }
+
+  // Strategy 2: Image element + canvas (works for public URLs with CORS headers)
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    const timeout = setTimeout(() => {
+      img.onload = null;
+      img.onerror = null;
+      img.src = "";
+      console.warn("[imageToBase64] timeout:", url.slice(-40));
+      resolve(null);
+    }, timeoutMs);
+
+    img.onload = () => {
+      clearTimeout(timeout);
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || 200;
+        canvas.height = img.naturalHeight || 200;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(null); return; }
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        console.info("[imageToBase64] canvas OK:", url.slice(-40));
+        resolve(dataUrl);
+      } catch {
+        console.warn("[imageToBase64] canvas tainted:", url.slice(-40));
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => {
+      clearTimeout(timeout);
+      console.warn("[imageToBase64] img error:", url.slice(-40));
+      resolve(null);
+    };
+
+    img.src = url;
+  });
 }
 
 /**
