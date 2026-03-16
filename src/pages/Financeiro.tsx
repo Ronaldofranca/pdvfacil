@@ -31,6 +31,7 @@ export default function FinanceiroPage() {
 
   const filters = statusFilter !== "todas" ? { status: statusFilter } : undefined;
   const { data: parcelas, isLoading } = useParcelas(filters);
+  const { data: todasParcelas } = useParcelas();
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -38,11 +39,11 @@ export default function FinanceiroPage() {
     (p as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) || !search
   );
 
-  // Resumo
-  const totalPendente = parcelas?.filter((p) => p.status === "pendente" || p.status === "parcial").reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
-  const totalVencido = parcelas?.filter((p) => p.status === "vencida").reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
-  const totalPago = parcelas?.filter((p) => p.status === "paga").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
-  const totalParcial = parcelas?.filter((p) => p.status === "parcial").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+  // Resumo sempre baseado em TODAS as parcelas
+  const totalPendente = todasParcelas?.filter((p) => p.status === "pendente" || p.status === "parcial").reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
+  const totalVencido = todasParcelas?.filter((p) => p.status === "vencida").reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
+  const totalPago = todasParcelas?.filter((p) => p.status === "paga").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+  const totalParcial = todasParcelas?.filter((p) => p.status === "parcial").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
 
   return (
     <div className="space-y-6">
