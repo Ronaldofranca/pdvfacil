@@ -13,7 +13,11 @@ export function useParcelas(filters?: { vendaId?: string; clienteId?: string; st
         .order("vencimento");
       if (filters?.vendaId) q = q.eq("venda_id", filters.vendaId);
       if (filters?.clienteId) q = q.eq("cliente_id", filters.clienteId);
-      if (filters?.status) q = q.eq("status", filters.status as any);
+      if (filters?.status === "pendente") {
+        q = q.in("status", ["pendente", "parcial"] as any[]);
+      } else if (filters?.status) {
+        q = q.eq("status", filters.status as any);
+      }
       const { data, error } = await q;
       if (error) throw error;
       return data;
