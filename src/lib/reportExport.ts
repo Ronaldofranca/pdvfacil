@@ -556,6 +556,10 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
     <div class="section">
       <div class="finance-cards">
         <div class="finance-card anterior">
+          <div class="fc-label">Valor Original</div>
+          <div class="fc-value">${fmtR(parcelaInfo.valorTotal)}</div>
+        </div>
+        <div class="finance-card anterior">
           <div class="fc-label">Saldo Anterior</div>
           <div class="fc-value">${fmtR(parcelaInfo.saldoAnterior)}</div>
         </div>
