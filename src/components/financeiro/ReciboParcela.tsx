@@ -125,6 +125,20 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
     await exportReceiptPDF(buildReceiptOptions());
   };
 
+  const handlePrint = async () => {
+    const { preloadReceiptImages } = await import("@/lib/receiptConfig");
+    const opts = buildReceiptOptions();
+    await preloadReceiptImages(opts);
+    const { buildReceiptHTML } = await import("@/lib/reportExport");
+    const html = await buildReceiptHTML(opts);
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.onload = () => setTimeout(() => w.print(), 400);
+    }
+  };
+
   const handleShare = async () => {
     const clientePhone = (parcela as any).clientes?.telefone;
     await shareReceiptWhatsApp(buildReceiptOptions(), clientePhone);
