@@ -155,7 +155,7 @@ export function useRelParcelasPorCliente() {
         curr.total_comprado += Number(p.valor_total);
         curr.total_pago += Number(p.valor_pago);
         if (p.status === "vencida") curr.total_vencido += Number(p.saldo ?? 0);
-        if (p.status === "pendente") curr.total_pendente += Number(p.saldo ?? 0);
+        if (p.status === "pendente" || p.status === "parcial") curr.total_pendente += Number(p.saldo ?? 0);
         curr.parcelas.push(p);
         map.set(cid, curr);
       }
