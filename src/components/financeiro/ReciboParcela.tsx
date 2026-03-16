@@ -255,7 +255,7 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
             <Button variant="outline" className="flex-1 gap-1.5" onClick={handleExportPDF}>
               <FileDown className="w-4 h-4" /> Exportar PDF
             </Button>
-            <Button variant="outline" className="gap-1.5" onClick={() => window.print()}>
+            <Button variant="outline" className="gap-1.5" onClick={handlePrint}>
               <Printer className="w-4 h-4" /> Imprimir
             </Button>
             <Button variant="outline" className="gap-1.5" onClick={handleShare}>
