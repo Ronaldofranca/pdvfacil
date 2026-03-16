@@ -660,12 +660,33 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 async function htmlToPdfBlob(html: string): Promise<Blob> {
   const html2pdf = (await import("html2pdf.js")).default;
   const container = document.createElement("div");
-  container.innerHTML = html;
-  container.style.position = "fixed";
-  container.style.left = "-9999px";
+
+  // Extract <style> and <body> content from the full HTML document
+  // because setting a full <!DOCTYPE> into div.innerHTML causes browsers
+  // to strip <html>/<head>/<body> tags, potentially losing styles.
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+
+  if (styleMatch && bodyMatch) {
+    const styleEl = document.createElement("style");
+    styleEl.textContent = styleMatch[1];
+    container.appendChild(styleEl);
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = bodyMatch[1];
+    container.appendChild(wrapper);
+  } else {
+    // Fallback: use as-is
+    container.innerHTML = html;
+  }
+
+  container.style.position = "absolute";
+  container.style.left = "0";
   container.style.top = "0";
+  container.style.zIndex = "-9999";
+  container.style.opacity = "0";
   container.style.width = "210mm";
   container.style.background = "#fff";
+  container.style.pointerEvents = "none";
   document.body.appendChild(container);
 
   // Wait for ALL images inside the container to load before capturing
