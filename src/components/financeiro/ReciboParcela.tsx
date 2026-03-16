@@ -8,7 +8,7 @@ import { useEmpresas } from "@/hooks/useEmpresas";
 import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { exportReceiptPDF, shareReceiptWhatsApp, fmtR } from "@/lib/reportExport";
+import { exportReceiptPDF, shareReceiptWhatsApp, buildReceiptHTML, fmtR } from "@/lib/reportExport";
 import { getReceiptConfig } from "@/lib/receiptConfig";
 
 interface Props {
@@ -125,6 +125,20 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
     await exportReceiptPDF(buildReceiptOptions());
   };
 
+  const handlePrint = async () => {
+    const { preloadReceiptImages } = await import("@/lib/receiptConfig");
+    const opts = buildReceiptOptions();
+    await preloadReceiptImages(opts);
+    const { buildReceiptHTML } = await import("@/lib/reportExport");
+    const html = await buildReceiptHTML(opts);
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.onload = () => setTimeout(() => w.print(), 400);
+    }
+  };
+
   const handleShare = async () => {
     const clientePhone = (parcela as any).clientes?.telefone;
     await shareReceiptWhatsApp(buildReceiptOptions(), clientePhone);
@@ -176,14 +190,20 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
 
           <Separator />
 
-          {/* Financial summary with saldo anterior */}
+          {/* Financial summary with valor original */}
           <div className="space-y-3">
             <p className="text-sm font-semibold">Resumo Financeiro</p>
-            <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Valor Original</p>
+                <p className="text-sm font-bold">{fmtR(Number(parcela.valor_total))}</p>
+              </div>
               <div className="rounded-lg bg-muted p-3">
                 <p className="text-xs text-muted-foreground">Saldo Anterior</p>
                 <p className="text-sm font-bold">{fmtR(saldoAnterior)}</p>
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-lg bg-primary/10 p-3">
                 <p className="text-xs text-muted-foreground">Pago</p>
                 <p className="text-sm font-bold text-primary">{fmtR(Number(parcela.valor_pago))}</p>
@@ -249,7 +269,7 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
             <Button variant="outline" className="flex-1 gap-1.5" onClick={handleExportPDF}>
               <FileDown className="w-4 h-4" /> Exportar PDF
             </Button>
-            <Button variant="outline" className="gap-1.5" onClick={() => window.print()}>
+            <Button variant="outline" className="gap-1.5" onClick={handlePrint}>
               <Printer className="w-4 h-4" /> Imprimir
             </Button>
             <Button variant="outline" className="gap-1.5" onClick={handleShare}>

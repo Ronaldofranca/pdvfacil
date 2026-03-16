@@ -556,6 +556,10 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
     <div class="section">
       <div class="finance-cards">
         <div class="finance-card anterior">
+          <div class="fc-label">Valor Original</div>
+          <div class="fc-value">${fmtR(parcelaInfo.valorTotal)}</div>
+        </div>
+        <div class="finance-card anterior">
           <div class="fc-label">Saldo Anterior</div>
           <div class="fc-value">${fmtR(parcelaInfo.saldoAnterior)}</div>
         </div>
@@ -728,12 +732,11 @@ export async function exportReceiptPDF(options: ReceiptPDFOptions) {
 
   console.info("[Receipt] PDF generated:", pdfBlob.size, "bytes");
 
-  const url = URL.createObjectURL(pdfBlob);
-  const w = window.open(url, "_blank");
-  if (!w) {
-    downloadBlob(pdfBlob, `recibo_${options.id}.pdf`);
-  }
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  // Always download as a real PDF file
+  const fileName = options.type === "venda"
+    ? `recibo_venda_${options.id}.pdf`
+    : `recibo_pagamento_${options.id}.pdf`;
+  downloadBlob(pdfBlob, fileName);
 }
 
 export async function shareReceiptWhatsApp(options: ReceiptPDFOptions, phone?: string) {
