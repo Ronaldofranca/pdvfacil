@@ -470,7 +470,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
               <td>
                 <div class="product-cell">
                   ${showImages ? (item.imagemUrl
-                    ? `<img src="${escapeHtml(item.imagemUrl)}" class="product-img" onerror="this.style.display='none'" />`
+                    ? `<img src="${escapeHtml(item.imagemUrl)}" class="product-img" crossorigin="anonymous" onerror="this.style.display='none'" />`
                     : `<div class="product-placeholder">IMG</div>`) : ""}
                   <span class="product-name">${escapeHtml(item.nome)}${item.bonus ? '<span class="bonus-tag">BÔNUS</span>' : ""}</span>
                 </div>
