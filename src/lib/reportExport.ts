@@ -804,7 +804,6 @@ async function assertValidPdfBlob(blob: Blob, expectedText: string) {
 }
 
 async function renderReceiptSectionsToPdf(html: string, expectedText: string) {
-  // html2canvas and JsPDF are now statically imported at the top
   const { frame, cleanup } = createReceiptFrame(html);
 
   try {
@@ -818,139 +817,82 @@ async function renderReceiptSectionsToPdf(html: string, expectedText: string) {
 
     const textContent = body.textContent?.replace(/\s+/g, " ").trim() ?? "";
     if (!textContent || !textContent.includes(expectedText.slice(0, Math.min(expectedText.length, 24)))) {
-      console.error("[Receipt] Missing receipt text in export DOM", {
-        textLength: textContent.length,
-        expectedText,
-      });
       throw new Error("O recibo não terminou de renderizar antes da exportação.");
+    }
+
+    // Render the ENTIRE body as one continuous canvas (matches visual preview exactly)
+    const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
+    const fullWidth = Math.max(body.scrollWidth, RECEIPT_RENDER_WIDTH_PX);
+    const fullHeight = Math.max(body.scrollHeight, RECEIPT_RENDER_MIN_HEIGHT_PX);
+
+    const canvas = await html2canvas(body, {
+      backgroundColor: "#ffffff",
+      scale,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      width: Math.ceil(fullWidth),
+      height: Math.ceil(fullHeight),
+      windowWidth: Math.ceil(fullWidth),
+      windowHeight: Math.ceil(fullHeight),
+      scrollX: 0,
+      scrollY: 0,
+    });
+
+    if (!canvas.width || !canvas.height) {
+      throw new Error("A captura do recibo resultou em imagem vazia.");
     }
 
     const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
     const pageWidthMm = pdf.internal.pageSize.getWidth();
     const pageHeightMm = pdf.internal.pageSize.getHeight();
-    const contentWidthMm = pageWidthMm - RECEIPT_PDF_MARGIN_MM * 2;
-    const maxContentHeightMm = pageHeightMm - RECEIPT_PDF_MARGIN_MM * 2;
-    const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
+    const margin = RECEIPT_PDF_MARGIN_MM;
+    const contentWidthMm = pageWidthMm - margin * 2;
+    const maxContentHeightMm = pageHeightMm - margin * 2;
 
-    const sections = Array.from(body.querySelectorAll("[data-pdf-section]")) as HTMLElement[];
-    if (!sections.length) {
-      throw new Error("O recibo não possui seções de exportação configuradas.");
-    }
+    const totalHeightMm = (canvas.height * contentWidthMm) / canvas.width;
 
-    let currentY = RECEIPT_PDF_MARGIN_MM;
-    let pageIndex = 0;
-    let renderedSections = 0;
-
-    console.info("[Receipt] Rendering receipt sections", {
-      sectionCount: sections.length,
-      textLength: textContent.length,
-      images: doc.images.length,
-    });
-
-    for (const section of sections) {
-      const rect = section.getBoundingClientRect();
-      const widthPx = Math.max(rect.width, section.scrollWidth, RECEIPT_RENDER_WIDTH_PX);
-      const heightPx = Math.max(rect.height, section.scrollHeight, 1);
-
-      const canvas = await html2canvas(section, {
-        backgroundColor: "#ffffff",
-        scale,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        width: Math.ceil(widthPx),
-        height: Math.ceil(heightPx),
-        windowWidth: Math.ceil(Math.max(doc.documentElement.scrollWidth, RECEIPT_RENDER_WIDTH_PX)),
-        windowHeight: Math.ceil(Math.max(doc.documentElement.scrollHeight, section.scrollHeight, RECEIPT_RENDER_MIN_HEIGHT_PX)),
-        scrollX: 0,
-        scrollY: 0,
-      });
-
-      if (!canvas.width || !canvas.height) {
-        continue;
-      }
-
-      const sectionHeightMm = (canvas.height * contentWidthMm) / canvas.width;
-      const remainingHeightMm = pageHeightMm - RECEIPT_PDF_MARGIN_MM - currentY;
-
-      if (sectionHeightMm > remainingHeightMm && currentY > RECEIPT_PDF_MARGIN_MM) {
-        pdf.addPage();
-        pageIndex += 1;
-        currentY = RECEIPT_PDF_MARGIN_MM;
-      }
-
-      if (sectionHeightMm <= maxContentHeightMm) {
-        pdf.addImage(
-          canvas.toDataURL("image/jpeg", 0.98),
-          "JPEG",
-          RECEIPT_PDF_MARGIN_MM,
-          currentY,
-          contentWidthMm,
-          sectionHeightMm,
-          undefined,
-          "FAST"
-        );
-        currentY += sectionHeightMm + RECEIPT_PDF_SECTION_GAP_MM;
-        renderedSections += 1;
-        continue;
-      }
-
+    // If it fits on one page, just add the image
+    if (totalHeightMm <= maxContentHeightMm) {
+      pdf.addImage(
+        canvas.toDataURL("image/jpeg", 0.98),
+        "JPEG", margin, margin, contentWidthMm, totalHeightMm, undefined, "FAST"
+      );
+    } else {
+      // Slice the canvas into pages
       const pxPerMm = canvas.width / contentWidthMm;
       const sliceHeightPx = Math.max(1, Math.floor(maxContentHeightMm * pxPerMm));
-      let renderedHeightPx = 0;
+      let renderedPx = 0;
+      let pageIdx = 0;
 
-      while (renderedHeightPx < canvas.height) {
-        const currentSliceHeightPx = Math.min(sliceHeightPx, canvas.height - renderedHeightPx);
+      while (renderedPx < canvas.height) {
+        if (pageIdx > 0) pdf.addPage();
+
+        const currentSlicePx = Math.min(sliceHeightPx, canvas.height - renderedPx);
         const pageCanvas = document.createElement("canvas");
         pageCanvas.width = canvas.width;
-        pageCanvas.height = currentSliceHeightPx;
+        pageCanvas.height = currentSlicePx;
 
         const ctx = pageCanvas.getContext("2d");
-        if (!ctx) {
-          throw new Error("Falha ao preparar uma página do PDF do recibo.");
-        }
+        if (!ctx) throw new Error("Falha ao preparar uma página do PDF.");
 
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(canvas, 0, renderedHeightPx, canvas.width, currentSliceHeightPx, 0, 0, canvas.width, currentSliceHeightPx);
+        ctx.drawImage(canvas, 0, renderedPx, canvas.width, currentSlicePx, 0, 0, canvas.width, currentSlicePx);
 
-        const pageHeightRenderMm = currentSliceHeightPx / pxPerMm;
+        const sliceHeightMm = currentSlicePx / pxPerMm;
         pdf.addImage(
           pageCanvas.toDataURL("image/jpeg", 0.98),
-          "JPEG",
-          RECEIPT_PDF_MARGIN_MM,
-          currentY,
-          contentWidthMm,
-          pageHeightRenderMm,
-          undefined,
-          "FAST"
+          "JPEG", margin, margin, contentWidthMm, sliceHeightMm, undefined, "FAST"
         );
 
-        renderedHeightPx += currentSliceHeightPx;
-        renderedSections += 1;
-
-        if (renderedHeightPx < canvas.height) {
-          pdf.addPage();
-          pageIndex += 1;
-          currentY = RECEIPT_PDF_MARGIN_MM;
-        } else {
-          currentY += pageHeightRenderMm + RECEIPT_PDF_SECTION_GAP_MM;
-        }
+        renderedPx += currentSlicePx;
+        pageIdx += 1;
       }
     }
 
-    if (!renderedSections) {
-      throw new Error("A captura do recibo resultou em seções vazias.");
-    }
-
     const blob = pdf.output("blob");
-
-    console.info("[Receipt] PDF sections rendered successfully", {
-      renderedSections,
-      pages: pageIndex + 1,
-      size: blob.size,
-    });
-
+    console.info("[Receipt] PDF rendered successfully", { size: blob.size, totalHeightMm: totalHeightMm.toFixed(1) });
     return blob;
   } finally {
     cleanup();
