@@ -939,31 +939,64 @@ export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
 }
 
 export async function printReceipt(options: ReceiptPDFOptions) {
-  const { blob } = await generateReceiptPdfBlob(options);
-  const url = URL.createObjectURL(blob);
-  const printWindow = window.open(url, "_blank");
+  const { html } = await prepareReceiptDocument(options);
 
-  if (!printWindow) {
-    // Fallback: download the PDF if popup is blocked
-    downloadBlob(blob, buildReceiptFileName(options));
-    URL.revokeObjectURL(url);
-    return;
-  }
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", "receipt-print-frame");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = `${RECEIPT_RENDER_WIDTH_PX}px`;
+  iframe.style.minWidth = `${RECEIPT_RENDER_WIDTH_PX}px`;
+  iframe.style.height = `${RECEIPT_RENDER_MIN_HEIGHT_PX}px`;
+  iframe.style.border = "0";
+  iframe.style.opacity = "0.01";
+  iframe.style.pointerEvents = "none";
+  iframe.style.background = "#ffffff";
+  iframe.style.zIndex = "-1";
 
-  printWindow.addEventListener("afterprint", () => {
-    URL.revokeObjectURL(url);
-  });
-
-  // Some browsers need a delay before print() works on a PDF blob
-  printWindow.onload = () => {
+  const cleanup = () => {
     setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-    }, 600);
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    }, 300);
   };
 
-  // Cleanup after timeout in case events don't fire
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  document.body.appendChild(iframe);
+
+  const printDoc = iframe.contentDocument;
+  const printWin = iframe.contentWindow;
+
+  if (!printDoc || !printWin) {
+    cleanup();
+    throw new Error("Não foi possível preparar a área de impressão do recibo.");
+  }
+
+  printDoc.open();
+  printDoc.write(html);
+  printDoc.close();
+
+  await waitForReceiptFrame(iframe, 12000);
+
+  await new Promise<void>((resolve) => {
+    printWin.requestAnimationFrame(() => {
+      printWin.requestAnimationFrame(() => resolve());
+    });
+  });
+
+  try {
+    printWin.focus();
+    printWin.print();
+  } finally {
+    if ("onafterprint" in printWin) {
+      printWin.addEventListener("afterprint", cleanup, { once: true });
+      setTimeout(cleanup, 60000);
+    } else {
+      cleanup();
+    }
+  }
 }
 
 export async function exportReceiptPDF(options: ReceiptPDFOptions) {
