@@ -139,15 +139,18 @@ export async function imageToBase64(url: string, timeoutMs = 10000): Promise<str
  * Preload all images in receipt options, converting to base64.
  * Mutates the options object in place for convenience.
  */
-export async function preloadReceiptImages(options: {
-  logoUrl?: string;
-  itens: Array<{ imagemUrl?: string }>;
-}): Promise<void> {
+export async function preloadReceiptImages(
+  options: {
+    logoUrl?: string;
+    itens: Array<{ imagemUrl?: string }>;
+  },
+  timeoutMs = 10000,
+): Promise<void> {
   const promises: Promise<void>[] = [];
 
   if (options.logoUrl) {
     promises.push(
-      imageToBase64(options.logoUrl).then((b64) => {
+      imageToBase64(options.logoUrl, timeoutMs).then((b64) => {
         if (b64) options.logoUrl = b64;
       })
     );
@@ -156,9 +159,9 @@ export async function preloadReceiptImages(options: {
   for (const item of options.itens) {
     if (item.imagemUrl) {
       promises.push(
-        imageToBase64(item.imagemUrl).then((b64) => {
+        imageToBase64(item.imagemUrl, timeoutMs).then((b64) => {
           if (b64) item.imagemUrl = b64;
-          else item.imagemUrl = undefined; // Clear broken URLs
+          else item.imagemUrl = undefined;
         })
       );
     }
