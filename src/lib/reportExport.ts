@@ -1,5 +1,7 @@
 import { format } from "date-fns";
 import QRCode from "qrcode";
+import html2canvas from "html2canvas";
+import JsPDF from "jspdf";
 
 // ─── HTML Sanitizer ───
 function escapeHtml(unsafe: unknown): string {
