@@ -252,10 +252,16 @@ export default function FinanceiroPage() {
                       <p className="font-semibold text-foreground">{(mobileParcela as any).clientes?.nome ?? "Cliente não informado"}</p>
                       <p className="text-xs text-muted-foreground">Parcela {mobileParcela.numero}ª</p>
                     </div>
-                    <Badge variant={STATUS_CFG[mobileParcela.status]?.variant ?? "outline"} className="gap-1">
-                      <Icon className="w-3 h-3" />
-                      {STATUS_CFG[mobileParcela.status]?.label ?? mobileParcela.status}
-                    </Badge>
+                    {(() => {
+                      const cfg = STATUS_CFG[mobileParcela.status] ?? STATUS_CFG.pendente;
+                      const StatusIcon = cfg.icon;
+                      return (
+                        <Badge variant={cfg.variant} className="gap-1">
+                          <StatusIcon className="w-3 h-3" />
+                          {cfg.label}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
                     <div>
