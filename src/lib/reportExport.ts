@@ -660,6 +660,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 const RECEIPT_RENDER_WIDTH_PX = 794;
 const RECEIPT_RENDER_MIN_HEIGHT_PX = 1123;
 const RECEIPT_PDF_MARGIN_MM = 5;
+const RECEIPT_PDF_SECTION_GAP_MM = 4;
 const RECEIPT_MIN_VALID_PDF_BYTES = 1500;
 
 function buildReceiptFileName(options: ReceiptPDFOptions) {
