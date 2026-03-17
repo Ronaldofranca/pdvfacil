@@ -693,12 +693,13 @@ function cloneReceiptSourceForExport(sourceElement: HTMLElement) {
     node.remove();
   });
 
-  clone.querySelectorAll<HTMLElement>("[data-state], [hidden]").forEach((node) => {
-    if (node.hasAttribute("hidden")) node.removeAttribute("hidden");
-    if (node.dataset.state === "closed") node.dataset.state = "open";
+  clone.querySelectorAll<HTMLElement>("[data-radix-scroll-area-viewport], [data-radix-scroll-area-root], [data-export-expand]").forEach((node) => {
+    node.style.height = "auto";
+    node.style.maxHeight = "none";
+    node.style.overflow = "visible";
   });
 
-  clone.querySelectorAll<HTMLElement>("img").forEach((img) => {
+  clone.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
     img.loading = "eager";
     img.decoding = "sync";
   });
