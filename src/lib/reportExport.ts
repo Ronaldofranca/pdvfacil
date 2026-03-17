@@ -939,62 +939,63 @@ export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
 }
 
 export async function printReceipt(options: ReceiptPDFOptions) {
-  const printWindow = window.open("", "_blank");
+  const { html } = await prepareReceiptDocument(options);
 
-  if (!printWindow) {
-    throw new Error("Não foi possível abrir a janela de impressão do recibo.");
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", "receipt-print-frame");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = `${RECEIPT_RENDER_WIDTH_PX}px`;
+  iframe.style.minWidth = `${RECEIPT_RENDER_WIDTH_PX}px`;
+  iframe.style.height = `${RECEIPT_RENDER_MIN_HEIGHT_PX}px`;
+  iframe.style.border = "0";
+  iframe.style.opacity = "0.01";
+  iframe.style.pointerEvents = "none";
+  iframe.style.background = "#ffffff";
+  iframe.style.zIndex = "-1";
+
+  const cleanup = () => {
+    setTimeout(() => {
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    }, 300);
+  };
+
+  document.body.appendChild(iframe);
+
+  const printDoc = iframe.contentDocument;
+  const printWin = iframe.contentWindow;
+
+  if (!printDoc || !printWin) {
+    cleanup();
+    throw new Error("Não foi possível preparar a área de impressão do recibo.");
   }
 
-  printWindow.document.open();
-  printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Preparando impressão…</title><style>body{font-family:Segoe UI,Tahoma,sans-serif;padding:24px;color:#0f172a} .loading{max-width:420px;margin:10vh auto;text-align:center} .loading p{color:#64748b}</style></head><body><div class="loading"><h1>Preparando recibo…</h1><p>Aguarde enquanto o comprovante é carregado para impressão.</p></div></body></html>`);
-  printWindow.document.close();
+  printDoc.open();
+  printDoc.write(html);
+  printDoc.close();
+
+  await waitForReceiptFrame(iframe, 12000);
+
+  await new Promise<void>((resolve) => {
+    printWin.requestAnimationFrame(() => {
+      printWin.requestAnimationFrame(() => resolve());
+    });
+  });
 
   try {
-    const { html } = await prepareReceiptDocument(options);
-
-    const autoPrintScript = `
-      <script>
-        (async () => {
-          const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-          const images = Array.from(document.images || []);
-
-          await Promise.all(images.map((img) => new Promise((resolve) => {
-            if (img.complete) return resolve();
-            const done = () => resolve();
-            img.addEventListener('load', done, { once: true });
-            img.addEventListener('error', done, { once: true });
-            setTimeout(done, 3000);
-          })));
-
-          if (document.fonts && document.fonts.ready) {
-            try {
-              await Promise.race([document.fonts.ready, wait(2000)]);
-            } catch {}
-          }
-
-          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-          await wait(250);
-
-          window.focus();
-          window.print();
-
-          window.addEventListener('afterprint', () => {
-            setTimeout(() => window.close(), 150);
-          }, { once: true });
-        })();
-      <\/script>
-    `;
-
-    const printableHtml = html.replace("</body>", `${autoPrintScript}</body>`);
-    const printBlob = new Blob([printableHtml], { type: "text/html;charset=utf-8" });
-    const printUrl = URL.createObjectURL(printBlob);
-
-    printWindow.location.replace(printUrl);
-
-    setTimeout(() => URL.revokeObjectURL(printUrl), 60000);
-  } catch (error) {
-    printWindow.close();
-    throw error;
+    printWin.focus();
+    printWin.print();
+  } finally {
+    if ("onafterprint" in printWin) {
+      printWin.addEventListener("afterprint", cleanup, { once: true });
+      setTimeout(cleanup, 60000);
+    } else {
+      cleanup();
+    }
   }
 }
 
