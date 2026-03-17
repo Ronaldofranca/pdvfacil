@@ -157,6 +157,9 @@ export interface ReceiptPDFOptions {
     motivo: string;
     data?: string;
   };
+  sourceElement?: HTMLElement | null;
+  sourceReady?: boolean;
+  sourceLabel?: string;
   // Receipt visual config
   receiptConfig?: import("@/lib/receiptConfig").ReceiptConfig;
 }
