@@ -130,8 +130,10 @@ describe("receipt PDF pipeline", () => {
     expect(result.html).toContain("Empresa Teste");
     expect(result.html).toContain("Maria");
     expect(result.html).toContain("receipt-header");
+    expect(result.html).toContain("data-pdf-section=" );
     expect(html2canvasMock).toHaveBeenCalled();
     expect(addImageMock).toHaveBeenCalled();
+    expect(addPageMock).toHaveBeenCalled();
   });
 
   it("mantém a geração do PDF mesmo sem imagens de produto", async () => {
@@ -166,21 +168,14 @@ describe("receipt PDF pipeline", () => {
     const { buildReceiptHTML } = await import("@/lib/reportExport");
     const html = await buildReceiptHTML(baseOptions);
 
-    // Verificações de estrutura
     expect(html).toContain("<!DOCTYPE html>");
     expect(html).toContain("<style>");
     expect(html).toContain("receipt-header");
     expect(html).toContain("receipt-footer");
-
-    // Verificações de conteúdo
     expect(html).toContain("Empresa Teste");
     expect(html).toContain("Maria");
     expect(html).toContain("Produto A");
     expect(html).toContain("R$");
-
-    // Verificação de que o HTML não está vazio
-    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/);
-    expect(bodyMatch).toBeTruthy();
-    expect(bodyMatch![1].length).toBeGreaterThan(200);
+    expect((html.match(/data-pdf-section=/g) ?? []).length).toBeGreaterThan(6);
   });
 });

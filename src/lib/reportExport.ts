@@ -978,16 +978,14 @@ async function prepareReceiptDocument(options: ReceiptPDFOptions) {
 
 export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
   const prepared = await prepareReceiptDocument(options);
-  const canvas = await renderReceiptHtmlToCanvas(prepared.html, prepared.textContent);
-  const blob = await canvasToPdfBlob(canvas);
+  const blob = await renderReceiptSectionsToPdf(prepared.html, prepared.textContent);
 
   await assertValidPdfBlob(blob, prepared.textContent);
 
   console.info("[Receipt] PDF generated successfully", {
     fileName: prepared.fileName,
     size: blob.size,
-    canvasWidth: canvas.width,
-    canvasHeight: canvas.height,
+    strategy: "section-based",
   });
 
   return {
