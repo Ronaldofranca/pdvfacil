@@ -417,7 +417,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   const rodape = rc?.recibo_rodape ?? "Este recibo não tem valor fiscal.";
 
   const headerHtml = `
-    <div class="receipt-header">
+    <div class="receipt-header" data-pdf-section="header">
       <div class="brand">
         ${showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" crossorigin="anonymous" />` : ""}
         <div class="brand-info">
@@ -439,7 +439,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 
   // ─── Client Info ───
   const clienteHtml = showCliente ? `
-    <div class="section">
+    <div class="section" data-pdf-section="cliente">
       <div class="section-title">Dados do Cliente</div>
       <div class="info-grid">
         <div class="info-item full"><span class="label">Nome</span><span class="value">${escapeHtml(cliente.nome)}</span></div>
@@ -453,9 +453,9 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Items table ───
   const itensHtml = itens.length > 0 ? `
     <div class="section">
-      <div class="section-title">Itens da Venda</div>
+      <div class="section-title" data-pdf-section="itens-titulo">Itens da Venda</div>
       <table>
-        <thead>
+        <thead data-pdf-section="itens-cabecalho">
           <tr>
             <th style="width:45%">Produto</th>
             <th style="text-align:center;width:10%">Qtd</th>
@@ -465,8 +465,8 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
           </tr>
         </thead>
         <tbody>
-          ${itens.map((item) => `
-            <tr>
+          ${itens.map((item, index) => `
+            <tr data-pdf-section="item-${index + 1}">
               <td>
                 <div class="product-cell">
                   ${showImages ? (item.imagemUrl
@@ -489,7 +489,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Summary ───
   const summaryHtml = isVenda ? `
     <div class="section">
-      <div class="summary-box">
+      <div class="summary-box" data-pdf-section="resumo">
         <div class="summary-row"><span>Subtotal</span><span>${fmtR(resumo.subtotal)}</span></div>
         ${resumo.descontos > 0 ? `<div class="summary-row discount"><span>Descontos</span><span>-${fmtR(resumo.descontos)}</span></div>` : ""}
         <div class="summary-row total"><span>TOTAL</span><span>${fmtR(resumo.total)}</span></div>
@@ -500,9 +500,9 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Payments ───
   const pagamentosHtml = showFormaPagamento && pagamentos.length > 0 ? `
     <div class="section">
-      <div class="section-title">${isVenda ? "Formas de Pagamento" : "Pagamentos Realizados"}</div>
-      ${pagamentos.map((p) => `
-        <div class="payment-card">
+      <div class="section-title" data-pdf-section="pagamentos-titulo">${isVenda ? "Formas de Pagamento" : "Pagamentos Realizados"}</div>
+      ${pagamentos.map((p, index) => `
+        <div class="payment-card" data-pdf-section="pagamento-${index + 1}">
           <div>
             <div class="forma">${escapeHtml(p.forma)}</div>
             ${p.data ? `<div class="data">${escapeHtml(p.data)}</div>` : ""}
@@ -516,9 +516,9 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Parcelas (crediário) ───
   const parcelasHtml = showParcelas && parcelas && parcelas.length > 0 ? `
     <div class="section">
-      <div class="section-title">Parcelas do Crediário</div>
+      <div class="section-title" data-pdf-section="parcelas-titulo">Parcelas do Crediário</div>
       <table>
-        <thead>
+        <thead data-pdf-section="parcelas-cabecalho">
           <tr>
             <th>Parcela</th>
             <th style="text-align:right">Valor</th>
@@ -528,7 +528,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
         </thead>
         <tbody>
           ${parcelas.map((p, i) => `
-            <tr>
+            <tr data-pdf-section="parcela-${i + 1}">
               <td style="font-weight:600">${p.numero}/${parcelas.length}</td>
               <td style="text-align:right;font-weight:600">${fmtR(p.valor)}</td>
               <td>${escapeHtml(p.vencimento)}</td>
@@ -544,7 +544,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 
   // ─── Parcela Info (payment receipt) ───
   const parcelaInfoHtml = parcelaInfo ? `
-    <div class="section">
+    <div class="section" data-pdf-section="parcela-detalhes">
       <div class="section-title">Detalhes da Parcela</div>
       <div class="info-grid">
         <div class="info-item"><span class="label">Parcela</span><span class="value">${parcelaInfo.numero}ª</span></div>
@@ -554,7 +554,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
       </div>
     </div>
     <div class="section">
-      <div class="finance-cards">
+      <div class="finance-cards" data-pdf-section="parcela-financeiro">
         <div class="finance-card anterior">
           <div class="fc-label">Valor Original</div>
           <div class="fc-value">${fmtR(parcelaInfo.valorTotal)}</div>
@@ -578,9 +578,9 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Remaining parcelas ───
   const restantesHtml = parcelasRestantes && parcelasRestantes.length > 0 ? `
     <div class="section">
-      <div class="section-title">Parcelas Restantes</div>
+      <div class="section-title" data-pdf-section="restantes-titulo">Parcelas Restantes</div>
       <table>
-        <thead>
+        <thead data-pdf-section="restantes-cabecalho">
           <tr>
             <th>Parcela</th>
             <th style="text-align:right">Valor</th>
@@ -589,8 +589,8 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
           </tr>
         </thead>
         <tbody>
-          ${parcelasRestantes.map((p) => `
-            <tr>
+          ${parcelasRestantes.map((p, index) => `
+            <tr data-pdf-section="restante-${index + 1}">
               <td style="font-weight:600">${p.numero}ª</td>
               <td style="text-align:right;font-weight:600">${fmtR(p.valor)}</td>
               <td>${escapeHtml(p.vencimento)}</td>
@@ -607,7 +607,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── PIX Section ───
   const pixHtml = pixQrDataUrl && pix ? `
     <div class="section">
-      <div class="pix-section">
+      <div class="pix-section" data-pdf-section="pix">
         <h4>💳 Pagamento via PIX</h4>
         <img src="${pixQrDataUrl}" width="180" height="180" alt="QR Code PIX" />
         <div>
@@ -622,7 +622,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 
   // ─── Footer ───
   const footerHtml = `
-    <div class="receipt-footer">
+    <div class="receipt-footer" data-pdf-section="footer">
       ${mensagemFinal ? `<div class="thanks">${escapeHtml(mensagemFinal)}</div>` : ""}
       <div class="contact">Em caso de dúvidas, entre em contato.</div>
       ${showTelefone && empresaInfo?.telefone ? `<div class="contact">📱 WhatsApp: ${escapeHtml(empresaInfo.telefone)}</div>` : ""}
