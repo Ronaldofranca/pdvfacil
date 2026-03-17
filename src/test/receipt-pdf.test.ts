@@ -25,65 +25,6 @@ vi.mock("jspdf", () => ({
   },
 }));
 
-// ─── Mock createReceiptFrame to avoid real iframes in jsdom ───
-vi.mock("@/lib/reportExport", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/lib/reportExport")>();
-
-  return {
-    ...original,
-    generateReceiptPdfBlob: async (options: any) => {
-      const { preloadReceiptImages } = await import("@/lib/receiptConfig");
-      await preloadReceiptImages(options);
-
-      const html = await original.buildReceiptHTML(options);
-      const textContent = html
-        .replace(/<style[\s\S]*?<\/style>/gi, " ")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-
-      if (!textContent || textContent.length < 32) {
-        throw new Error("O HTML do recibo foi gerado sem conteúdo visível.");
-      }
-
-      // Simulate full-body canvas rendering
-      const { default: h2c } = await import("html2canvas");
-      await h2c(document.body);
-
-      const { default: JsPDF } = await import("jspdf");
-      const pdf = new JsPDF();
-      pdf.addImage("data:image/jpeg;base64,mock", "JPEG", 5, 5, 200, 280);
-      const blob = pdf.output("blob") as unknown as Blob;
-
-      const fileName = options.type === "venda"
-        ? `recibo_venda_${options.id}.pdf`
-        : `recibo_pagamento_${options.id}.pdf`;
-
-      return { blob, fileName, html };
-    },
-    shareReceiptWhatsApp: async (options: any) => {
-      const result = await original.generateReceiptPdfBlob?.(options);
-      const blob = result?.blob ?? new Blob([pdfBlobContent], { type: "application/pdf" });
-      const fileName = options.type === "venda"
-        ? `recibo_venda_${options.id}.pdf`
-        : `recibo_pagamento_${options.id}.pdf`;
-
-      const file = new File([blob], fileName, { type: "application/pdf" });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ title: `Recibo #${options.id}`, files: [file] });
-          return { fileName, blob, shared: true };
-        } catch {
-          // fall through
-        }
-      }
-
-      return { fileName, blob, shared: false };
-    },
-  };
-});
-
 const baseOptions = {
   type: "venda" as const,
   id: "abc123",
