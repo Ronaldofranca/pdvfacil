@@ -939,26 +939,31 @@ export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
 }
 
 export async function printReceipt(options: ReceiptPDFOptions) {
-  const { html } = await prepareReceiptDocument(options);
-  const printWindow = window.open("", "_blank", "noopener,noreferrer");
+  const { blob } = await generateReceiptPdfBlob(options);
+  const url = URL.createObjectURL(blob);
+  const printWindow = window.open(url, "_blank");
 
   if (!printWindow) {
-    throw new Error("Não foi possível abrir a janela de impressão do recibo.");
+    // Fallback: download the PDF if popup is blocked
+    downloadBlob(blob, buildReceiptFileName(options));
+    URL.revokeObjectURL(url);
+    return;
   }
 
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
-
-  await new Promise<void>((resolve) => {
-    printWindow.onload = () => {
-      setTimeout(() => resolve(), 400);
-    };
-    setTimeout(() => resolve(), 1200);
+  printWindow.addEventListener("afterprint", () => {
+    URL.revokeObjectURL(url);
   });
 
-  printWindow.focus();
-  printWindow.print();
+  // Some browsers need a delay before print() works on a PDF blob
+  printWindow.onload = () => {
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 600);
+  };
+
+  // Cleanup after timeout in case events don't fire
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 export async function exportReceiptPDF(options: ReceiptPDFOptions) {
