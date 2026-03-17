@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ReceiptDialogShellProps {
   open: boolean;
@@ -11,19 +13,41 @@ interface ReceiptDialogShellProps {
 }
 
 export function ReceiptDialogShell({ open, onOpenChange, title, children, actions }: ReceiptDialogShellProps) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="flex max-h-[96dvh] flex-col">
+          <DrawerHeader className="shrink-0 border-b px-4 pb-3 pt-2 text-left">
+            <DrawerTitle className="text-base">{title}</DrawerTitle>
+          </DrawerHeader>
+
+          <ScrollArea className="min-h-0 flex-1 overflow-y-auto">
+            <div className="px-4 py-4">{children}</div>
+          </ScrollArea>
+
+          <div className="shrink-0 border-t bg-background px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+            <div className="grid grid-cols-3 gap-2">{actions}</div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(100dvh-0.75rem,52rem)] w-[calc(100vw-0.75rem)] max-w-[calc(100vw-0.75rem)] flex-col gap-0 overflow-hidden rounded-xl p-0 sm:h-[90vh] sm:max-w-2xl">
-        <DialogHeader className="shrink-0 border-b px-4 pb-3 pt-4 text-left sm:px-6">
-          <DialogTitle className="pr-8 text-base sm:text-lg">{title}</DialogTitle>
+      <DialogContent className="flex h-[90vh] max-h-[52rem] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b px-6 pb-3 pt-4 text-left">
+          <DialogTitle className="pr-8 text-lg">{title}</DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="min-h-0 flex-1">
-          <div className="px-4 py-4 sm:px-6 sm:py-5">{children}</div>
+          <div className="px-6 py-5">{children}</div>
         </ScrollArea>
 
-        <div className="shrink-0 border-t bg-background/95 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">{actions}</div>
+        <div className="shrink-0 border-t bg-background px-6 py-3">
+          <div className="grid grid-cols-3 gap-2">{actions}</div>
         </div>
       </DialogContent>
     </Dialog>
