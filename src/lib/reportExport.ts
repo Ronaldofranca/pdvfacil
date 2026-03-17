@@ -157,9 +157,6 @@ export interface ReceiptPDFOptions {
     motivo: string;
     data?: string;
   };
-  sourceElement?: HTMLElement | null;
-  sourceReady?: boolean;
-  sourceLabel?: string;
   // Receipt visual config
   receiptConfig?: import("@/lib/receiptConfig").ReceiptConfig;
 }
@@ -663,7 +660,6 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 }
 
 const RECEIPT_RENDER_WIDTH_PX = 794;
-const RECEIPT_RENDER_MIN_HEIGHT_PX = 1123;
 const RECEIPT_PDF_MARGIN_MM = 5;
 const RECEIPT_MIN_VALID_PDF_BYTES = 1500;
 
@@ -682,31 +678,10 @@ function extractTextFromReceiptHtml(html: string) {
     .trim();
 }
 
-function cloneReceiptSourceForExport(sourceElement: HTMLElement) {
-  const clone = sourceElement.cloneNode(true) as HTMLElement;
-
-  clone.removeAttribute("id");
-  clone.setAttribute("data-export-clone", "receipt");
-  clone.setAttribute("data-export-mode", "pdf");
-
-  clone.querySelectorAll("button, [role='button'], [data-receipt-action], [data-ui-control], [aria-label='Close'], [aria-label='Fechar']").forEach((node) => {
-    node.remove();
-  });
-
-  clone.querySelectorAll<HTMLElement>("[data-radix-scroll-area-viewport], [data-radix-scroll-area-root], [data-export-expand]").forEach((node) => {
-    node.style.height = "auto";
-    node.style.maxHeight = "none";
-    node.style.overflow = "visible";
-  });
-
-  clone.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
-    img.loading = "eager";
-    img.decoding = "sync";
-  });
-
-  return clone;
-}
-
+/**
+ * Wait for all <img> elements inside a node to finish loading.
+ * Hides broken images so they don't produce tainted canvas errors.
+ */
 async function waitForImagesInNode(root: ParentNode, timeoutMs = 8000) {
   const images = Array.from(root.querySelectorAll("img"));
   if (!images.length) return;
@@ -719,17 +694,10 @@ async function waitForImagesInNode(root: ParentNode, timeoutMs = 8000) {
           const finish = () => {
             if (settled) return;
             settled = true;
-            if (!img.naturalWidth) {
-              img.style.display = "none";
-            }
+            if (!img.naturalWidth) img.style.display = "none";
             resolve();
           };
-
-          if (img.complete) {
-            finish();
-            return;
-          }
-
+          if (img.complete) { finish(); return; }
           img.addEventListener("load", finish, { once: true });
           img.addEventListener("error", finish, { once: true });
           setTimeout(finish, timeoutMs);
@@ -738,277 +706,89 @@ async function waitForImagesInNode(root: ParentNode, timeoutMs = 8000) {
   );
 }
 
-async function waitForRenderableElement(element: HTMLElement, timeoutMs = 2500) {
-  const start = Date.now();
+/**
+ * Create a temporary off-screen container in the MAIN DOCUMENT,
+ * inject receipt HTML, wait for images/fonts, then run html2canvas.
+ *
+ * This is far more reliable than using an iframe because html2canvas
+ * has well-known issues rendering content inside iframes (especially
+ * on mobile Safari / Chrome) — often producing blank canvases.
+ */
+async function renderReceiptHtmlToPdfBlob(html: string, expectedText: string): Promise<Blob> {
+  // 1. Extract body content from full HTML
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const bodyContent = bodyMatch ? bodyMatch[1] : html;
+  const styleContent = styleMatch ? styleMatch[1] : "";
 
-  while (Date.now() - start < timeoutMs) {
-    const rect = element.getBoundingClientRect();
-    const text = element.textContent?.replace(/\s+/g, " ").trim() ?? "";
-    const style = window.getComputedStyle(element);
-    const hasSize = rect.width > 120 && rect.height > 120;
-    const visible = style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
-    const hasText = text.length >= 24;
+  // 2. Create off-screen container in main document
+  const container = document.createElement("div");
+  container.setAttribute("id", "receipt-pdf-render-root");
+  container.setAttribute("aria-hidden", "true");
+  container.style.cssText = [
+    "position: fixed",
+    "top: 0",
+    "left: 0",
+    `width: ${RECEIPT_RENDER_WIDTH_PX}px`,
+    `min-width: ${RECEIPT_RENDER_WIDTH_PX}px`,
+    "z-index: -9999",
+    "opacity: 0.01",
+    "pointer-events: none",
+    "overflow: hidden",
+    "background: #ffffff",
+  ].join("; ");
 
-    if (hasSize && visible && hasText) {
-      return {
-        width: rect.width,
-        height: rect.height,
-        textLength: text.length,
-      };
-    }
+  // 3. Inject scoped styles + body content
+  const styleEl = document.createElement("style");
+  styleEl.textContent = `
+    #receipt-pdf-render-root { font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; color: #1a1a2e; font-size: 11px; }
+    #receipt-pdf-render-root * { box-sizing: border-box; }
+    ${styleContent}
+  `;
+  container.appendChild(styleEl);
 
-    await new Promise((resolve) => window.requestAnimationFrame(() => resolve(undefined)));
-  }
+  const contentWrapper = document.createElement("div");
+  contentWrapper.innerHTML = bodyContent;
+  container.appendChild(contentWrapper);
 
-  throw new Error("O recibo ainda não terminou de renderizar. Aguarde alguns instantes e tente novamente.");
-}
+  document.body.appendChild(container);
 
-async function waitForRenderCycle(frameWindow: Window, cycles = 2) {
-  for (let i = 0; i < cycles; i += 1) {
-    await new Promise<void>((resolve) => {
-      frameWindow.requestAnimationFrame(() => resolve());
-    });
-  }
-}
-
-async function inlineStyles(sourceElement: HTMLElement, cloneElement: HTMLElement) {
-  const sourceNodes = [sourceElement, ...Array.from(sourceElement.querySelectorAll<HTMLElement>("*"))];
-  const cloneNodes = [cloneElement, ...Array.from(cloneElement.querySelectorAll<HTMLElement>("*"))];
-
-  sourceNodes.forEach((sourceNode, index) => {
-    const cloneNode = cloneNodes[index];
-    if (!cloneNode) return;
-
-    const computed = window.getComputedStyle(sourceNode);
-    const importantStyles = [
-      "display",
-      "position",
-      "top",
-      "right",
-      "bottom",
-      "left",
-      "width",
-      "min-width",
-      "max-width",
-      "height",
-      "min-height",
-      "max-height",
-      "margin",
-      "margin-top",
-      "margin-right",
-      "margin-bottom",
-      "margin-left",
-      "padding",
-      "padding-top",
-      "padding-right",
-      "padding-bottom",
-      "padding-left",
-      "border",
-      "border-top",
-      "border-right",
-      "border-bottom",
-      "border-left",
-      "border-radius",
-      "background",
-      "background-color",
-      "background-image",
-      "background-size",
-      "background-position",
-      "color",
-      "font",
-      "font-size",
-      "font-weight",
-      "font-family",
-      "line-height",
-      "letter-spacing",
-      "text-align",
-      "text-transform",
-      "text-decoration",
-      "white-space",
-      "word-break",
-      "overflow-wrap",
-      "gap",
-      "column-gap",
-      "row-gap",
-      "grid-template-columns",
-      "grid-template-rows",
-      "flex-direction",
-      "justify-content",
-      "align-items",
-      "object-fit",
-      "box-shadow",
-      "opacity",
-      "transform",
-      "overflow",
-    ];
-
-    importantStyles.forEach((prop) => {
-      cloneNode.style.setProperty(prop, computed.getPropertyValue(prop));
-    });
-  });
-}
-
-async function buildReceiptHtmlFromSourceElement(sourceElement: HTMLElement, options: ReceiptPDFOptions) {
-  const clone = cloneReceiptSourceForExport(sourceElement);
-  await inlineStyles(sourceElement, clone);
-
-  const wrapper = document.createElement("div");
-  wrapper.style.width = `${Math.max(RECEIPT_RENDER_WIDTH_PX, Math.ceil(sourceElement.getBoundingClientRect().width || RECEIPT_RENDER_WIDTH_PX))}px`;
-  wrapper.style.margin = "0 auto";
-  wrapper.style.padding = "0";
-  wrapper.style.background = "#ffffff";
-  wrapper.appendChild(clone);
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Recibo ${escapeHtml(options.id)}</title>
-<style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #ffffff; }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; color: #111827; }
-  img { max-width: 100%; }
-  [data-export-clone='receipt'] { width: 100%; background: #ffffff; }
-</style>
-</head>
-<body>
-  ${wrapper.outerHTML}
-</body>
-</html>`;
-
-  return html;
-}
-
-function createReceiptFrame(html: string, title = "receipt-export-frame") {
-  const frame = document.createElement("iframe");
-  frame.setAttribute("title", title);
-  frame.setAttribute("aria-hidden", "true");
-  frame.style.position = "fixed";
-  frame.style.top = "0";
-  frame.style.left = "0";
-  frame.style.width = `${RECEIPT_RENDER_WIDTH_PX}px`;
-  frame.style.minWidth = `${RECEIPT_RENDER_WIDTH_PX}px`;
-  frame.style.height = `${RECEIPT_RENDER_MIN_HEIGHT_PX}px`;
-  frame.style.border = "0";
-  frame.style.opacity = "0.01";
-  frame.style.pointerEvents = "none";
-  frame.style.background = "#ffffff";
-  frame.style.zIndex = "-1";
-  frame.style.overflow = "hidden";
-
-  document.body.appendChild(frame);
-
-  const doc = frame.contentDocument;
-  if (!doc) {
-    document.body.removeChild(frame);
-    throw new Error("Falha ao criar o frame de renderização do recibo.");
-  }
-
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  return {
-    frame,
-    cleanup: () => {
-      if (frame.parentNode) {
-        frame.parentNode.removeChild(frame);
-      }
-    },
+  const cleanup = () => {
+    if (container.parentNode) container.parentNode.removeChild(container);
   };
-}
-
-async function waitForReceiptFrame(frame: HTMLIFrameElement, timeoutMs = 10000) {
-  const doc = frame.contentDocument;
-  const win = frame.contentWindow;
-
-  if (!doc || !win) {
-    throw new Error("Não foi possível inicializar o documento do recibo.");
-  }
-
-  const body = doc.body;
-  if (!body) {
-    throw new Error("O template do recibo não foi montado corretamente.");
-  }
-
-  if (doc.fonts?.ready) {
-    await Promise.race([
-      doc.fonts.ready.catch(() => undefined),
-      new Promise((resolve) => setTimeout(resolve, 2500)),
-    ]);
-  }
-
-  await waitForImagesInNode(doc, timeoutMs);
-  await waitForRenderCycle(win, 3);
-}
-
-async function assertValidPdfBlob(blob: Blob, expectedText: string) {
-  let header = "";
-  try {
-    const slice = blob.slice(0, 4);
-    if (typeof slice.text === "function") {
-      header = await slice.text();
-    } else {
-      const buf = await slice.arrayBuffer();
-      header = String.fromCharCode(...new Uint8Array(buf));
-    }
-  } catch {
-    // ignore — header stays empty
-  }
-
-  if (header !== "%PDF" || blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
-    console.error("[Receipt] Invalid PDF blob", {
-      size: blob.size,
-      header,
-      expectedTextLength: expectedText.length,
-    });
-    throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
-  }
-}
-
-async function renderReceiptElementToPdf(sourceElement: HTMLElement, html: string, expectedText: string) {
-  const { frame, cleanup } = createReceiptFrame(html);
 
   try {
-    await waitForReceiptFrame(frame);
+    // 4. Wait for images to load
+    await waitForImagesInNode(container, 8000);
 
-    const doc = frame.contentDocument;
-    const body = doc?.body;
-    const exportRoot = body?.querySelector<HTMLElement>("[data-export-clone='receipt']") ?? body;
-    if (!doc || !body || !exportRoot) {
-      throw new Error("O conteúdo do recibo não foi encontrado no DOM de exportação.");
-    }
+    // 5. Let the browser paint
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    );
 
-    const textContent = exportRoot.textContent?.replace(/\s+/g, " ").trim() ?? "";
-    if (!textContent || textContent.length < 24 || !expectedText.includes(textContent.slice(0, Math.min(textContent.length, 24)))) {
-      console.error("[Receipt] Export root missing visible content", {
-        sourceLabel: sourceElement.dataset.receiptSource || sourceElement.id || null,
-        textLength: textContent.length,
-        expectedTextLength: expectedText.length,
+    // 6. Validate visible text content before capture
+    const renderedText = container.textContent?.replace(/\s+/g, " ").trim() ?? "";
+    if (!renderedText || renderedText.length < 24) {
+      console.error("[Receipt] Container has no visible text after render", {
+        renderedTextLength: renderedText.length,
+        containerHeight: container.scrollHeight,
       });
-      throw new Error("O recibo não terminou de renderizar antes da exportação.");
+      throw new Error("O recibo foi renderizado sem conteúdo visível.");
     }
 
-    const sourceRect = sourceElement.getBoundingClientRect();
-    const exportRect = exportRoot.getBoundingClientRect();
-    const captureWidth = Math.max(RECEIPT_RENDER_WIDTH_PX, Math.ceil(exportRect.width || sourceRect.width || RECEIPT_RENDER_WIDTH_PX));
-    const captureHeight = Math.max(RECEIPT_RENDER_MIN_HEIGHT_PX, Math.ceil(exportRoot.scrollHeight || exportRect.height || sourceRect.height || RECEIPT_RENDER_MIN_HEIGHT_PX));
-
-    console.info("[Receipt] Starting PDF capture", {
-      sourceLabel: sourceElement.dataset.receiptSource || sourceElement.id || null,
-      sourceReady: true,
-      sourceRect: { width: sourceRect.width, height: sourceRect.height },
-      exportRect: { width: exportRect.width, height: exportRect.height },
-      captureWidth,
-      captureHeight,
-      images: exportRoot.querySelectorAll("img").length,
-      textLength: textContent.length,
+    console.info("[Receipt] Starting html2canvas capture", {
+      containerWidth: container.scrollWidth,
+      containerHeight: container.scrollHeight,
+      textLength: renderedText.length,
+      images: container.querySelectorAll("img").length,
     });
 
+    // 7. html2canvas on the main-document element (reliable on mobile)
     const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
-    const canvas = await html2canvas(exportRoot, {
+    const captureWidth = Math.max(RECEIPT_RENDER_WIDTH_PX, container.scrollWidth);
+    const captureHeight = Math.max(400, container.scrollHeight);
+
+    const canvas = await html2canvas(container, {
       backgroundColor: "#ffffff",
       scale,
       useCORS: true,
@@ -1026,6 +806,12 @@ async function renderReceiptElementToPdf(sourceElement: HTMLElement, html: strin
       throw new Error("A captura do recibo resultou em imagem vazia.");
     }
 
+    console.info("[Receipt] Canvas captured", {
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+    });
+
+    // 8. Build PDF from canvas
     const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
     const pageWidthMm = pdf.internal.pageSize.getWidth();
     const pageHeightMm = pdf.internal.pageSize.getHeight();
@@ -1035,8 +821,12 @@ async function renderReceiptElementToPdf(sourceElement: HTMLElement, html: strin
     const totalHeightMm = (canvas.height * contentWidthMm) / canvas.width;
 
     if (totalHeightMm <= maxContentHeightMm) {
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", margin, margin, contentWidthMm, totalHeightMm, undefined, "FAST");
+      pdf.addImage(
+        canvas.toDataURL("image/jpeg", 0.98),
+        "JPEG", margin, margin, contentWidthMm, totalHeightMm, undefined, "FAST"
+      );
     } else {
+      // Slice canvas into A4 pages
       const pxPerMm = canvas.width / contentWidthMm;
       const sliceHeightPx = Math.max(1, Math.floor(maxContentHeightMm * pxPerMm));
       let renderedPx = 0;
@@ -1058,7 +848,10 @@ async function renderReceiptElementToPdf(sourceElement: HTMLElement, html: strin
         ctx.drawImage(canvas, 0, renderedPx, canvas.width, currentSlicePx, 0, 0, canvas.width, currentSlicePx);
 
         const sliceHeightMm = currentSlicePx / pxPerMm;
-        pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.98), "JPEG", margin, margin, contentWidthMm, sliceHeightMm, undefined, "FAST");
+        pdf.addImage(
+          pageCanvas.toDataURL("image/jpeg", 0.98),
+          "JPEG", margin, margin, contentWidthMm, sliceHeightMm, undefined, "FAST"
+        );
 
         renderedPx += currentSlicePx;
         pageIdx += 1;
@@ -1066,44 +859,42 @@ async function renderReceiptElementToPdf(sourceElement: HTMLElement, html: strin
     }
 
     const blob = pdf.output("blob");
-    console.info("[Receipt] PDF rendered successfully", {
-      size: blob.size,
-      totalHeightMm: totalHeightMm.toFixed(1),
-      strategy: "visible-layout-clone",
-    });
+    console.info("[Receipt] PDF blob created", { size: blob.size, totalHeightMm: totalHeightMm.toFixed(1) });
     return blob;
   } finally {
     cleanup();
   }
 }
 
+async function assertValidPdfBlob(blob: Blob, expectedText: string) {
+  let header = "";
+  try {
+    const slice = blob.slice(0, 4);
+    if (typeof slice.text === "function") {
+      header = await slice.text();
+    } else {
+      const buf = await slice.arrayBuffer();
+      header = String.fromCharCode(...new Uint8Array(buf));
+    }
+  } catch {
+    // ignore
+  }
+
+  if (header !== "%PDF" || blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
+    console.error("[Receipt] Invalid PDF blob", { size: blob.size, header, expectedTextLength: expectedText.length });
+    throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
+  }
+}
+
 async function prepareReceiptDocument(options: ReceiptPDFOptions) {
-  const sourceElement = options.sourceElement ?? null;
-  if (!sourceElement) {
-    throw new Error("A área visível do recibo não foi encontrada para exportação.");
-  }
-
-  if (options.sourceReady === false) {
-    throw new Error("O recibo ainda está carregando. Aguarde terminar para exportar.");
-  }
-
-  const readiness = await waitForRenderableElement(sourceElement);
-  console.info("[Receipt] Source ready for export", {
-    sourceLabel: options.sourceLabel ?? sourceElement.dataset.receiptSource ?? sourceElement.id ?? null,
-    width: readiness.width,
-    height: readiness.height,
-    textLength: readiness.textLength,
-    mobileViewport: window.innerWidth < 768,
-  });
-
   const { preloadReceiptImages } = await import("@/lib/receiptConfig");
   await preloadReceiptImages(options);
 
-  const html = await buildReceiptHtmlFromSourceElement(sourceElement, options);
+  const html = await buildReceiptHTML(options);
   const textContent = extractTextFromReceiptHtml(html);
 
   if (!textContent || textContent.length < 32) {
-    console.error("[Receipt] HTML generated without visible content", { options });
+    console.error("[Receipt] HTML generated without visible content", { textContentLength: textContent.length });
     throw new Error("O HTML do recibo foi gerado sem conteúdo visível.");
   }
 
@@ -1111,20 +902,18 @@ async function prepareReceiptDocument(options: ReceiptPDFOptions) {
     html,
     textContent,
     fileName: buildReceiptFileName(options),
-    sourceElement,
   };
 }
 
 export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
   const prepared = await prepareReceiptDocument(options);
-  const blob = await renderReceiptElementToPdf(prepared.sourceElement, prepared.html, prepared.textContent);
+  const blob = await renderReceiptHtmlToPdfBlob(prepared.html, prepared.textContent);
 
   await assertValidPdfBlob(blob, prepared.textContent);
 
   console.info("[Receipt] PDF generated successfully", {
     fileName: prepared.fileName,
     size: blob.size,
-    strategy: "visible-layout-clone",
   });
 
   return {
@@ -1134,65 +923,27 @@ export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
   };
 }
 
-
 export async function printReceipt(options: ReceiptPDFOptions) {
-  const { html } = await prepareReceiptDocument(options);
+  // Generate PDF blob and open it for printing (most reliable cross-browser)
+  const { blob } = await generateReceiptPdfBlob(options);
+  const url = URL.createObjectURL(blob);
 
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute("title", "receipt-print-frame");
-  iframe.setAttribute("aria-hidden", "true");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = `${RECEIPT_RENDER_WIDTH_PX}px`;
-  iframe.style.minWidth = `${RECEIPT_RENDER_WIDTH_PX}px`;
-  iframe.style.height = `${RECEIPT_RENDER_MIN_HEIGHT_PX}px`;
-  iframe.style.border = "0";
-  iframe.style.opacity = "0.01";
-  iframe.style.pointerEvents = "none";
-  iframe.style.background = "#ffffff";
-  iframe.style.zIndex = "-1";
-
-  const cleanup = () => {
-    setTimeout(() => {
-      if (iframe.parentNode) {
-        iframe.parentNode.removeChild(iframe);
-      }
-    }, 300);
-  };
-
-  document.body.appendChild(iframe);
-
-  const printDoc = iframe.contentDocument;
-  const printWin = iframe.contentWindow;
-
-  if (!printDoc || !printWin) {
-    cleanup();
-    throw new Error("Não foi possível preparar a área de impressão do recibo.");
-  }
-
-  printDoc.open();
-  printDoc.write(html);
-  printDoc.close();
-
-  await waitForReceiptFrame(iframe, 12000);
-
-  await new Promise<void>((resolve) => {
-    printWin.requestAnimationFrame(() => {
-      printWin.requestAnimationFrame(() => resolve());
-    });
-  });
-
-  try {
-    printWin.focus();
-    printWin.print();
-  } finally {
-    if ("onafterprint" in printWin) {
-      printWin.addEventListener("afterprint", cleanup, { once: true });
-      setTimeout(cleanup, 60000);
-    } else {
-      cleanup();
-    }
+  // On mobile, opening a blob URL and calling print is the most reliable approach
+  const printWindow = window.open(url, "_blank");
+  if (printWindow) {
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+      }, 500);
+    };
+    // Cleanup URL after a delay
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } else {
+    // Fallback: download the PDF
+    URL.revokeObjectURL(url);
+    const { fileName } = await prepareReceiptDocument(options);
+    downloadBlob(blob, fileName);
   }
 }
 

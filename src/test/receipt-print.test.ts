@@ -1,38 +1,39 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_RECEIPT_CONFIG } from "@/lib/receiptConfig";
 
+// ─── Mock html2canvas ───
+vi.mock("html2canvas", () => ({
+  default: vi.fn(async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 794;
+    canvas.height = 1123;
+    return canvas;
+  }),
+}));
+
+// ─── Mock jsPDF ───
+const pdfBlobContent = "%PDF-1.4 mock receipt pdf for print test with enough bytes to pass validation";
+vi.mock("jspdf", () => ({
+  default: class MockJsPDF {
+    internal = { pageSize: { getWidth: () => 210, getHeight: () => 297 } };
+    addImage = vi.fn();
+    addPage = vi.fn();
+    output = vi.fn(() => new Blob([pdfBlobContent], { type: "application/pdf" }));
+  },
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("printReceipt", () => {
-  it("renderiza o recibo em iframe e dispara a impressão", async () => {
-    const iframe = document.createElement("iframe");
-    document.body.appendChild(iframe);
-
-    const printMock = vi.fn();
-    const focusMock = vi.fn();
-    const rafMock = vi.fn((cb: FrameRequestCallback) => {
-      cb(0);
-      return 1;
+  it("gera PDF e abre janela para impressão", async () => {
+    const openMock = vi.fn().mockReturnValue({
+      onload: null,
+      focus: vi.fn(),
+      print: vi.fn(),
     });
-
-    Object.defineProperty(iframe, "contentWindow", {
-      value: {
-        print: printMock,
-        focus: focusMock,
-        requestAnimationFrame: rafMock,
-        addEventListener: vi.fn(),
-      },
-      configurable: true,
-    });
-
-    Object.defineProperty(iframe, "contentDocument", {
-      value: document.implementation.createHTMLDocument("print"),
-      configurable: true,
-    });
-
-    const appendSpy = vi.spyOn(document.body, "appendChild").mockReturnValue(iframe);
+    vi.spyOn(window, "open").mockImplementation(openMock);
 
     const { printReceipt } = await import("@/lib/reportExport");
 
@@ -51,8 +52,8 @@ describe("printReceipt", () => {
       receiptConfig: DEFAULT_RECEIPT_CONFIG,
     });
 
-    expect(appendSpy).toHaveBeenCalled();
-    expect(printMock).toHaveBeenCalledTimes(1);
-    expect(focusMock).toHaveBeenCalledTimes(1);
+    expect(openMock).toHaveBeenCalledTimes(1);
+    // First arg should be a blob URL
+    expect(openMock.mock.calls[0][0]).toMatch(/^blob:/);
   });
 });
