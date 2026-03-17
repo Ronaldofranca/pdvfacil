@@ -777,7 +777,18 @@ function createReceiptFrame(html: string) {
 }
 
 async function assertValidPdfBlob(blob: Blob, expectedText: string) {
-  const header = await blob.slice(0, 4).text().catch(() => "");
+  let header = "";
+  try {
+    const slice = blob.slice(0, 4);
+    if (typeof slice.text === "function") {
+      header = await slice.text();
+    } else {
+      const buf = await slice.arrayBuffer();
+      header = String.fromCharCode(...new Uint8Array(buf));
+    }
+  } catch {
+    // ignore — header stays empty
+  }
 
   if (header !== "%PDF" || blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
     console.error("[Receipt] Invalid PDF blob", {
