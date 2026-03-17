@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_RECEIPT_CONFIG } from "@/lib/receiptConfig";
 
 // ─── Mock html2canvas ───
-const html2canvasMock = vi.fn(async () => {
+const html2canvasMock = vi.fn(async (element?: Element) => {
   const canvas = document.createElement("canvas");
+  const key = element?.getAttribute?.("data-pdf-section") || element?.tagName || "unknown";
   canvas.width = 794;
-  canvas.height = 1123;
+  canvas.height = key.includes("item") ? 140 : key.includes("pix") ? 320 : key.includes("footer") ? 120 : 220;
   return canvas;
 });
 
