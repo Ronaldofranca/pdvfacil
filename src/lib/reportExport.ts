@@ -923,24 +923,151 @@ export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
   };
 }
 
+/**
+ * Capture a live DOM element directly with html2canvas and produce a PDF.
+ * This is the preferred method — it guarantees the PDF matches the screen exactly.
+ */
+export async function exportReceiptFromElement(
+  element: HTMLElement,
+  fileName: string,
+  action: "download" | "print" | "share" = "download",
+  phone?: string,
+  options?: Partial<ReceiptPDFOptions>
+) {
+  // Wait for images inside the live element
+  await waitForImagesInNode(element, 6000);
+
+  // Let the browser finish painting
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+  const text = element.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  if (!text || text.length < 20) {
+    throw new Error("O recibo ainda não tem conteúdo visível. Aguarde os dados carregarem.");
+  }
+
+  console.info("[Receipt] Capturing live DOM element", {
+    width: element.scrollWidth,
+    height: element.scrollHeight,
+    textLength: text.length,
+  });
+
+  const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
+
+  const canvas = await html2canvas(element, {
+    backgroundColor: "#ffffff",
+    scale,
+    useCORS: true,
+    allowTaint: false,
+    logging: false,
+    width: element.scrollWidth,
+    height: element.scrollHeight,
+    scrollX: 0,
+    scrollY: 0,
+  });
+
+  if (!canvas.width || !canvas.height) {
+    throw new Error("A captura do recibo resultou em imagem vazia.");
+  }
+
+  // Build PDF from canvas
+  const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+  const pageWidthMm = pdf.internal.pageSize.getWidth();
+  const pageHeightMm = pdf.internal.pageSize.getHeight();
+  const margin = RECEIPT_PDF_MARGIN_MM;
+  const contentWidthMm = pageWidthMm - margin * 2;
+  const maxContentHeightMm = pageHeightMm - margin * 2;
+  const totalHeightMm = (canvas.height * contentWidthMm) / canvas.width;
+
+  if (totalHeightMm <= maxContentHeightMm) {
+    pdf.addImage(
+      canvas.toDataURL("image/jpeg", 0.98),
+      "JPEG", margin, margin, contentWidthMm, totalHeightMm, undefined, "FAST"
+    );
+  } else {
+    const pxPerMm = canvas.width / contentWidthMm;
+    const sliceHeightPx = Math.max(1, Math.floor(maxContentHeightMm * pxPerMm));
+    let renderedPx = 0;
+    let pageIdx = 0;
+
+    while (renderedPx < canvas.height) {
+      if (pageIdx > 0) pdf.addPage();
+      const currentSlicePx = Math.min(sliceHeightPx, canvas.height - renderedPx);
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = currentSlicePx;
+      const ctx = pageCanvas.getContext("2d");
+      if (!ctx) throw new Error("Falha ao preparar uma página do PDF.");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      ctx.drawImage(canvas, 0, renderedPx, canvas.width, currentSlicePx, 0, 0, canvas.width, currentSlicePx);
+      const sliceHeightMm = currentSlicePx / pxPerMm;
+      pdf.addImage(
+        pageCanvas.toDataURL("image/jpeg", 0.98),
+        "JPEG", margin, margin, contentWidthMm, sliceHeightMm, undefined, "FAST"
+      );
+      renderedPx += currentSlicePx;
+      pageIdx += 1;
+    }
+  }
+
+  const blob = pdf.output("blob");
+  console.info("[Receipt] PDF from live element", { size: blob.size, action });
+
+  if (blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
+    throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
+  }
+
+  if (action === "download") {
+    downloadBlob(blob, fileName);
+    return { blob, fileName, shared: false };
+  }
+
+  if (action === "print") {
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, "_blank");
+    if (printWindow) {
+      printWindow.onload = () => setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } else {
+      URL.revokeObjectURL(url);
+      downloadBlob(blob, fileName);
+    }
+    return { blob, fileName, shared: false };
+  }
+
+  // share
+  const file = new File([blob], fileName, { type: "application/pdf" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      const title = options?.type === "venda" ? `Recibo de Venda #${options.id}` : `Recibo de Pagamento #${options.id}`;
+      await navigator.share({ title, files: [file] });
+      return { blob, fileName, shared: true };
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return { blob, fileName, shared: false, cancelled: true };
+    }
+  }
+
+  downloadBlob(blob, fileName);
+  const cleanPhone = phone?.replace(/\D/g, "") || "";
+  const vendaText = options?.type === "venda"
+    ? `📄 *Recibo de Venda #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome}\n💰 Total: ${fmtR(options?.resumo?.total ?? 0)}`
+    : `📄 *Recibo de Pagamento #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome}`;
+  const encoded = encodeURIComponent(vendaText);
+  const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+  window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  return { blob, fileName, shared: false };
+}
+
 export async function printReceipt(options: ReceiptPDFOptions) {
-  // Generate PDF blob and open it for printing (most reliable cross-browser)
   const { blob } = await generateReceiptPdfBlob(options);
   const url = URL.createObjectURL(blob);
-
-  // On mobile, opening a blob URL and calling print is the most reliable approach
   const printWindow = window.open(url, "_blank");
   if (printWindow) {
     printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-      }, 500);
+      setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
     };
-    // Cleanup URL after a delay
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   } else {
-    // Fallback: download the PDF
     URL.revokeObjectURL(url);
     const { fileName } = await prepareReceiptDocument(options);
     downloadBlob(blob, fileName);
