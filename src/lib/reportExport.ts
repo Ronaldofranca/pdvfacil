@@ -983,7 +983,7 @@ async function renderReceiptElementToPdf(sourceElement: HTMLElement, html: strin
     const textContent = exportRoot.textContent?.replace(/\s+/g, " ").trim() ?? "";
     if (!textContent || textContent.length < 24 || !expectedText.includes(textContent.slice(0, Math.min(textContent.length, 24)))) {
       console.error("[Receipt] Export root missing visible content", {
-        sourceLabel: sourceElement.dataset.receiptSource || sourceElement.id || options?.sourceLabel,
+        sourceLabel: sourceElement.dataset.receiptSource || sourceElement.id || null,
         textLength: textContent.length,
         expectedTextLength: expectedText.length,
       });
