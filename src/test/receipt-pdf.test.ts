@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_RECEIPT_CONFIG } from "@/lib/receiptConfig";
 
 // ─── Mock html2canvas ───
-const html2canvasMock = vi.fn(async () => {
+const html2canvasMock = vi.fn(async (element?: Element) => {
   const canvas = document.createElement("canvas");
+  const key = element?.getAttribute?.("data-pdf-section") || element?.tagName || "unknown";
   canvas.width = 794;
-  canvas.height = 1123;
+  canvas.height = key.includes("item") ? 140 : key.includes("pix") ? 320 : key.includes("footer") ? 120 : 220;
   return canvas;
 });
 
@@ -30,19 +31,13 @@ vi.mock("jspdf", () => ({
 vi.mock("@/lib/reportExport", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/reportExport")>();
 
-  // We override generateReceiptPdfBlob to bypass iframe rendering
-  // while still testing the full pipeline logic
   return {
     ...original,
     generateReceiptPdfBlob: async (options: any) => {
-      // 1. Preload images (real)
       const { preloadReceiptImages } = await import("@/lib/receiptConfig");
       await preloadReceiptImages(options);
 
-      // 2. Build HTML (real)
       const html = await original.buildReceiptHTML(options);
-
-      // 3. Validate HTML has content
       const textContent = html
         .replace(/<style[\s\S]*?<\/style>/gi, " ")
         .replace(/<[^>]+>/g, " ")
@@ -53,15 +48,28 @@ vi.mock("@/lib/reportExport", async (importOriginal) => {
         throw new Error("O HTML do recibo foi gerado sem conteúdo visível.");
       }
 
-      // 4. Call mocked html2canvas
-      const { default: h2c } = await import("html2canvas");
-      const canvas = await h2c(document.body);
+      const host = document.createElement("div");
+      host.innerHTML = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? html;
+      document.body.appendChild(host);
 
-      // 5. Call mocked jsPDF
+      const sections = Array.from(host.querySelectorAll("[data-pdf-section]"));
+      if (!sections.length) {
+        throw new Error("O recibo não possui seções de exportação configuradas.");
+      }
+
+      const { default: h2c } = await import("html2canvas");
+      for (const section of sections) {
+        await h2c(section as HTMLElement);
+      }
+
       const { default: JsPDF } = await import("jspdf");
       const pdf = new JsPDF();
-      pdf.addImage("data:image/jpeg;base64,mock", "JPEG", 5, 5, 200, 287);
+      sections.forEach((_, index) => {
+        if (index > 0) pdf.addPage();
+        pdf.addImage("data:image/jpeg;base64,mock", "JPEG", 5, 5, 200, 40);
+      });
       const blob = pdf.output("blob") as unknown as Blob;
+      host.remove();
 
       const fileName = options.type === "venda"
         ? `recibo_venda_${options.id}.pdf`
@@ -69,21 +77,9 @@ vi.mock("@/lib/reportExport", async (importOriginal) => {
 
       return { blob, fileName, html };
     },
-    // Keep shareReceiptWhatsApp using the overridden generateReceiptPdfBlob
-    shareReceiptWhatsApp: async (options: any, phone?: string) => {
-      const { preloadReceiptImages } = await import("@/lib/receiptConfig");
-      await preloadReceiptImages(options);
-
-      const html = await original.buildReceiptHTML(options);
-
-      const { default: h2c } = await import("html2canvas");
-      await h2c(document.body);
-
-      const { default: JsPDF } = await import("jspdf");
-      const pdf = new JsPDF();
-      pdf.addImage("data:image/jpeg;base64,mock", "JPEG", 5, 5, 200, 287);
-      const blob = pdf.output("blob") as unknown as Blob;
-
+    shareReceiptWhatsApp: async (options: any) => {
+      const result = await original.generateReceiptPdfBlob?.(options);
+      const blob = result?.blob ?? new Blob([pdfBlobContent], { type: "application/pdf" });
       const fileName = options.type === "venda"
         ? `recibo_venda_${options.id}.pdf`
         : `recibo_pagamento_${options.id}.pdf`;
@@ -134,8 +130,10 @@ describe("receipt PDF pipeline", () => {
     expect(result.html).toContain("Empresa Teste");
     expect(result.html).toContain("Maria");
     expect(result.html).toContain("receipt-header");
+    expect(result.html).toContain("data-pdf-section=" );
     expect(html2canvasMock).toHaveBeenCalled();
     expect(addImageMock).toHaveBeenCalled();
+    expect(addPageMock).toHaveBeenCalled();
   });
 
   it("mantém a geração do PDF mesmo sem imagens de produto", async () => {
@@ -170,21 +168,14 @@ describe("receipt PDF pipeline", () => {
     const { buildReceiptHTML } = await import("@/lib/reportExport");
     const html = await buildReceiptHTML(baseOptions);
 
-    // Verificações de estrutura
     expect(html).toContain("<!DOCTYPE html>");
     expect(html).toContain("<style>");
     expect(html).toContain("receipt-header");
     expect(html).toContain("receipt-footer");
-
-    // Verificações de conteúdo
     expect(html).toContain("Empresa Teste");
     expect(html).toContain("Maria");
     expect(html).toContain("Produto A");
     expect(html).toContain("R$");
-
-    // Verificação de que o HTML não está vazio
-    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/);
-    expect(bodyMatch).toBeTruthy();
-    expect(bodyMatch![1].length).toBeGreaterThan(200);
+    expect((html.match(/data-pdf-section=/g) ?? []).length).toBeGreaterThan(6);
   });
 });

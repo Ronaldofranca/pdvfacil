@@ -204,7 +204,6 @@ describe("buildReceiptHTML", () => {
   });
 
   it("PDF generation does not produce empty content", async () => {
-    // This test verifies that buildReceiptHTML produces non-empty HTML
     const { buildReceiptHTML } = await import("@/lib/reportExport");
     const html = await buildReceiptHTML({
       type: "venda",
@@ -214,9 +213,10 @@ describe("buildReceiptHTML", () => {
       cliente: { nome: "Cliente", id: "id" },
       itens: [
         { nome: "Item 1", quantidade: 1, precoUnitario: 100, desconto: 0, subtotal: 100 },
+        { nome: "Item 2", quantidade: 1, precoUnitario: 50, desconto: 0, subtotal: 50 },
       ],
-      resumo: { subtotal: 100, descontos: 0, total: 100 },
-      pagamentos: [{ forma: "Dinheiro", valor: 100 }],
+      resumo: { subtotal: 150, descontos: 0, total: 150 },
+      pagamentos: [{ forma: "Dinheiro", valor: 150 }],
     });
 
     expect(html.length).toBeGreaterThan(500);
@@ -224,5 +224,6 @@ describe("buildReceiptHTML", () => {
     expect(html).toContain("Item 1");
     expect(html).toContain("R$");
     expect(html).toContain("receipt-header");
+    expect((html.match(/data-pdf-section=/g) ?? []).length).toBeGreaterThan(6);
   });
 });

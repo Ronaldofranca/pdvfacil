@@ -417,7 +417,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   const rodape = rc?.recibo_rodape ?? "Este recibo não tem valor fiscal.";
 
   const headerHtml = `
-    <div class="receipt-header">
+    <div class="receipt-header" data-pdf-section="header">
       <div class="brand">
         ${showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" crossorigin="anonymous" />` : ""}
         <div class="brand-info">
@@ -439,7 +439,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 
   // ─── Client Info ───
   const clienteHtml = showCliente ? `
-    <div class="section">
+    <div class="section" data-pdf-section="cliente">
       <div class="section-title">Dados do Cliente</div>
       <div class="info-grid">
         <div class="info-item full"><span class="label">Nome</span><span class="value">${escapeHtml(cliente.nome)}</span></div>
@@ -453,9 +453,9 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Items table ───
   const itensHtml = itens.length > 0 ? `
     <div class="section">
-      <div class="section-title">Itens da Venda</div>
+      <div class="section-title" data-pdf-section="itens-titulo">Itens da Venda</div>
       <table>
-        <thead>
+        <thead data-pdf-section="itens-cabecalho">
           <tr>
             <th style="width:45%">Produto</th>
             <th style="text-align:center;width:10%">Qtd</th>
@@ -465,8 +465,8 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
           </tr>
         </thead>
         <tbody>
-          ${itens.map((item) => `
-            <tr>
+          ${itens.map((item, index) => `
+            <tr data-pdf-section="item-${index + 1}">
               <td>
                 <div class="product-cell">
                   ${showImages ? (item.imagemUrl
@@ -489,7 +489,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Summary ───
   const summaryHtml = isVenda ? `
     <div class="section">
-      <div class="summary-box">
+      <div class="summary-box" data-pdf-section="resumo">
         <div class="summary-row"><span>Subtotal</span><span>${fmtR(resumo.subtotal)}</span></div>
         ${resumo.descontos > 0 ? `<div class="summary-row discount"><span>Descontos</span><span>-${fmtR(resumo.descontos)}</span></div>` : ""}
         <div class="summary-row total"><span>TOTAL</span><span>${fmtR(resumo.total)}</span></div>
@@ -500,9 +500,9 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Payments ───
   const pagamentosHtml = showFormaPagamento && pagamentos.length > 0 ? `
     <div class="section">
-      <div class="section-title">${isVenda ? "Formas de Pagamento" : "Pagamentos Realizados"}</div>
-      ${pagamentos.map((p) => `
-        <div class="payment-card">
+      <div class="section-title" data-pdf-section="pagamentos-titulo">${isVenda ? "Formas de Pagamento" : "Pagamentos Realizados"}</div>
+      ${pagamentos.map((p, index) => `
+        <div class="payment-card" data-pdf-section="pagamento-${index + 1}">
           <div>
             <div class="forma">${escapeHtml(p.forma)}</div>
             ${p.data ? `<div class="data">${escapeHtml(p.data)}</div>` : ""}
@@ -516,9 +516,9 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Parcelas (crediário) ───
   const parcelasHtml = showParcelas && parcelas && parcelas.length > 0 ? `
     <div class="section">
-      <div class="section-title">Parcelas do Crediário</div>
+      <div class="section-title" data-pdf-section="parcelas-titulo">Parcelas do Crediário</div>
       <table>
-        <thead>
+        <thead data-pdf-section="parcelas-cabecalho">
           <tr>
             <th>Parcela</th>
             <th style="text-align:right">Valor</th>
@@ -528,7 +528,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
         </thead>
         <tbody>
           ${parcelas.map((p, i) => `
-            <tr>
+            <tr data-pdf-section="parcela-${i + 1}">
               <td style="font-weight:600">${p.numero}/${parcelas.length}</td>
               <td style="text-align:right;font-weight:600">${fmtR(p.valor)}</td>
               <td>${escapeHtml(p.vencimento)}</td>
@@ -544,7 +544,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 
   // ─── Parcela Info (payment receipt) ───
   const parcelaInfoHtml = parcelaInfo ? `
-    <div class="section">
+    <div class="section" data-pdf-section="parcela-detalhes">
       <div class="section-title">Detalhes da Parcela</div>
       <div class="info-grid">
         <div class="info-item"><span class="label">Parcela</span><span class="value">${parcelaInfo.numero}ª</span></div>
@@ -554,7 +554,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
       </div>
     </div>
     <div class="section">
-      <div class="finance-cards">
+      <div class="finance-cards" data-pdf-section="parcela-financeiro">
         <div class="finance-card anterior">
           <div class="fc-label">Valor Original</div>
           <div class="fc-value">${fmtR(parcelaInfo.valorTotal)}</div>
@@ -578,9 +578,9 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── Remaining parcelas ───
   const restantesHtml = parcelasRestantes && parcelasRestantes.length > 0 ? `
     <div class="section">
-      <div class="section-title">Parcelas Restantes</div>
+      <div class="section-title" data-pdf-section="restantes-titulo">Parcelas Restantes</div>
       <table>
-        <thead>
+        <thead data-pdf-section="restantes-cabecalho">
           <tr>
             <th>Parcela</th>
             <th style="text-align:right">Valor</th>
@@ -589,8 +589,8 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
           </tr>
         </thead>
         <tbody>
-          ${parcelasRestantes.map((p) => `
-            <tr>
+          ${parcelasRestantes.map((p, index) => `
+            <tr data-pdf-section="restante-${index + 1}">
               <td style="font-weight:600">${p.numero}ª</td>
               <td style="text-align:right;font-weight:600">${fmtR(p.valor)}</td>
               <td>${escapeHtml(p.vencimento)}</td>
@@ -607,7 +607,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
   // ─── PIX Section ───
   const pixHtml = pixQrDataUrl && pix ? `
     <div class="section">
-      <div class="pix-section">
+      <div class="pix-section" data-pdf-section="pix">
         <h4>💳 Pagamento via PIX</h4>
         <img src="${pixQrDataUrl}" width="180" height="180" alt="QR Code PIX" />
         <div>
@@ -622,7 +622,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 
   // ─── Footer ───
   const footerHtml = `
-    <div class="receipt-footer">
+    <div class="receipt-footer" data-pdf-section="footer">
       ${mensagemFinal ? `<div class="thanks">${escapeHtml(mensagemFinal)}</div>` : ""}
       <div class="contact">Em caso de dúvidas, entre em contato.</div>
       ${showTelefone && empresaInfo?.telefone ? `<div class="contact">📱 WhatsApp: ${escapeHtml(empresaInfo.telefone)}</div>` : ""}
@@ -660,6 +660,7 @@ export async function buildReceiptHTML(options: ReceiptPDFOptions): Promise<stri
 const RECEIPT_RENDER_WIDTH_PX = 794;
 const RECEIPT_RENDER_MIN_HEIGHT_PX = 1123;
 const RECEIPT_PDF_MARGIN_MM = 5;
+const RECEIPT_PDF_SECTION_GAP_MM = 4;
 const RECEIPT_MIN_VALID_PDF_BYTES = 1500;
 
 function buildReceiptFileName(options: ReceiptPDFOptions) {
@@ -800,8 +801,9 @@ async function assertValidPdfBlob(blob: Blob, expectedText: string) {
   }
 }
 
-async function renderReceiptHtmlToCanvas(html: string, expectedText: string) {
+async function renderReceiptSectionsToPdf(html: string, expectedText: string) {
   const { default: html2canvas } = await import("html2canvas");
+  const { default: JsPDF } = await import("jspdf");
   const { frame, cleanup } = createReceiptFrame(html);
 
   try {
@@ -822,91 +824,138 @@ async function renderReceiptHtmlToCanvas(html: string, expectedText: string) {
       throw new Error("O recibo não terminou de renderizar antes da exportação.");
     }
 
-    const width = Math.max(RECEIPT_RENDER_WIDTH_PX, body.scrollWidth, doc.documentElement.scrollWidth);
-    const height = Math.max(RECEIPT_RENDER_MIN_HEIGHT_PX, body.scrollHeight, doc.documentElement.scrollHeight);
+    const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+    const pageWidthMm = pdf.internal.pageSize.getWidth();
+    const pageHeightMm = pdf.internal.pageSize.getHeight();
+    const contentWidthMm = pageWidthMm - RECEIPT_PDF_MARGIN_MM * 2;
+    const maxContentHeightMm = pageHeightMm - RECEIPT_PDF_MARGIN_MM * 2;
+    const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
 
-    console.info("[Receipt] Rendering HTML to canvas", {
-      width,
-      height,
-      images: doc.images.length,
-      textLength: textContent.length,
-    });
-
-    const canvas = await html2canvas(body, {
-      backgroundColor: "#ffffff",
-      scale: Math.max(2, Math.min(3, window.devicePixelRatio || 2)),
-      useCORS: true,
-      allowTaint: false,
-      logging: false,
-      width,
-      height,
-      windowWidth: width,
-      windowHeight: height,
-      scrollX: 0,
-      scrollY: 0,
-    });
-
-    if (!canvas.width || !canvas.height) {
-      throw new Error("A captura do recibo resultou em uma área vazia.");
+    const sections = Array.from(body.querySelectorAll("[data-pdf-section]")) as HTMLElement[];
+    if (!sections.length) {
+      throw new Error("O recibo não possui seções de exportação configuradas.");
     }
 
-    return canvas;
+    let currentY = RECEIPT_PDF_MARGIN_MM;
+    let pageIndex = 0;
+    let renderedSections = 0;
+
+    console.info("[Receipt] Rendering receipt sections", {
+      sectionCount: sections.length,
+      textLength: textContent.length,
+      images: doc.images.length,
+    });
+
+    for (const section of sections) {
+      const rect = section.getBoundingClientRect();
+      const widthPx = Math.max(rect.width, section.scrollWidth, RECEIPT_RENDER_WIDTH_PX);
+      const heightPx = Math.max(rect.height, section.scrollHeight, 1);
+
+      const canvas = await html2canvas(section, {
+        backgroundColor: "#ffffff",
+        scale,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        width: Math.ceil(widthPx),
+        height: Math.ceil(heightPx),
+        windowWidth: Math.ceil(Math.max(doc.documentElement.scrollWidth, RECEIPT_RENDER_WIDTH_PX)),
+        windowHeight: Math.ceil(Math.max(doc.documentElement.scrollHeight, section.scrollHeight, RECEIPT_RENDER_MIN_HEIGHT_PX)),
+        scrollX: 0,
+        scrollY: 0,
+      });
+
+      if (!canvas.width || !canvas.height) {
+        continue;
+      }
+
+      const sectionHeightMm = (canvas.height * contentWidthMm) / canvas.width;
+      const remainingHeightMm = pageHeightMm - RECEIPT_PDF_MARGIN_MM - currentY;
+
+      if (sectionHeightMm > remainingHeightMm && currentY > RECEIPT_PDF_MARGIN_MM) {
+        pdf.addPage();
+        pageIndex += 1;
+        currentY = RECEIPT_PDF_MARGIN_MM;
+      }
+
+      if (sectionHeightMm <= maxContentHeightMm) {
+        pdf.addImage(
+          canvas.toDataURL("image/jpeg", 0.98),
+          "JPEG",
+          RECEIPT_PDF_MARGIN_MM,
+          currentY,
+          contentWidthMm,
+          sectionHeightMm,
+          undefined,
+          "FAST"
+        );
+        currentY += sectionHeightMm + RECEIPT_PDF_SECTION_GAP_MM;
+        renderedSections += 1;
+        continue;
+      }
+
+      const pxPerMm = canvas.width / contentWidthMm;
+      const sliceHeightPx = Math.max(1, Math.floor(maxContentHeightMm * pxPerMm));
+      let renderedHeightPx = 0;
+
+      while (renderedHeightPx < canvas.height) {
+        const currentSliceHeightPx = Math.min(sliceHeightPx, canvas.height - renderedHeightPx);
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = currentSliceHeightPx;
+
+        const ctx = pageCanvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("Falha ao preparar uma página do PDF do recibo.");
+        }
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(canvas, 0, renderedHeightPx, canvas.width, currentSliceHeightPx, 0, 0, canvas.width, currentSliceHeightPx);
+
+        const pageHeightRenderMm = currentSliceHeightPx / pxPerMm;
+        pdf.addImage(
+          pageCanvas.toDataURL("image/jpeg", 0.98),
+          "JPEG",
+          RECEIPT_PDF_MARGIN_MM,
+          currentY,
+          contentWidthMm,
+          pageHeightRenderMm,
+          undefined,
+          "FAST"
+        );
+
+        renderedHeightPx += currentSliceHeightPx;
+        renderedSections += 1;
+
+        if (renderedHeightPx < canvas.height) {
+          pdf.addPage();
+          pageIndex += 1;
+          currentY = RECEIPT_PDF_MARGIN_MM;
+        } else {
+          currentY += pageHeightRenderMm + RECEIPT_PDF_SECTION_GAP_MM;
+        }
+      }
+    }
+
+    if (!renderedSections) {
+      throw new Error("A captura do recibo resultou em seções vazias.");
+    }
+
+    const blob = pdf.output("blob");
+
+    console.info("[Receipt] PDF sections rendered successfully", {
+      renderedSections,
+      pages: pageIndex + 1,
+      size: blob.size,
+    });
+
+    return blob;
   } finally {
     cleanup();
   }
 }
 
-async function canvasToPdfBlob(canvas: HTMLCanvasElement) {
-  const { default: JsPDF } = await import("jspdf");
-  const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
-
-  const pageWidthMm = pdf.internal.pageSize.getWidth() - RECEIPT_PDF_MARGIN_MM * 2;
-  const pageHeightMm = pdf.internal.pageSize.getHeight() - RECEIPT_PDF_MARGIN_MM * 2;
-  const pxPerMm = canvas.width / pageWidthMm;
-  const pageHeightPx = Math.max(1, Math.floor(pageHeightMm * pxPerMm));
-
-  let renderedHeightPx = 0;
-  let pageIndex = 0;
-
-  while (renderedHeightPx < canvas.height) {
-    const sliceHeightPx = Math.min(pageHeightPx, canvas.height - renderedHeightPx);
-    const pageCanvas = document.createElement("canvas");
-    pageCanvas.width = canvas.width;
-    pageCanvas.height = sliceHeightPx;
-
-    const ctx = pageCanvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("Falha ao preparar uma página do PDF do recibo.");
-    }
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-    ctx.drawImage(canvas, 0, renderedHeightPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
-
-    const pageImage = pageCanvas.toDataURL("image/jpeg", 0.98);
-    const pageHeightRenderMm = sliceHeightPx / pxPerMm;
-
-    if (pageIndex > 0) {
-      pdf.addPage();
-    }
-
-    pdf.addImage(
-      pageImage,
-      "JPEG",
-      RECEIPT_PDF_MARGIN_MM,
-      RECEIPT_PDF_MARGIN_MM,
-      pageWidthMm,
-      pageHeightRenderMm,
-      undefined,
-      "FAST"
-    );
-
-    renderedHeightPx += sliceHeightPx;
-    pageIndex += 1;
-  }
-
-  return pdf.output("blob");
-}
 
 async function prepareReceiptDocument(options: ReceiptPDFOptions) {
   const { preloadReceiptImages } = await import("@/lib/receiptConfig");
@@ -929,16 +978,14 @@ async function prepareReceiptDocument(options: ReceiptPDFOptions) {
 
 export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
   const prepared = await prepareReceiptDocument(options);
-  const canvas = await renderReceiptHtmlToCanvas(prepared.html, prepared.textContent);
-  const blob = await canvasToPdfBlob(canvas);
+  const blob = await renderReceiptSectionsToPdf(prepared.html, prepared.textContent);
 
   await assertValidPdfBlob(blob, prepared.textContent);
 
   console.info("[Receipt] PDF generated successfully", {
     fileName: prepared.fileName,
     size: blob.size,
-    canvasWidth: canvas.width,
-    canvasHeight: canvas.height,
+    strategy: "section-based",
   });
 
   return {
