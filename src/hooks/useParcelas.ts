@@ -3,9 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { invalidateDashboardQueries } from "@/hooks/useVendas";
 
-export function useParcelas(filters?: { vendaId?: string; clienteId?: string; status?: string }) {
+export function useParcelas(
+  filters?: { vendaId?: string; clienteId?: string; status?: string },
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: ["parcelas", filters],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       let q = supabase
         .from("parcelas")

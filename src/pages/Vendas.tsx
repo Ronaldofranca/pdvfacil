@@ -1,20 +1,24 @@
 import { useState } from "react";
-import { ShoppingCart, Search, Plus, Eye, XCircle, Receipt } from "lucide-react";
+import { ShoppingCart, Search, Plus, Eye, XCircle, Receipt, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useVendas, useVendaItens, useCancelarVenda, useVendaParcelas } from "@/hooks/useVendas";
+import { useParcelas } from "@/hooks/useParcelas";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { ReciboVenda } from "@/components/vendas/ReciboVenda";
+import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -26,6 +30,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
 };
 
 export default function VendasPage() {
+  const isMobile = useIsMobile();
   const { canCreateVenda, isAdmin } = usePermissions();
   const { user } = useAuth();
   const { data: vendas, isLoading } = useVendas();
@@ -35,7 +40,13 @@ export default function VendasPage() {
   const [search, setSearch] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [reciboVenda, setReciboVenda] = useState<any>(null);
+  const [mobileActionVendaId, setMobileActionVendaId] = useState<string | null>(null);
+  const [pagamentoState, setPagamentoState] = useState<{ open: boolean; data?: any }>({ open: false });
   const { data: itensDetail } = useVendaItens(detailId);
+  const { data: mobileVendaParcelas } = useParcelas(
+    { vendaId: mobileActionVendaId ?? undefined },
+    { enabled: !!mobileActionVendaId },
+  );
 
   // Cancellation dialog
   const [cancelDialogVendaId, setCancelDialogVendaId] = useState<string | null>(null);
@@ -45,7 +56,10 @@ export default function VendasPage() {
   const parcelasComPagamento = cancelParcelas?.filter((p) => Number(p.valor_pago) > 0) ?? [];
   const valorJaPago = parcelasComPagamento.reduce((s, p) => s + Number(p.valor_pago), 0);
 
-  const vendaDetail = vendas?.find((v) => v.id === detailId);
+  const vendaDetail = vendas?.find((v) => v.id === detailId) ?? null;
+  const vendaAcoes = vendas?.find((v) => v.id === mobileActionVendaId) ?? null;
+  const parcelaAbertaVenda =
+    mobileVendaParcelas?.find((p) => ["pendente", "parcial", "vencida"].includes(String((p as any).status))) ?? null;
 
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -55,12 +69,24 @@ export default function VendasPage() {
     v.id.includes(search)
   );
 
+  const visibleColumnCount = isMobile ? 4 : 6;
+
   const handleConfirmCancel = () => {
     if (!cancelDialogVendaId || !user) return;
     cancelar.mutate(
       { vendaId: cancelDialogVendaId, motivo: cancelMotivo, userId: user.id },
-      { onSuccess: () => { setCancelDialogVendaId(null); setCancelMotivo(""); } }
+      {
+        onSuccess: () => {
+          setCancelDialogVendaId(null);
+          setCancelMotivo("");
+        },
+      },
     );
+  };
+
+  const openMobileActions = (vendaId: string) => {
+    if (!isMobile) return;
+    setMobileActionVendaId(vendaId);
   };
 
   return (
@@ -84,51 +110,117 @@ export default function VendasPage() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar por cliente ou ID..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input
+          className="pl-9"
+          placeholder="Buscar por cliente ou ID..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
+
+      {isMobile && (
+        <p className="px-1 text-xs text-muted-foreground">
+          Toque em uma venda para abrir ações rápidas sem precisar arrastar a tabela.
+        </p>
+      )}
 
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
+              {!isMobile && <TableHead>ID</TableHead>}
               <TableHead>Cliente</TableHead>
               <TableHead>Data</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-32" />
+              {!isMobile && <TableHead className="w-32">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={visibleColumnCount} className="py-8 text-center text-muted-foreground">
+                  Carregando...
+                </TableCell>
+              </TableRow>
             ) : !filtered?.length ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma venda encontrada</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={visibleColumnCount} className="py-8 text-center text-muted-foreground">
+                  Nenhuma venda encontrada
+                </TableCell>
+              </TableRow>
             ) : (
               filtered.map((v) => {
                 const st = STATUS_MAP[v.status] ?? STATUS_MAP.rascunho;
+                const saleIdLabel = v.id.slice(0, 8);
+
                 return (
-                  <TableRow key={v.id}>
-                    <TableCell className="font-mono text-xs">{v.id.slice(0, 8)}</TableCell>
-                    <TableCell className="font-medium">{(v as any).clientes?.nome ?? "—"}</TableCell>
+                  <TableRow
+                    key={v.id}
+                    className={isMobile ? "cursor-pointer active:bg-muted/80" : undefined}
+                    onClick={isMobile ? () => openMobileActions(v.id) : undefined}
+                    onKeyDown={
+                      isMobile
+                        ? (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              openMobileActions(v.id);
+                            }
+                          }
+                        : undefined
+                    }
+                    role={isMobile ? "button" : undefined}
+                    tabIndex={isMobile ? 0 : undefined}
+                    aria-label={isMobile ? `Abrir ações da venda ${saleIdLabel}` : undefined}
+                  >
+                    {!isMobile && <TableCell className="font-mono text-xs">{saleIdLabel}</TableCell>}
+                    <TableCell className="font-medium">
+                      <div className="min-w-0">
+                        <p className="truncate">{(v as any).clientes?.nome ?? "—"}</p>
+                        {isMobile && <p className="text-xs text-muted-foreground">#{saleIdLabel}</p>}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(v.data_venda), "dd/MM/yy HH:mm", { locale: ptBR })}
                     </TableCell>
                     <TableCell className="text-right font-semibold">{fmt(Number(v.total))}</TableCell>
-                    <TableCell><Badge variant={st.variant}>{st.label}</Badge></TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setDetailId(v.id)}><Eye className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => setReciboVenda(v)} title="Recibo">
-                          <Receipt className="w-4 h-4" />
-                        </Button>
-                        {isAdmin && v.status === "finalizada" && (
-                          <Button variant="ghost" size="icon" onClick={() => setCancelDialogVendaId(v.id)} title="Cancelar venda">
-                            <XCircle className="w-4 h-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
+                      <Badge variant={st.variant}>{st.label}</Badge>
                     </TableCell>
+                    {!isMobile && (
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Ver venda ${saleIdLabel}`}
+                            onClick={() => setDetailId(v.id)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Gerar recibo da venda ${saleIdLabel}`}
+                            onClick={() => setReciboVenda(v)}
+                            title="Recibo"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </Button>
+                          {isAdmin && v.status === "finalizada" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Retornar venda ${saleIdLabel}`}
+                              onClick={() => setCancelDialogVendaId(v.id)}
+                              title="Cancelar venda"
+                            >
+                              <XCircle className="w-4 h-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })
@@ -137,8 +229,105 @@ export default function VendasPage() {
         </Table>
       </Card>
 
+      <Drawer open={isMobile && !!mobileActionVendaId} onOpenChange={(open) => !open && setMobileActionVendaId(null)}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle>Ações da venda</DrawerTitle>
+          </DrawerHeader>
+          {vendaAcoes && (
+            <div className="space-y-4 overflow-y-auto px-4 pb-5">
+              <Card className="p-4">
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-foreground">{(vendaAcoes as any).clientes?.nome ?? "Cliente não informado"}</p>
+                      <p className="text-xs text-muted-foreground">Venda #{vendaAcoes.id.slice(0, 8)}</p>
+                    </div>
+                    <Badge variant={STATUS_MAP[vendaAcoes.status]?.variant ?? "outline"}>
+                      {STATUS_MAP[vendaAcoes.status]?.label ?? vendaAcoes.status}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                    <div>
+                      <p>Data</p>
+                      <p className="font-medium text-foreground">
+                        {format(new Date(vendaAcoes.data_venda), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <div>
+                      <p>Total</p>
+                      <p className="font-semibold text-foreground">{fmt(Number(vendaAcoes.total))}</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="space-y-2">
+                <Button
+                  className="w-full justify-start gap-2"
+                  variant="outline"
+                  onClick={() => {
+                    setMobileActionVendaId(null);
+                    setDetailId(vendaAcoes.id);
+                  }}
+                >
+                  <Eye className="w-4 h-4" /> Ver venda
+                </Button>
+
+                {parcelaAbertaVenda ? (
+                  <Button
+                    className="w-full justify-start gap-2"
+                    variant="outline"
+                    onClick={() => {
+                      setMobileActionVendaId(null);
+                      setPagamentoState({ open: true, data: parcelaAbertaVenda });
+                    }}
+                  >
+                    <CreditCard className="w-4 h-4" /> Pagar venda
+                  </Button>
+                ) : (
+                  <Button className="w-full justify-start gap-2" variant="outline" disabled>
+                    <CreditCard className="w-4 h-4" /> Venda quitada
+                  </Button>
+                )}
+
+                <Button
+                  className="w-full justify-start gap-2"
+                  variant="outline"
+                  onClick={() => {
+                    setMobileActionVendaId(null);
+                    setReciboVenda(vendaAcoes);
+                  }}
+                >
+                  <Receipt className="w-4 h-4" /> Gerar recibo
+                </Button>
+
+                {isAdmin && vendaAcoes.status === "finalizada" && (
+                  <Button
+                    className="w-full justify-start gap-2"
+                    variant="destructive"
+                    onClick={() => {
+                      setMobileActionVendaId(null);
+                      setCancelDialogVendaId(vendaAcoes.id);
+                    }}
+                  >
+                    <XCircle className="w-4 h-4" /> Retornar venda
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DrawerContent>
+      </Drawer>
+
       {/* PDV */}
       <PDVModal open={pdvOpen} onOpenChange={setPdvOpen} />
+
+      <PagamentoForm
+        open={pagamentoState.open}
+        onOpenChange={(open) => setPagamentoState((prev) => ({ ...prev, open }))}
+        parcela={pagamentoState.data}
+      />
 
       {/* Recibo de Venda */}
       <ReciboVenda
@@ -148,7 +337,15 @@ export default function VendasPage() {
       />
 
       {/* Cancellation confirmation dialog */}
-      <Dialog open={!!cancelDialogVendaId} onOpenChange={(o) => { if (!o) { setCancelDialogVendaId(null); setCancelMotivo(""); } }}>
+      <Dialog
+        open={!!cancelDialogVendaId}
+        onOpenChange={(o) => {
+          if (!o) {
+            setCancelDialogVendaId(null);
+            setCancelMotivo("");
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-destructive">Cancelar Venda</DialogTitle>
@@ -159,15 +356,13 @@ export default function VendasPage() {
               O histórico será preservado.
             </p>
             {parcelasComPagamento.length > 0 && (
-              <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg text-sm space-y-1">
-                <p className="font-semibold text-destructive flex items-center gap-1.5">
-                  ⚠️ Atenção: Pagamentos Existentes
-                </p>
+              <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm space-y-1">
+                <p className="flex items-center gap-1.5 font-semibold text-destructive">⚠️ Atenção: Pagamentos Existentes</p>
                 <p className="text-muted-foreground">
                   Esta venda possui {parcelasComPagamento.length} parcela(s) com pagamentos já registrados
                   totalizando <span className="font-semibold text-foreground">{fmt(valorJaPago)}</span>.
                 </p>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   Os pagamentos serão mantidos no histórico. Parcelas serão marcadas como canceladas com registro do estorno.
                 </p>
               </div>
@@ -183,7 +378,9 @@ export default function VendasPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setCancelDialogVendaId(null); setCancelMotivo(""); }}>Voltar</Button>
+            <Button variant="outline" onClick={() => { setCancelDialogVendaId(null); setCancelMotivo(""); }}>
+              Voltar
+            </Button>
             <Button
               variant="destructive"
               disabled={!cancelMotivo.trim() || cancelar.isPending}
@@ -197,7 +394,7 @@ export default function VendasPage() {
 
       {/* Detalhes da venda */}
       <Sheet open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>Detalhes da Venda</SheetTitle>
           </SheetHeader>
@@ -210,7 +407,7 @@ export default function VendasPage() {
                 <div><span className="text-muted-foreground">Data:</span> {format(new Date(vendaDetail.data_venda), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
               </div>
               {vendaDetail.status === "cancelada" && (vendaDetail as any).motivo_cancelamento && (
-                <div className="bg-destructive/10 p-3 rounded-lg text-sm space-y-1">
+                <div className="space-y-1 rounded-lg bg-destructive/10 p-3 text-sm">
                   <p className="font-semibold text-destructive">Venda Cancelada</p>
                   <p className="text-muted-foreground">Motivo: {(vendaDetail as any).motivo_cancelamento}</p>
                   {(vendaDetail as any).cancelado_em && (
@@ -224,7 +421,7 @@ export default function VendasPage() {
               <div className="space-y-2">
                 <p className="text-sm font-semibold">Itens</p>
                 {itensDetail?.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm p-2 rounded border">
+                  <div key={item.id} className="flex justify-between rounded border p-2 text-sm">
                     <div>
                       <p className="font-medium">{item.nome_produto}</p>
                       <p className="text-xs text-muted-foreground">
@@ -243,7 +440,7 @@ export default function VendasPage() {
                 {Number(vendaDetail.desconto_total) > 0 && (
                   <div className="flex justify-between text-destructive"><span>Descontos</span><span>-{fmt(Number(vendaDetail.desconto_total))}</span></div>
                 )}
-                <div className="flex justify-between font-bold text-lg"><span>Total</span><span className="text-primary">{fmt(Number(vendaDetail.total))}</span></div>
+                <div className="flex justify-between text-lg font-bold"><span>Total</span><span className="text-primary">{fmt(Number(vendaDetail.total))}</span></div>
               </div>
               {vendaDetail.pagamentos && Array.isArray(vendaDetail.pagamentos) && (vendaDetail.pagamentos as any[]).length > 0 && (
                 <>
@@ -266,9 +463,15 @@ export default function VendasPage() {
                 </>
               )}
 
-              {/* Quick receipt button in detail view */}
               <Separator />
-              <Button variant="outline" className="w-full gap-1.5" onClick={() => { setDetailId(null); setReciboVenda(vendaDetail); }}>
+              <Button
+                variant="outline"
+                className="w-full gap-1.5"
+                onClick={() => {
+                  setDetailId(null);
+                  setReciboVenda(vendaDetail);
+                }}
+              >
                 <Receipt className="w-4 h-4" /> Gerar Recibo
               </Button>
             </div>
