@@ -804,8 +804,7 @@ async function assertValidPdfBlob(blob: Blob, expectedText: string) {
 }
 
 async function renderReceiptSectionsToPdf(html: string, expectedText: string) {
-  const { default: html2canvas } = await import("html2canvas");
-  const { default: JsPDF } = await import("jspdf");
+  // html2canvas and JsPDF are now statically imported at the top
   const { frame, cleanup } = createReceiptFrame(html);
 
   try {
