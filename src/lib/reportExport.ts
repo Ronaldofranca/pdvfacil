@@ -1133,20 +1133,6 @@ export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
   };
 }
 
-  await assertValidPdfBlob(blob, prepared.textContent);
-
-  console.info("[Receipt] PDF generated successfully", {
-    fileName: prepared.fileName,
-    size: blob.size,
-    strategy: "section-based",
-  });
-
-  return {
-    blob,
-    fileName: prepared.fileName,
-    html: prepared.html,
-  };
-}
 
 export async function printReceipt(options: ReceiptPDFOptions) {
   const { html } = await prepareReceiptDocument(options);
