@@ -62,13 +62,13 @@ export function PedidosReposicaoTab() {
       .single();
     const { data: itens } = await (await import("@/integrations/supabase/client")).supabase
       .from("itens_pedido_reposicao" as any)
-      .select("*, produtos(nome, codigo, unidade)")
+      .select("*, produtos(nome, codigo, unidade, imagem_url)")
       .eq("pedido_reposicao_id", pedido.id);
 
     if (data) {
       const pedidoData = data as any;
       pedidoData.itens_pedido_reposicao = itens;
-      gerarPdfReposicao(pedidoData as PedidoReposicao, empresaNome);
+      await gerarPdfReposicao(pedidoData as PedidoReposicao, empresaNome);
     }
   };
 
