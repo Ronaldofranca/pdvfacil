@@ -66,7 +66,9 @@ export function PedidosReposicaoTab() {
       .eq("pedido_reposicao_id", pedido.id);
 
     if (data) {
-      gerarPdfReposicao({ ...data, itens_pedido_reposicao: itens } as unknown as PedidoReposicao, empresaNome);
+      const pedidoData = data as any;
+      pedidoData.itens_pedido_reposicao = itens;
+      gerarPdfReposicao(pedidoData as PedidoReposicao, empresaNome);
     }
   };
 

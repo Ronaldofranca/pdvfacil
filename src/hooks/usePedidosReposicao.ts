@@ -66,7 +66,9 @@ export function usePedidoReposicaoDetalhes(pedidoId: string | null) {
         .eq("pedido_reposicao_id", pedidoId!);
       if (ie) throw ie;
 
-      return { ...pedido, itens_pedido_reposicao: itens } as unknown as PedidoReposicao;
+      const result = pedido as any;
+      result.itens_pedido_reposicao = itens;
+      return result as PedidoReposicao;
     },
   });
 }
