@@ -12,6 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { usePedidos, usePedidoItens, useAtualizarStatusPedido, type StatusPedido } from "@/hooks/usePedidos";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { PedidoForm } from "@/components/pedidos/PedidoForm";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileRowActions, mobileRowProps } from "@/components/layout/MobileRowActions";
 import { useFinalizarVenda, type CartItem } from "@/hooks/useVendas";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -29,6 +31,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
 
 export default function PedidosPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { profile, user } = useAuth();
   const atualizarStatus = useAtualizarStatusPedido();
 
@@ -37,6 +40,7 @@ export default function PedidosPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [pdvState, setPdvState] = useState<{ open: boolean; cart?: CartItem[]; clienteId?: string; pedidoId?: string }>({ open: false });
+  const [mobileItem, setMobileItem] = useState<any | null>(null);
 
   const filtros = statusFilter !== "todos" ? { status: statusFilter as StatusPedido } : undefined;
   const { data: pedidos, isLoading } = usePedidos(filtros);
@@ -79,12 +83,7 @@ export default function PedidosPage() {
     setDetailId(null);
   };
 
-  // After PDV sale is finalized, mark pedido as converted
   const handlePdvClose = (open: boolean) => {
-    if (!open && pdvState.pedidoId) {
-      // Check if the PDV was just closed without completing - we can't easily detect this
-      // The conversion status update happens via onSuccess in the PDV
-    }
     setPdvState({ open });
   };
 
@@ -133,60 +132,133 @@ export default function PedidosPage() {
         </Select>
       </div>
 
+      {isMobile && (
+        <p className="px-1 text-xs text-muted-foreground">
+          Toque em um pedido para abrir ações rápidas.
+        </p>
+      )}
+
       {/* Tabela */}
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
+              {!isMobile && <TableHead>ID</TableHead>}
               <TableHead>Cliente</TableHead>
-              <TableHead>Entrega Prevista</TableHead>
+              <TableHead>Entrega</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-32" />
+              {!isMobile && <TableHead className="w-32" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={isMobile ? 4 : 6} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
             ) : !filtered?.length ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum pedido encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={isMobile ? 4 : 6} className="text-center text-muted-foreground py-8">Nenhum pedido encontrado</TableCell></TableRow>
             ) : (
               filtered.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-xs">{p.id.slice(0, 8)}</TableCell>
-                  <TableCell className="font-medium">{p.clientes?.nome ?? "—"}</TableCell>
+                <TableRow
+                  key={p.id}
+                  {...mobileRowProps(isMobile, () => setMobileItem(p), `Abrir ações do pedido ${p.id.slice(0, 8)}`)}
+                >
+                  {!isMobile && <TableCell className="font-mono text-xs">{p.id.slice(0, 8)}</TableCell>}
+                  <TableCell className="font-medium">
+                    <div className="min-w-0">
+                      <p className="truncate">{p.clientes?.nome ?? "—"}</p>
+                      {isMobile && <p className="text-xs text-muted-foreground">#{p.id.slice(0, 8)}</p>}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm">{format(new Date(p.data_prevista_entrega + "T12:00:00"), "dd/MM/yyyy")}</span>
+                      <span className="text-sm">{format(new Date(p.data_prevista_entrega + "T12:00:00"), "dd/MM/yy")}</span>
                       {["rascunho", "aguardando_entrega", "em_rota"].includes(p.status) && getEntregaBadge(p.data_prevista_entrega)}
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-semibold">{fmtR(Number(p.valor_total))}</TableCell>
                   <TableCell>{getStatusBadge(p.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setDetailId(p.id)} title="Ver detalhes">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {p.status === "rascunho" && (
-                        <Button variant="ghost" size="icon" onClick={() => atualizarStatus.mutate({ id: p.id, status: "aguardando_entrega" })} title="Confirmar">
-                          <CheckCircle className="w-4 h-4 text-primary" />
+                  {!isMobile && (
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setDetailId(p.id)} title="Ver detalhes">
+                          <Eye className="w-4 h-4" />
                         </Button>
-                      )}
-                      {p.status === "aguardando_entrega" && (
-                        <Button variant="ghost" size="icon" onClick={() => atualizarStatus.mutate({ id: p.id, status: "em_rota" })} title="Em rota">
-                          <Truck className="w-4 h-4 text-blue-600" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+                        {p.status === "rascunho" && (
+                          <Button variant="ghost" size="icon" onClick={() => atualizarStatus.mutate({ id: p.id, status: "aguardando_entrega" })} title="Confirmar">
+                            <CheckCircle className="w-4 h-4 text-primary" />
+                          </Button>
+                        )}
+                        {p.status === "aguardando_entrega" && (
+                          <Button variant="ghost" size="icon" onClick={() => atualizarStatus.mutate({ id: p.id, status: "em_rota" })} title="Em rota">
+                            <Truck className="w-4 h-4 text-blue-600" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </Card>
+
+      {/* Mobile pedido actions drawer */}
+      <MobileRowActions
+        open={isMobile && !!mobileItem}
+        onOpenChange={(open) => !open && setMobileItem(null)}
+        title="Ações do pedido"
+        summary={mobileItem && (
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-foreground">{mobileItem.clientes?.nome ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">Pedido #{mobileItem.id.slice(0, 8)}</p>
+              </div>
+              {getStatusBadge(mobileItem.status)}
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+              <div>
+                <p>Entrega</p>
+                <p className="font-medium text-foreground">{format(new Date(mobileItem.data_prevista_entrega + "T12:00:00"), "dd/MM/yyyy")}</p>
+              </div>
+              <div>
+                <p>Total</p>
+                <p className="font-semibold text-foreground">{fmtR(Number(mobileItem.valor_total))}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      >
+        <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileItem(null); setDetailId(mobileItem.id); }}>
+          <Eye className="w-4 h-4" /> Ver detalhes
+        </Button>
+        {mobileItem?.status === "rascunho" && (
+          <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileItem(null); atualizarStatus.mutate({ id: mobileItem.id, status: "aguardando_entrega" }); }}>
+            <CheckCircle className="w-4 h-4 text-primary" /> Confirmar pedido
+          </Button>
+        )}
+        {mobileItem?.status === "aguardando_entrega" && (
+          <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileItem(null); atualizarStatus.mutate({ id: mobileItem.id, status: "em_rota" }); }}>
+            <Truck className="w-4 h-4 text-blue-600" /> Marcar em rota
+          </Button>
+        )}
+        {(mobileItem?.status === "em_rota" || mobileItem?.status === "aguardando_entrega") && (
+          <>
+            <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileItem(null); atualizarStatus.mutate({ id: mobileItem.id, status: "entregue" }); }}>
+              <CheckCircle className="w-4 h-4" /> Marcar entregue
+            </Button>
+            <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileItem(null); setDetailId(mobileItem.id); }}>
+              <ShoppingCart className="w-4 h-4" /> Converter em venda
+            </Button>
+          </>
+        )}
+        {["rascunho", "aguardando_entrega"].includes(mobileItem?.status) && (
+          <Button className="w-full justify-start gap-2" variant="destructive" onClick={() => { setMobileItem(null); atualizarStatus.mutate({ id: mobileItem.id, status: "cancelado" }); }}>
+            <XCircle className="w-4 h-4" /> Cancelar pedido
+          </Button>
+        )}
+      </MobileRowActions>
 
       {/* Form */}
       <PedidoForm open={formOpen} onOpenChange={setFormOpen} />

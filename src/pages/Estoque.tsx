@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEstoque, useMovimentos, useVendedores } from "@/hooks/useEstoque";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { MovimentoForm } from "@/components/estoque/MovimentoForm";
 import { EntradaLoteForm } from "@/components/estoque/EntradaLoteForm";
+import { MobileRowActions, mobileRowProps } from "@/components/layout/MobileRowActions";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -23,6 +25,7 @@ const TIPO_CONFIG: Record<string, { label: string; icon: any; variant: "default"
 };
 
 export default function EstoquePage() {
+  const isMobile = useIsMobile();
   const { isAdmin, isGerente } = usePermissions();
   const { user } = useAuth();
   const canViewAll = isAdmin || isGerente;
@@ -31,6 +34,8 @@ export default function EstoquePage() {
   const [search, setSearch] = useState("");
   const [movOpen, setMovOpen] = useState(false);
   const [loteOpen, setLoteOpen] = useState(false);
+  const [mobileEstoqueItem, setMobileEstoqueItem] = useState<any | null>(null);
+  const [mobileMovItem, setMobileMovItem] = useState<any | null>(null);
 
   const effectiveVendedor = vendedorFilter === "todos" ? undefined : vendedorFilter;
   const { data: estoque, isLoading: loadingEstoque } = useEstoque(effectiveVendedor);
@@ -89,6 +94,12 @@ export default function EstoquePage() {
         )}
       </div>
 
+      {isMobile && (
+        <p className="px-1 text-xs text-muted-foreground">
+          Toque em um item para ver detalhes.
+        </p>
+      )}
+
       <Tabs defaultValue="estoque">
         <TabsList>
           <TabsTrigger value="estoque" className="gap-1.5"><Warehouse className="w-4 h-4" />Saldo</TabsTrigger>
@@ -103,19 +114,22 @@ export default function EstoquePage() {
                 <TableRow>
                   <TableHead>Produto</TableHead>
                   <TableHead className="text-right">Quantidade</TableHead>
-                  <TableHead>Atualizado</TableHead>
+                  {!isMobile && <TableHead>Atualizado</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingEstoque ? (
-                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isMobile ? 2 : 3} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
                 ) : !filteredEstoque?.length ? (
-                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">Nenhum estoque encontrado</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isMobile ? 2 : 3} className="text-center text-muted-foreground py-8">Nenhum estoque encontrado</TableCell></TableRow>
                 ) : (
                   filteredEstoque.map((e) => {
                     const qty = Number(e.quantidade);
                     return (
-                      <TableRow key={e.id}>
+                      <TableRow
+                        key={e.id}
+                        {...mobileRowProps(isMobile, () => setMobileEstoqueItem(e), `Ver detalhes de ${(e as any).produtos?.nome}`)}
+                      >
                         <TableCell>
                           <p className="font-medium">{(e as any).produtos?.nome}</p>
                           {(e as any).produtos?.codigo && <p className="text-xs text-muted-foreground">{(e as any).produtos.codigo}</p>}
@@ -125,9 +139,11 @@ export default function EstoquePage() {
                             {qty} {(e as any).produtos?.unidade ?? "un"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(e.updated_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                        </TableCell>
+                        {!isMobile && (
+                          <TableCell className="text-sm text-muted-foreground">
+                            {format(new Date(e.updated_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })
@@ -146,21 +162,24 @@ export default function EstoquePage() {
                   <TableHead>Produto</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Qtd</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Obs</TableHead>
+                  {!isMobile && <TableHead>Data</TableHead>}
+                  {!isMobile && <TableHead>Obs</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingMov ? (
-                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isMobile ? 3 : 5} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
                 ) : !filteredMov?.length ? (
-                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum movimento encontrado</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isMobile ? 3 : 5} className="text-center text-muted-foreground py-8">Nenhum movimento encontrado</TableCell></TableRow>
                 ) : (
                   filteredMov.map((m) => {
                     const cfg = TIPO_CONFIG[m.tipo] ?? TIPO_CONFIG.ajuste;
                     const Icon = cfg.icon;
                     return (
-                      <TableRow key={m.id}>
+                      <TableRow
+                        key={m.id}
+                        {...mobileRowProps(isMobile, () => setMobileMovItem(m), `Ver detalhes do movimento`)}
+                      >
                         <TableCell className="font-medium">{(m as any).produtos?.nome}</TableCell>
                         <TableCell>
                           <Badge variant={cfg.variant} className="gap-1">
@@ -169,10 +188,12 @@ export default function EstoquePage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-medium">{Number(m.quantidade)}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(m.data), "dd/MM/yy HH:mm", { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{m.observacoes || "—"}</TableCell>
+                        {!isMobile && (
+                          <TableCell className="text-sm text-muted-foreground">
+                            {format(new Date(m.data), "dd/MM/yy HH:mm", { locale: ptBR })}
+                          </TableCell>
+                        )}
+                        {!isMobile && <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{m.observacoes || "—"}</TableCell>}
                       </TableRow>
                     );
                   })
@@ -182,6 +203,72 @@ export default function EstoquePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Mobile estoque item drawer */}
+      <MobileRowActions
+        open={isMobile && !!mobileEstoqueItem}
+        onOpenChange={(open) => !open && setMobileEstoqueItem(null)}
+        title="Detalhes do estoque"
+        summary={mobileEstoqueItem && (
+          <div className="space-y-2 text-sm">
+            <p className="font-semibold text-foreground">{(mobileEstoqueItem as any).produtos?.nome}</p>
+            {(mobileEstoqueItem as any).produtos?.codigo && <p className="text-xs text-muted-foreground">{(mobileEstoqueItem as any).produtos.codigo}</p>}
+            <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+              <div>
+                <p>Quantidade</p>
+                <p className="font-semibold text-foreground">{Number(mobileEstoqueItem.quantidade)} {(mobileEstoqueItem as any).produtos?.unidade ?? "un"}</p>
+              </div>
+              <div>
+                <p>Atualizado</p>
+                <p className="font-medium text-foreground">{format(new Date(mobileEstoqueItem.updated_at), "dd/MM/yy HH:mm", { locale: ptBR })}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      >
+        <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileEstoqueItem(null); setMovOpen(true); }}>
+          <Plus className="w-4 h-4" /> Novo movimento
+        </Button>
+      </MobileRowActions>
+
+      {/* Mobile movimento item drawer */}
+      <MobileRowActions
+        open={isMobile && !!mobileMovItem}
+        onOpenChange={(open) => !open && setMobileMovItem(null)}
+        title="Detalhes do movimento"
+        summary={mobileMovItem && (() => {
+          const cfg = TIPO_CONFIG[mobileMovItem.tipo] ?? TIPO_CONFIG.ajuste;
+          const Icon = cfg.icon;
+          return (
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold text-foreground">{(mobileMovItem as any).produtos?.nome}</p>
+                <Badge variant={cfg.variant} className="gap-1"><Icon className="w-3 h-3" />{cfg.label}</Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                <div>
+                  <p>Quantidade</p>
+                  <p className="font-semibold text-foreground">{Number(mobileMovItem.quantidade)}</p>
+                </div>
+                <div>
+                  <p>Data</p>
+                  <p className="font-medium text-foreground">{format(new Date(mobileMovItem.data), "dd/MM/yy HH:mm", { locale: ptBR })}</p>
+                </div>
+              </div>
+              {mobileMovItem.observacoes && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Observações</p>
+                  <p className="text-sm text-foreground">{mobileMovItem.observacoes}</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      >
+        <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileMovItem(null); setMovOpen(true); }}>
+          <Plus className="w-4 h-4" /> Novo movimento
+        </Button>
+      </MobileRowActions>
 
       <MovimentoForm open={movOpen} onOpenChange={setMovOpen} />
       <EntradaLoteForm open={loteOpen} onOpenChange={setLoteOpen} />
