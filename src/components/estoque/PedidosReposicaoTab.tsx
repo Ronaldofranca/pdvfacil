@@ -68,7 +68,7 @@ export function PedidosReposicaoTab() {
     if (data) {
       const pedidoData = data as any;
       pedidoData.itens_pedido_reposicao = itens;
-      gerarPdfReposicao(pedidoData as PedidoReposicao, empresaNome);
+      await gerarPdfReposicao(pedidoData as PedidoReposicao, empresaNome);
     }
   };
 
