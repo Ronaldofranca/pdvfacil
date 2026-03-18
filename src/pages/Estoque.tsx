@@ -204,6 +204,10 @@ export default function EstoquePage() {
             </Table>
           </Card>
         </TabsContent>
+        {/* ─── REPOSIÇÃO ─── */}
+        <TabsContent value="reposicao">
+          <PedidosReposicaoTab />
+        </TabsContent>
       </Tabs>
 
       {/* Mobile estoque item drawer */}
