@@ -18,17 +18,17 @@ export function ReceiptDialogShell({ open, onOpenChange, title, children, action
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="flex max-h-[96dvh] flex-col">
+        <DrawerContent className="!h-[96dvh] max-h-[96dvh] overflow-hidden">
           <DrawerHeader className="shrink-0 border-b px-4 pb-3 pt-2 text-left">
             <DrawerTitle className="text-base">{title}</DrawerTitle>
           </DrawerHeader>
 
-          <ScrollArea className="min-h-0 flex-1 overflow-y-auto">
+          <ScrollArea className="min-h-0 flex-1">
             <div className="px-4 py-4">{children}</div>
           </ScrollArea>
 
-          <div className="shrink-0 border-t bg-background px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-            <div className="grid grid-cols-3 gap-2">{actions}</div>
+          <div className="shrink-0 border-t bg-background px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+            <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3">{actions}</div>
           </div>
         </DrawerContent>
       </Drawer>
