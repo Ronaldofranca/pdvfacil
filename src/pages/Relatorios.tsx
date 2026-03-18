@@ -139,12 +139,10 @@ export default function RelatoriosPage() {
   const totalAVista = useMemo(() => {
     let total = 0;
     (vendas ?? []).forEach((v) => {
-      const vpgtos = (v as any).pagamentos;
-      if (Array.isArray(vpgtos)) {
-        for (const pg of vpgtos) {
-          if (pg.forma !== "crediario") {
-            total += Number(pg.valor ?? 0);
-          }
+      const vpgtos = parsePagamentos((v as any).pagamentos);
+      for (const pg of vpgtos) {
+        if (pg.forma !== "crediario") {
+          total += Number(pg.valor ?? 0);
         }
       }
     });
