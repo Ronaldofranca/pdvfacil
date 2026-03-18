@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Warehouse, Search, Plus, ArrowDownUp, TrendingUp, TrendingDown, AlertTriangle, Wrench, PackagePlus } from "lucide-react";
+import { Warehouse, Search, Plus, ArrowDownUp, TrendingUp, TrendingDown, AlertTriangle, Wrench, PackagePlus, ClipboardList } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MovimentoForm } from "@/components/estoque/MovimentoForm";
 import { EntradaLoteForm } from "@/components/estoque/EntradaLoteForm";
 import { MobileRowActions, mobileRowProps } from "@/components/layout/MobileRowActions";
+import { PedidosReposicaoTab } from "@/components/estoque/PedidosReposicaoTab";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -104,6 +105,7 @@ export default function EstoquePage() {
         <TabsList>
           <TabsTrigger value="estoque" className="gap-1.5"><Warehouse className="w-4 h-4" />Saldo</TabsTrigger>
           <TabsTrigger value="movimentos" className="gap-1.5"><ArrowDownUp className="w-4 h-4" />Movimentos</TabsTrigger>
+          <TabsTrigger value="reposicao" className="gap-1.5"><ClipboardList className="w-4 h-4" />Reposição</TabsTrigger>
         </TabsList>
 
         {/* ─── SALDO ─── */}
@@ -201,6 +203,10 @@ export default function EstoquePage() {
               </TableBody>
             </Table>
           </Card>
+        </TabsContent>
+        {/* ─── REPOSIÇÃO ─── */}
+        <TabsContent value="reposicao">
+          <PedidosReposicaoTab />
         </TabsContent>
       </Tabs>
 

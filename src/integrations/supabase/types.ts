@@ -1507,6 +1507,77 @@ export type Database = {
           },
         ]
       }
+      itens_pedido_reposicao: {
+        Row: {
+          created_at: string
+          custo_unitario: number
+          empresa_id: string
+          id: string
+          observacao: string
+          pedido_reposicao_id: string
+          produto_id: string
+          quantidade_recebida: number
+          quantidade_solicitada: number
+          subtotal: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custo_unitario?: number
+          empresa_id: string
+          id?: string
+          observacao?: string
+          pedido_reposicao_id: string
+          produto_id: string
+          quantidade_recebida?: number
+          quantidade_solicitada?: number
+          subtotal?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custo_unitario?: number
+          empresa_id?: string
+          id?: string
+          observacao?: string
+          pedido_reposicao_id?: string
+          produto_id?: string
+          quantidade_recebida?: number
+          quantidade_solicitada?: number
+          subtotal?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_pedido_reposicao_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_pedido_reposicao_pedido_reposicao_id_fkey"
+            columns: ["pedido_reposicao_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos_reposicao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_pedido_reposicao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_pedido_reposicao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       itens_venda: {
         Row: {
           bonus: boolean
@@ -2121,6 +2192,62 @@ export type Database = {
             columns: ["venda_id"]
             isOneToOne: false
             referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos_reposicao: {
+        Row: {
+          created_at: string
+          created_by: string
+          data_finalizacao: string | null
+          data_recebimento: string | null
+          empresa_id: string
+          fornecedor_nome: string
+          id: string
+          numero: number
+          observacoes: string
+          status: string
+          total_itens: number
+          total_valor: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          data_finalizacao?: string | null
+          data_recebimento?: string | null
+          empresa_id: string
+          fornecedor_nome?: string
+          id?: string
+          numero?: number
+          observacoes?: string
+          status?: string
+          total_itens?: number
+          total_valor?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          data_finalizacao?: string | null
+          data_recebimento?: string | null
+          empresa_id?: string
+          fornecedor_nome?: string
+          id?: string
+          numero?: number
+          observacoes?: string
+          status?: string
+          total_itens?: number
+          total_valor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_reposicao_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
@@ -2990,6 +3117,10 @@ export type Database = {
         Args: { _motivo: string; _usuario_id: string; _venda_id: string }
         Returns: Json
       }
+      fn_confirmar_recebimento_reposicao: {
+        Args: { _itens: Json; _pedido_id: string; _vendedor_id: string }
+        Returns: Json
+      }
       fn_finalizar_venda_atomica: {
         Args: {
           _cliente_id: string
@@ -3049,7 +3180,13 @@ export type Database = {
         | "cancelado"
         | "convertido_em_venda"
       status_venda: "rascunho" | "pendente" | "finalizada" | "cancelada"
-      tipo_movimento: "venda" | "reposicao" | "dano" | "ajuste"
+      tipo_movimento:
+        | "venda"
+        | "reposicao"
+        | "dano"
+        | "ajuste"
+        | "entrada_reposicao"
+        | "estorno"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3197,7 +3334,14 @@ export const Constants = {
         "convertido_em_venda",
       ],
       status_venda: ["rascunho", "pendente", "finalizada", "cancelada"],
-      tipo_movimento: ["venda", "reposicao", "dano", "ajuste"],
+      tipo_movimento: [
+        "venda",
+        "reposicao",
+        "dano",
+        "ajuste",
+        "entrada_reposicao",
+        "estorno",
+      ],
     },
   },
 } as const
