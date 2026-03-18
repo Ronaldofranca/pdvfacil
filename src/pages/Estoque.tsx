@@ -105,6 +105,7 @@ export default function EstoquePage() {
         <TabsList>
           <TabsTrigger value="estoque" className="gap-1.5"><Warehouse className="w-4 h-4" />Saldo</TabsTrigger>
           <TabsTrigger value="movimentos" className="gap-1.5"><ArrowDownUp className="w-4 h-4" />Movimentos</TabsTrigger>
+          <TabsTrigger value="reposicao" className="gap-1.5"><ClipboardList className="w-4 h-4" />Reposição</TabsTrigger>
         </TabsList>
 
         {/* ─── SALDO ─── */}
