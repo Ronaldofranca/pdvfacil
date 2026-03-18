@@ -10,7 +10,7 @@ export interface PedidoReposicaoItem {
   custo_unitario: number;
   subtotal: number;
   observacao?: string;
-  produtos?: { nome: string; codigo: string; unidade: string };
+  produtos?: { nome: string; codigo: string; unidade: string; imagem_url?: string | null };
 }
 
 export interface PedidoReposicao {
