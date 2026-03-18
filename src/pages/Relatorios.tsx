@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { parsePagamentos } from "@/hooks/useDashboard";
 import {
   BarChart3, Calendar as CalendarIcon, TrendingUp, Package, CreditCard,
   AlertTriangle, DollarSign, BarChart, Users, MapPin, Truck, FileDown,
