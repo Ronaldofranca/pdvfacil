@@ -171,13 +171,11 @@ export default function RelatoriosPage() {
     });
     // Vendas à vista (non-crediário)
     (vendas ?? []).forEach((v) => {
-      const vpgtos = (v as any).pagamentos;
-      if (Array.isArray(vpgtos)) {
-        for (const pg of vpgtos) {
-          if (pg.forma !== "crediario") {
-            const forma = (pg.forma || "outro").replace(/_/g, " ");
-            map.set(forma, (map.get(forma) ?? 0) + Number(pg.valor ?? 0));
-          }
+      const vpgtos = parsePagamentos((v as any).pagamentos);
+      for (const pg of vpgtos) {
+        if (pg.forma !== "crediario") {
+          const forma = (pg.forma || "outro").replace(/_/g, " ");
+          map.set(forma, (map.get(forma) ?? 0) + Number(pg.valor ?? 0));
         }
       }
     });
