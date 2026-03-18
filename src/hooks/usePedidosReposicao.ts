@@ -62,7 +62,7 @@ export function usePedidoReposicaoDetalhes(pedidoId: string | null) {
 
       const { data: itens, error: ie } = await supabase
         .from("itens_pedido_reposicao" as any)
-        .select("*, produtos(nome, codigo, unidade)")
+        .select("*, produtos(nome, codigo, unidade, imagem_url)")
         .eq("pedido_reposicao_id", pedidoId!);
       if (ie) throw ie;
 
