@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MovimentoForm } from "@/components/estoque/MovimentoForm";
 import { EntradaLoteForm } from "@/components/estoque/EntradaLoteForm";
 import { MobileRowActions, mobileRowProps } from "@/components/layout/MobileRowActions";
+import { PedidosReposicaoTab } from "@/components/estoque/PedidosReposicaoTab";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
