@@ -9,11 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus } from "lucide-react";
 import { useProdutos, useCategorias, useKits, useDeleteProduto, useDeleteKit } from "@/hooks/useProdutos";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ProdutoForm } from "@/components/produtos/ProdutoForm";
 import { KitForm } from "@/components/produtos/KitForm";
 import { CategoriaForm } from "@/components/produtos/CategoriaForm";
+import { MobileRowActions, mobileRowProps } from "@/components/layout/MobileRowActions";
 
 export default function ProdutosPage() {
+  const isMobile = useIsMobile();
   const { canEditProduto } = usePermissions();
   const { data: produtos, isLoading: loadingProd } = useProdutos();
   const { data: categorias, isLoading: loadingCat } = useCategorias();
@@ -25,6 +28,8 @@ export default function ProdutosPage() {
   const [produtoForm, setProdutoForm] = useState<{ open: boolean; data?: any }>({ open: false });
   const [kitForm, setKitForm] = useState<{ open: boolean; data?: any }>({ open: false });
   const [catForm, setCatForm] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [mobileItem, setMobileItem] = useState<any | null>(null);
+  const [mobileCat, setMobileCat] = useState<any | null>(null);
 
   const filteredProdutos = produtos?.filter((p) =>
     p.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -75,27 +80,37 @@ export default function ProdutosPage() {
               </Button>
             </div>
           )}
+
+          {isMobile && (
+            <p className="px-1 text-xs text-muted-foreground">
+              Toque em um produto para abrir ações rápidas.
+            </p>
+          )}
+
           <Card>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead className="text-right">Custo</TableHead>
+                  {!isMobile && <TableHead>Código</TableHead>}
+                  {!isMobile && <TableHead>Categoria</TableHead>}
+                  {!isMobile && <TableHead className="text-right">Custo</TableHead>}
                   <TableHead className="text-right">Preço</TableHead>
                   <TableHead>Status</TableHead>
-                  {canEditProduto && <TableHead className="w-20" />}
+                  {!isMobile && canEditProduto && <TableHead className="w-20" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingProd ? (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isMobile ? 3 : 7} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
                 ) : !filteredProdutos?.length ? (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isMobile ? 3 : 7} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
                 ) : (
                   filteredProdutos.map((p) => (
-                    <TableRow key={p.id}>
+                    <TableRow
+                      key={p.id}
+                      {...mobileRowProps(isMobile, () => setMobileItem(p), `Abrir ações do produto ${p.nome}`)}
+                    >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           {p.imagem_url ? (
@@ -105,17 +120,20 @@ export default function ProdutosPage() {
                               <Package className="w-4 h-4 text-muted-foreground" />
                             </div>
                           )}
-                          {p.nome}
+                          <div className="min-w-0">
+                            <p className="truncate">{p.nome}</p>
+                            {isMobile && p.codigo && <p className="text-xs text-muted-foreground">{p.codigo}</p>}
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{p.codigo || "—"}</TableCell>
-                      <TableCell>{(p as any).categorias?.nome || "—"}</TableCell>
-                      <TableCell className="text-right">{fmt(Number(p.custo))}</TableCell>
+                      {!isMobile && <TableCell className="text-muted-foreground">{p.codigo || "—"}</TableCell>}
+                      {!isMobile && <TableCell>{(p as any).categorias?.nome || "—"}</TableCell>}
+                      {!isMobile && <TableCell className="text-right">{fmt(Number(p.custo))}</TableCell>}
                       <TableCell className="text-right font-medium">{fmt(Number(p.preco))}</TableCell>
                       <TableCell>
                         <Badge variant={p.ativo ? "default" : "secondary"}>{p.ativo ? "Ativo" : "Inativo"}</Badge>
                       </TableCell>
-                      {canEditProduto && (
+                      {!isMobile && canEditProduto && (
                         <TableCell>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" onClick={() => setProdutoForm({ open: true, data: p })}>
@@ -195,26 +213,41 @@ export default function ProdutosPage() {
               </Button>
             </div>
           )}
+
+          {isMobile && (
+            <p className="px-1 text-xs text-muted-foreground">
+              Toque em uma categoria para editar.
+            </p>
+          )}
+
           <Card>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  {canEditProduto && <TableHead className="w-20" />}
+                  {!isMobile && <TableHead>Descrição</TableHead>}
+                  {!isMobile && canEditProduto && <TableHead className="w-20" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingCat ? (
-                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isMobile ? 1 : 3} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
                 ) : !categorias?.length ? (
-                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">Nenhuma categoria</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isMobile ? 1 : 3} className="text-center text-muted-foreground py-8">Nenhuma categoria</TableCell></TableRow>
                 ) : (
                   categorias.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.nome}</TableCell>
-                      <TableCell className="text-muted-foreground">{c.descricao || "—"}</TableCell>
-                      {canEditProduto && (
+                    <TableRow
+                      key={c.id}
+                      {...mobileRowProps(isMobile && canEditProduto, () => setMobileCat(c), `Editar categoria ${c.nome}`)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="min-w-0">
+                          <p>{c.nome}</p>
+                          {isMobile && c.descricao && <p className="text-xs text-muted-foreground truncate">{c.descricao}</p>}
+                        </div>
+                      </TableCell>
+                      {!isMobile && <TableCell className="text-muted-foreground">{c.descricao || "—"}</TableCell>}
+                      {!isMobile && canEditProduto && (
                         <TableCell>
                           <Button variant="ghost" size="icon" onClick={() => setCatForm({ open: true, data: c })}>
                             <Pencil className="w-4 h-4" />
@@ -229,6 +262,71 @@ export default function ProdutosPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Mobile product actions drawer */}
+      <MobileRowActions
+        open={isMobile && !!mobileItem}
+        onOpenChange={(open) => !open && setMobileItem(null)}
+        title="Ações do produto"
+        summary={mobileItem && (
+          <div className="flex items-center gap-3">
+            {mobileItem.imagem_url ? (
+              <img src={mobileItem.imagem_url} alt={mobileItem.nome} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <Package className="w-5 h-5 text-muted-foreground" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground truncate">{mobileItem.nome}</p>
+              <p className="text-sm font-bold text-primary">{fmt(Number(mobileItem.preco))}</p>
+              {mobileItem.codigo && <p className="text-xs text-muted-foreground">{mobileItem.codigo}</p>}
+            </div>
+          </div>
+        )}
+      >
+        {canEditProduto && (
+          <>
+            <Button
+              className="w-full justify-start gap-2"
+              variant="outline"
+              onClick={() => { setMobileItem(null); setProdutoForm({ open: true, data: mobileItem }); }}
+            >
+              <Pencil className="w-4 h-4" /> Editar produto
+            </Button>
+            <Button
+              className="w-full justify-start gap-2"
+              variant="destructive"
+              onClick={() => { setMobileItem(null); deleteProduto.mutate(mobileItem.id); }}
+            >
+              <Trash2 className="w-4 h-4" /> Excluir produto
+            </Button>
+          </>
+        )}
+      </MobileRowActions>
+
+      {/* Mobile category actions drawer */}
+      <MobileRowActions
+        open={isMobile && !!mobileCat}
+        onOpenChange={(open) => !open && setMobileCat(null)}
+        title="Ações da categoria"
+        summary={mobileCat && (
+          <div>
+            <p className="font-semibold text-foreground">{mobileCat.nome}</p>
+            {mobileCat.descricao && <p className="text-sm text-muted-foreground">{mobileCat.descricao}</p>}
+          </div>
+        )}
+      >
+        {canEditProduto && (
+          <Button
+            className="w-full justify-start gap-2"
+            variant="outline"
+            onClick={() => { setMobileCat(null); setCatForm({ open: true, data: mobileCat }); }}
+          >
+            <Pencil className="w-4 h-4" /> Editar categoria
+          </Button>
+        )}
+      </MobileRowActions>
 
       {/* Forms */}
       <ProdutoForm open={produtoForm.open} onOpenChange={(v) => setProdutoForm({ open: v })} produto={produtoForm.data} />
