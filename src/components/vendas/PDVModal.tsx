@@ -123,7 +123,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     })(),
   };
 
-  const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
+  const [cart, setCart] = useState<CartItem[]>(() => ensureAllLineIds(initialCart ?? []));
   const [clienteId, setClienteId] = useState(initialClienteId ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
