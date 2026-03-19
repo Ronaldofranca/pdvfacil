@@ -87,13 +87,14 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
           {itens?.map((item) => (
             <div key={item.id} className="rounded border p-2 text-sm">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-xs text-muted-foreground">
-                  <img
-                    src={(item as any).produtos?.imagem_url || "/placeholder.svg"}
-                    alt={item.nome_produto}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+                <img
+                  src={(item as any).produtos?.imagem_url || "/placeholder.svg"}
+                  alt={item.nome_produto}
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 max-h-10 max-w-[2.5rem] flex-shrink-0 rounded bg-muted object-cover"
+                  style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, objectFit: 'cover' }}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <p className="truncate font-medium">{item.nome_produto}</p>
