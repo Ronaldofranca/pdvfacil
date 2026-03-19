@@ -38,7 +38,20 @@ export const ReceiptParcelaContent = forwardRef<HTMLDivElement, ReceiptParcelaCo
     const vendaId = parcela.venda_id ? `#${parcela.venda_id.slice(0, 8)}` : "—";
 
     return (
-      <div ref={ref} className="space-y-4 text-sm sm:space-y-5 bg-background">
+      <div ref={ref} data-receipt-document="pagamento" className="space-y-4 bg-background text-sm sm:space-y-5">
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Recibo de Pagamento</p>
+              <h2 className="text-xl font-semibold text-foreground">Parcela {parcela.numero}ª</h2>
+              <p className="text-xs text-muted-foreground">Venda vinculada: {vendaId}</p>
+            </div>
+            <Badge variant={parcela.status === "paga" ? "default" : parcela.status === "vencida" ? "destructive" : parcela.status === "parcial" ? "outline" : "secondary"}>
+              {STATUS_LABELS[parcela.status] ?? parcela.status}
+            </Badge>
+          </div>
+        </div>
+
         <div className="space-y-2 text-sm">
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Cliente</span>
@@ -70,7 +83,7 @@ export const ReceiptParcelaContent = forwardRef<HTMLDivElement, ReceiptParcelaCo
 
         <div className="space-y-3">
           <p className="text-sm font-semibold">Resumo Financeiro</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-center">
+          <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-2">
             <div className="rounded-lg bg-muted p-3">
               <p className="text-xs text-muted-foreground">Valor Original</p>
               <p className="text-sm font-bold">{fmtR(Number(parcela.valor_total))}</p>
@@ -80,7 +93,7 @@ export const ReceiptParcelaContent = forwardRef<HTMLDivElement, ReceiptParcelaCo
               <p className="text-sm font-bold">{fmtR(saldoAnterior)}</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-center">
+          <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-2">
             <div className="rounded-lg bg-primary/10 p-3">
               <p className="text-xs text-muted-foreground">Pago</p>
               <p className="text-sm font-bold text-primary">{fmtR(Number(parcela.valor_pago))}</p>
@@ -118,7 +131,7 @@ export const ReceiptParcelaContent = forwardRef<HTMLDivElement, ReceiptParcelaCo
               {parcelasRestantes.map((p) => (
                 <div key={p.id} className="flex items-center justify-between gap-3 rounded border p-2 text-sm">
                   <div className="min-w-0">
-                    <p className="font-medium break-words">{p.numero}ª — {fmtR(Number(p.valor_total))}</p>
+                    <p className="break-words font-medium">{p.numero}ª — {fmtR(Number(p.valor_total))}</p>
                     <p className="text-xs text-muted-foreground">Venc: {format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy")}</p>
                   </div>
                   <Badge variant={p.status === "vencida" ? "destructive" : p.status === "parcial" ? "outline" : "secondary"} className="text-xs">

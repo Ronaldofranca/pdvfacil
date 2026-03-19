@@ -40,13 +40,28 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
   ({ venda, itens, parcelas }, ref) => {
     if (!venda) return null;
 
+    const vendaId = venda.id.slice(0, 8);
     const clienteNome = (venda as any).clientes?.nome ?? "Consumidor";
     const dataVenda = new Date(venda.data_venda);
     const pagamentos = Array.isArray(venda.pagamentos) ? (venda.pagamentos as any[]) : [];
     const hasCrediario = pagamentos.some((p: any) => p.forma === "crediario");
+    const titulo = venda.status === "cancelada" ? "Comprovante de Cancelamento" : "Recibo de Venda";
 
     return (
-      <div ref={ref} className="space-y-4 text-sm sm:space-y-5 bg-background">
+      <div ref={ref} data-receipt-document="venda" className="space-y-4 bg-background text-sm sm:space-y-5">
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{titulo}</p>
+              <h2 className="text-xl font-semibold text-foreground">#{vendaId}</h2>
+              <p className="text-xs text-muted-foreground">Emitido em {format(dataVenda, "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+            </div>
+            <Badge variant={venda.status === "finalizada" ? "default" : venda.status === "cancelada" ? "destructive" : "secondary"}>
+              {STATUS_LABELS[venda.status] ?? venda.status}
+            </Badge>
+          </div>
+        </div>
+
         <div className="space-y-2 text-sm">
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Cliente</span>
@@ -71,9 +86,9 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
         </div>
 
         {venda.status === "cancelada" && (
-          <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm space-y-1">
+          <div className="space-y-1 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm">
             <p className="font-semibold text-destructive">Venda Cancelada</p>
-            {(venda as any).motivo_cancelamento && <p className="text-muted-foreground break-words">Motivo: {(venda as any).motivo_cancelamento}</p>}
+            {(venda as any).motivo_cancelamento && <p className="break-words text-muted-foreground">Motivo: {(venda as any).motivo_cancelamento}</p>}
             {(venda as any).cancelado_em && (
               <p className="text-xs text-muted-foreground">Cancelada em: {format(new Date((venda as any).cancelado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
             )}
@@ -93,7 +108,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
                   width={40}
                   height={40}
                   className="h-10 w-10 max-h-10 max-w-[2.5rem] flex-shrink-0 rounded bg-muted object-cover"
-                  style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, objectFit: 'cover' }}
+                  style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, objectFit: "cover" }}
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
@@ -145,8 +160,8 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
             <p className="text-sm font-semibold">Formas de Pagamento</p>
             {pagamentos.map((p: any, i: number) => (
               <div key={i} className="flex justify-between gap-4 rounded border p-2 text-sm">
-                <span className="capitalize break-words">{FORMA_LABELS[p.forma] ?? p.forma}</span>
-                <span className="font-medium whitespace-nowrap">{fmtR(p.valor)}</span>
+                <span className="break-words capitalize">{FORMA_LABELS[p.forma] ?? p.forma}</span>
+                <span className="whitespace-nowrap font-medium">{fmtR(p.valor)}</span>
               </div>
             ))}
           </div>
@@ -160,7 +175,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
               {parcelas.map((p) => (
                 <div key={p.id} className="flex items-center justify-between gap-3 rounded border p-2 text-sm">
                   <div className="min-w-0">
-                    <p className="font-medium break-words">{p.numero}ª Parcela — {fmtR(Number(p.valor_total))}</p>
+                    <p className="break-words font-medium">{p.numero}ª Parcela — {fmtR(Number(p.valor_total))}</p>
                     <p className="text-xs text-muted-foreground">Venc: {format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy")}</p>
                   </div>
                   <Badge variant={p.status === "paga" ? "default" : p.status === "vencida" ? "destructive" : p.status === "parcial" ? "outline" : "secondary"} className="text-xs">
