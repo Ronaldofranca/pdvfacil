@@ -47,6 +47,7 @@ export interface KitItemRef {
 }
 
 export interface CartItem {
+  line_id: string;
   produto_id: string;
   nome: string;
   quantidade: number;

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle, Layers } from "lucide-react";
 import { usePDVPersistence } from "@/hooks/useFormPersistence";
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
+import { addItemToCart, markOneUnitAsGift, unmarkOneGift, updateCartItem, changeLineQty, removeCartLine, ensureAllLineIds } from "@/lib/cartUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -122,7 +123,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
     })(),
   };
 
-  const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
+  const [cart, setCart] = useState<CartItem[]>(() => ensureAllLineIds(initialCart ?? []));
   const [clienteId, setClienteId] = useState(initialClienteId ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
@@ -142,14 +143,14 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
       if (!initialCart?.length && !initialClienteId) {
         const saved = pdvPersistence.restore();
         if (saved && saved.cart?.length > 0) {
-          setCart(saved.cart);
+          setCart(ensureAllLineIds(saved.cart));
           setClienteId(saved.clienteId || "");
           setObservacoes(saved.observacoes || "");
           setPagamentos(saved.pagamentos?.length ? saved.pagamentos : [{ forma: "dinheiro", valor: 0 }]);
           if (saved.crediarioConfig) setCrediarioConfig(saved.crediarioConfig);
         }
       }
-      if (initialCart?.length) setCart(initialCart);
+      if (initialCart?.length) setCart(ensureAllLineIds(initialCart));
       if (initialClienteId) setClienteId(initialClienteId);
     }
     if (!open) restoredRef.current = false;
@@ -218,55 +219,25 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
 
   // ─── Cart operations ───
   const addToCart = (produto: any) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.produto_id === produto.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.produto_id === produto.id
-            ? { ...i, quantidade: i.quantidade + 1, subtotal: (i.quantidade + 1) * i.preco_vendido }
-            : i
-        );
-      }
-      const item: CartItem = {
-        produto_id: produto.id,
-        nome: produto.nome,
-        quantidade: 1,
-        preco_original: Number(produto.preco),
-        preco_vendido: Number(produto.preco),
-        desconto: 0,
-        bonus: false,
-        subtotal: Number(produto.preco),
-        custo_unitario: Number(produto.custo ?? 0),
-      };
-      if (produto.is_kit && produto.kit_itens) {
-        item.is_kit = true;
-        item.kit_itens = produto.kit_itens;
-      }
-      return [...prev, item];
-    });
+    setCart((prev) => addItemToCart(prev, produto));
   };
 
-  const updateItem = (idx: number, updates: Partial<CartItem>) => {
-    setCart((prev) =>
-      prev.map((item, i) => {
-        if (i !== idx) return item;
-        const merged = { ...item, ...updates };
-        if (merged.bonus) {
-          merged.subtotal = 0;
-        } else {
-          merged.subtotal = merged.quantidade * merged.preco_vendido - merged.desconto;
-        }
-        return merged;
-      })
-    );
+  const updateItem = (lineId: string, updates: Partial<CartItem>) => {
+    setCart((prev) => updateCartItem(prev, lineId, updates));
   };
 
-  const removeItem = (idx: number) => setCart((prev) => prev.filter((_, i) => i !== idx));
+  const removeItem = (lineId: string) => setCart((prev) => removeCartLine(prev, lineId));
 
-  const changeQty = (idx: number, delta: number) => {
-    const item = cart[idx];
-    const newQty = Math.max(1, item.quantidade + delta);
-    updateItem(idx, { quantidade: newQty });
+  const changeQty = (lineId: string, delta: number) => {
+    setCart((prev) => changeLineQty(prev, lineId, delta));
+  };
+
+  const handleMarkGift = (lineId: string, isBonus: boolean) => {
+    if (isBonus) {
+      setCart((prev) => unmarkOneGift(prev, lineId));
+    } else {
+      setCart((prev) => markOneUnitAsGift(prev, lineId));
+    }
   };
 
   // ─── Tier discount ───
@@ -515,8 +486,8 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
               {cart.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Carrinho vazio</p>
               ) : (
-                cart.map((item, idx) => (
-                  <Card key={item.produto_id} className="p-3 space-y-2">
+                cart.map((item) => (
+                  <Card key={item.line_id} className="p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -530,50 +501,54 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                     <div className="flex items-center gap-2 flex-wrap">
                       {/* Qty */}
                       <div className="flex items-center gap-1">
-                        <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(idx, -1)}>
+                        <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(item.line_id, -1)}>
                           <Minus className="w-3 h-3" />
                         </Button>
                         <span className="w-8 text-center text-sm font-medium">{item.quantidade}</span>
-                        <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(idx, 1)}>
+                        <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(item.line_id, 1)}>
                           <Plus className="w-3 h-3" />
                         </Button>
                       </div>
-                      {/* Preço */}
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 text-muted-foreground" />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-7 w-20 text-xs"
-                          value={item.preco_vendido || ""}
-                          onChange={(e) => updateItem(idx, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
-                        />
-                      </div>
-                      {/* Desconto */}
-                      <div className="flex items-center gap-1">
-                        <Percent className="w-3 h-3 text-muted-foreground" />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-7 w-20 text-xs"
-                          placeholder="Desc."
-                          value={item.desconto || ""}
-                          onChange={(e) => updateItem(idx, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
-                        />
-                      </div>
-                      {/* Bônus */}
+                      {/* Preço - only for non-bonus */}
+                      {!item.bonus && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="w-3 h-3 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="h-7 w-20 text-xs"
+                            value={item.preco_vendido || ""}
+                            onChange={(e) => updateItem(item.line_id, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
+                          />
+                        </div>
+                      )}
+                      {/* Desconto - only for non-bonus */}
+                      {!item.bonus && (
+                        <div className="flex items-center gap-1">
+                          <Percent className="w-3 h-3 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="h-7 w-20 text-xs"
+                            placeholder="Desc."
+                            value={item.desconto || ""}
+                            onChange={(e) => updateItem(item.line_id, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
+                          />
+                        </div>
+                      )}
+                      {/* Bônus — splits/unsplits one unit */}
                       <Button
                         type="button"
                         variant={item.bonus ? "default" : "outline"}
                         size="sm"
                         className="h-7 text-xs gap-1"
-                        onClick={() => updateItem(idx, { bonus: !item.bonus })}
+                        onClick={() => handleMarkGift(item.line_id, item.bonus)}
                       >
                         <Gift className="w-3 h-3" />
-                        Bônus
+                        {item.bonus ? "Desfazer" : "Bônus"}
                       </Button>
                       {/* Remove */}
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => removeItem(idx)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => removeItem(item.line_id)}>
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </Button>
                     </div>

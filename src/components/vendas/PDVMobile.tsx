@@ -25,6 +25,7 @@ import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { usePDVPersistence } from "@/hooks/useFormPersistence";
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
+import { addItemToCart, markOneUnitAsGift, unmarkOneGift, updateCartItem, changeLineQty, removeCartLine, ensureAllLineIds } from "@/lib/cartUtils";
 import { toast } from "sonner";
 
 const FORMAS_PAGAMENTO = [
@@ -61,13 +62,13 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const pdvPersistence = usePDVPersistence();
 
   const [step, setStep] = useState<Step>("cliente");
-  const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
+  const [cart, setCart] = useState<CartItem[]>(() => ensureAllLineIds(initialCart ?? []));
   const [clienteId, setClienteId] = useState(initialClienteId ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
   const [searchCliente, setSearchCliente] = useState("");
-  const [editingItem, setEditingItem] = useState<number | null>(null);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<"todos" | "produtos" | "kits">("todos");
   const [kitDetailId, setKitDetailId] = useState<string | null>(null);
   const [expandedCartKit, setExpandedCartKit] = useState<string | null>(null);
@@ -107,7 +108,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
       if (!initialCart?.length && !initialClienteId) {
         const saved = pdvPersistence.restore();
         if (saved && saved.cart?.length > 0) {
-          setCart(saved.cart);
+          setCart(ensureAllLineIds(saved.cart));
           setClienteId(saved.clienteId || "");
           setObservacoes(saved.observacoes || "");
           setPagamentos(saved.pagamentos?.length ? saved.pagamentos : [{ forma: "dinheiro", valor: 0 }]);
@@ -117,7 +118,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
         }
       }
       if (initialCart?.length) {
-        setCart(initialCart);
+        setCart(ensureAllLineIds(initialCart));
         setStep("carrinho");
       }
       if (initialClienteId) {
@@ -193,59 +194,29 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
 
   // ─── Cart operations ───
   const addToCart = (produto: any) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.produto_id === produto.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.produto_id === produto.id
-            ? { ...i, quantidade: i.quantidade + 1, subtotal: (i.quantidade + 1) * i.preco_vendido }
-            : i
-        );
-      }
-      const item: CartItem = {
-        produto_id: produto.id,
-        nome: produto.nome,
-        quantidade: 1,
-        preco_original: Number(produto.preco),
-        preco_vendido: Number(produto.preco),
-        desconto: 0,
-        bonus: false,
-        subtotal: Number(produto.preco),
-        custo_unitario: Number(produto.custo ?? 0),
-      };
-      if (produto.is_kit && produto.kit_itens) {
-        item.is_kit = true;
-        item.kit_itens = produto.kit_itens;
-      }
-      return [...prev, item];
-    });
+    setCart((prev) => addItemToCart(prev, produto));
     toast.success(`${produto.nome} adicionado`);
   };
 
-  const updateItem = (idx: number, updates: Partial<CartItem>) => {
-    setCart((prev) =>
-      prev.map((item, i) => {
-        if (i !== idx) return item;
-        const merged = { ...item, ...updates };
-        if (merged.bonus) {
-          merged.subtotal = 0;
-        } else {
-          merged.subtotal = merged.quantidade * merged.preco_vendido - merged.desconto;
-        }
-        return merged;
-      })
-    );
+  const updateItem = (lineId: string, updates: Partial<CartItem>) => {
+    setCart((prev) => updateCartItem(prev, lineId, updates));
   };
 
-  const removeItem = (idx: number) => {
-    setCart((prev) => prev.filter((_, i) => i !== idx));
+  const removeItem = (lineId: string) => {
+    setCart((prev) => removeCartLine(prev, lineId));
     setEditingItem(null);
   };
 
-  const changeQty = (idx: number, delta: number) => {
-    const item = cart[idx];
-    const newQty = Math.max(1, item.quantidade + delta);
-    updateItem(idx, { quantidade: newQty });
+  const changeQty = (lineId: string, delta: number) => {
+    setCart((prev) => changeLineQty(prev, lineId, delta));
+  };
+
+  const handleMarkGift = (lineId: string, isBonus: boolean) => {
+    if (isBonus) {
+      setCart((prev) => unmarkOneGift(prev, lineId));
+    } else {
+      setCart((prev) => markOneUnitAsGift(prev, lineId));
+    }
   };
 
   // ─── Tier discount ───
@@ -751,8 +722,8 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                   </Button>
                 </div>
               ) : (
-                cart.map((item, idx) => (
-                  <Card key={item.produto_id} className="p-4 rounded-2xl">
+                cart.map((item) => (
+                  <Card key={item.line_id} className="p-4 rounded-2xl">
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -770,22 +741,22 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-0.5">
-                          {item.quantidade}x {fmt(item.preco_vendido)}
-                          {item.desconto > 0 && ` (desc: ${fmt(item.desconto)})`}
+                          {item.quantidade}x {fmt(item.bonus ? item.preco_original : item.preco_vendido)}
+                          {!item.bonus && item.desconto > 0 && ` (desc: ${fmt(item.desconto)})`}
                         </p>
                         {/* Expandable kit composition */}
                         {item.is_kit && item.kit_itens && (
                           <button
                             type="button"
-                            onClick={() => setExpandedCartKit(expandedCartKit === item.produto_id ? null : item.produto_id)}
+                            onClick={() => setExpandedCartKit(expandedCartKit === item.line_id ? null : item.line_id)}
                             className="text-xs text-primary mt-1 flex items-center gap-1"
                           >
                             <Package className="w-3 h-3" />
                             {item.kit_itens.length} {item.kit_itens.length === 1 ? "item" : "itens"}
-                            <ChevronRight className={`w-3 h-3 transition-transform ${expandedCartKit === item.produto_id ? "rotate-90" : ""}`} />
+                            <ChevronRight className={`w-3 h-3 transition-transform ${expandedCartKit === item.line_id ? "rotate-90" : ""}`} />
                           </button>
                         )}
-                        {item.is_kit && expandedCartKit === item.produto_id && item.kit_itens && (
+                        {item.is_kit && expandedCartKit === item.line_id && item.kit_itens && (
                           <div className="mt-2 ml-1 space-y-1 border-l-2 border-primary/20 pl-3">
                             {item.kit_itens.map((ki) => {
                               const prod = (onlineProdutos as any[])?.find((p: any) => p.id === ki.produto_id);
@@ -811,7 +782,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                           variant="outline"
                           size="icon"
                           className="h-12 w-12 rounded-xl"
-                          onClick={() => changeQty(idx, -1)}
+                          onClick={() => changeQty(item.line_id, -1)}
                         >
                           <Minus className="w-5 h-5" />
                         </Button>
@@ -821,7 +792,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                           variant="outline"
                           size="icon"
                           className="h-12 w-12 rounded-xl"
-                          onClick={() => changeQty(idx, 1)}
+                          onClick={() => changeQty(item.line_id, 1)}
                         >
                           <Plus className="w-5 h-5" />
                         </Button>
@@ -832,35 +803,37 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                           variant={item.bonus ? "default" : "outline"}
                           size="icon"
                           className="h-12 w-12 rounded-xl"
-                          onClick={() => updateItem(idx, { bonus: !item.bonus })}
-                          title="Bônus"
+                          onClick={() => handleMarkGift(item.line_id, item.bonus)}
+                          title={item.bonus ? "Desfazer bônus" : "Marcar como bônus"}
                         >
                           <Gift className="w-5 h-5" />
                         </Button>
-                        <Button
-                          type="button"
-                          variant={editingItem === idx ? "default" : "outline"}
-                          size="icon"
-                          className="h-12 w-12 rounded-xl"
-                          onClick={() => setEditingItem(editingItem === idx ? null : idx)}
-                          title="Editar preço"
-                        >
-                          <DollarSign className="w-5 h-5" />
-                        </Button>
+                        {!item.bonus && (
+                          <Button
+                            type="button"
+                            variant={editingItem === item.line_id ? "default" : "outline"}
+                            size="icon"
+                            className="h-12 w-12 rounded-xl"
+                            onClick={() => setEditingItem(editingItem === item.line_id ? null : item.line_id)}
+                            title="Editar preço"
+                          >
+                            <DollarSign className="w-5 h-5" />
+                          </Button>
+                        )}
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
                           className="h-12 w-12 rounded-xl border-destructive/30"
-                          onClick={() => removeItem(idx)}
+                          onClick={() => removeItem(item.line_id)}
                         >
                           <Trash2 className="w-5 h-5 text-destructive" />
                         </Button>
                       </div>
                     </div>
 
-                    {/* Editing panel */}
-                    {editingItem === idx && (
+                    {/* Editing panel - only for non-bonus */}
+                    {!item.bonus && editingItem === item.line_id && (
                       <div className="mt-3 pt-3 border-t space-y-3">
                         <div>
                           <Label className="text-sm text-muted-foreground">Preço unitário</Label>
@@ -870,7 +843,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                             className="h-14 text-lg mt-1 rounded-xl"
                             value={item.preco_vendido || ""}
                             onChange={(e) =>
-                              updateItem(idx, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })
+                              updateItem(item.line_id, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })
                             }
                           />
                         </div>
@@ -883,7 +856,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
                             value={item.desconto || ""}
                             placeholder="0,00"
                             onChange={(e) =>
-                              updateItem(idx, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })
+                              updateItem(item.line_id, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })
                             }
                           />
                         </div>
