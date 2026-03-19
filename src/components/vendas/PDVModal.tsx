@@ -486,8 +486,8 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
               {cart.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Carrinho vazio</p>
               ) : (
-                cart.map((item, idx) => (
-                  <Card key={item.produto_id} className="p-3 space-y-2">
+                cart.map((item) => (
+                  <Card key={item.line_id} className="p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -501,50 +501,54 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                     <div className="flex items-center gap-2 flex-wrap">
                       {/* Qty */}
                       <div className="flex items-center gap-1">
-                        <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(idx, -1)}>
+                        <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(item.line_id, -1)}>
                           <Minus className="w-3 h-3" />
                         </Button>
                         <span className="w-8 text-center text-sm font-medium">{item.quantidade}</span>
-                        <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(idx, 1)}>
+                        <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(item.line_id, 1)}>
                           <Plus className="w-3 h-3" />
                         </Button>
                       </div>
-                      {/* Preço */}
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 text-muted-foreground" />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-7 w-20 text-xs"
-                          value={item.preco_vendido || ""}
-                          onChange={(e) => updateItem(idx, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
-                        />
-                      </div>
-                      {/* Desconto */}
-                      <div className="flex items-center gap-1">
-                        <Percent className="w-3 h-3 text-muted-foreground" />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-7 w-20 text-xs"
-                          placeholder="Desc."
-                          value={item.desconto || ""}
-                          onChange={(e) => updateItem(idx, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
-                        />
-                      </div>
-                      {/* Bônus */}
+                      {/* Preço - only for non-bonus */}
+                      {!item.bonus && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="w-3 h-3 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="h-7 w-20 text-xs"
+                            value={item.preco_vendido || ""}
+                            onChange={(e) => updateItem(item.line_id, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
+                          />
+                        </div>
+                      )}
+                      {/* Desconto - only for non-bonus */}
+                      {!item.bonus && (
+                        <div className="flex items-center gap-1">
+                          <Percent className="w-3 h-3 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="h-7 w-20 text-xs"
+                            placeholder="Desc."
+                            value={item.desconto || ""}
+                            onChange={(e) => updateItem(item.line_id, { desconto: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
+                          />
+                        </div>
+                      )}
+                      {/* Bônus — splits/unsplits one unit */}
                       <Button
                         type="button"
                         variant={item.bonus ? "default" : "outline"}
                         size="sm"
                         className="h-7 text-xs gap-1"
-                        onClick={() => updateItem(idx, { bonus: !item.bonus })}
+                        onClick={() => handleMarkGift(item.line_id, item.bonus)}
                       >
                         <Gift className="w-3 h-3" />
-                        Bônus
+                        {item.bonus ? "Desfazer" : "Bônus"}
                       </Button>
                       {/* Remove */}
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => removeItem(idx)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={() => removeItem(item.line_id)}>
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </Button>
                     </div>
