@@ -1,13 +1,10 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileDown, Printer, MessageCircle } from "lucide-react";
 import { useVendaItens } from "@/hooks/useVendas";
 import { useParcelas } from "@/hooks/useParcelas";
 import { useEmpresas } from "@/hooks/useEmpresas";
-import { useConfiguracoes } from "@/hooks/useConfiguracoes";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { exportReceiptFromElement, fmtR } from "@/lib/reportExport";
+import { exportReceiptFromElement } from "@/lib/reportExport";
 import { ReceiptDialogShell } from "@/components/receipts/ReceiptDialogShell";
 import { ReceiptVendaContent } from "@/components/receipts/ReceiptVendaContent";
 import { toast } from "sonner";
@@ -18,64 +15,57 @@ interface Props {
   venda: any;
 }
 
-const FORMA_LABELS: Record<string, string> = {
-  dinheiro: "Dinheiro",
-  pix: "PIX",
-  cartao_credito: "Cartão de Crédito",
-  cartao_debito: "Cartão de Débito",
-  crediario: "Crediário / Fiado",
-  boleto: "Boleto",
-  transferencia: "Transferência",
-  outro: "Outro",
-};
-
-const PARCELA_STATUS: Record<string, string> = {
-  pendente: "Pendente",
-  parcial: "Parcial",
-  paga: "Paga",
-  vencida: "Vencida",
-};
-
 export function ReciboVenda({ open, onOpenChange, venda }: Props) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const { data: itens } = useVendaItens(venda?.id ?? null);
-  const { data: parcelas } = useParcelas(venda?.id ? { vendaId: venda.id } : undefined);
-  const { data: empresas } = useEmpresas();
-  const { data: config } = useConfiguracoes();
+  const exportRef = useRef<HTMLDivElement>(null);
+  const { data: itens, isLoading: itensLoading, isFetching: itensFetching } = useVendaItens(venda?.id ?? null);
+  const { data: parcelas, isLoading: parcelasLoading, isFetching: parcelasFetching } = useParcelas(venda?.id ? { vendaId: venda.id } : undefined);
+  const { data: empresas, isLoading: empresasLoading } = useEmpresas();
   const empresa = empresas?.[0];
+  const vendaId = venda?.id?.slice(0, 8) ?? "";
+  const clienteNome = (venda as any)?.clientes?.nome ?? "Consumidor";
+  const fileName = `recibo_venda_${vendaId}.pdf`;
+  const loadingReceipt = itensLoading || itensFetching || parcelasLoading || parcelasFetching || empresasLoading;
+
+  useEffect(() => {
+    if (!open || !venda) return;
+    console.info("[Receipt] início da montagem do recibo de venda", { vendaId: venda.id });
+  }, [open, venda]);
+
+  useEffect(() => {
+    if (!open || !venda || loadingReceipt) return;
+    console.info("[Receipt] dados carregados para recibo de venda", {
+      vendaId: venda.id,
+      itens: itens?.length ?? 0,
+      parcelas: parcelas?.length ?? 0,
+      empresa: empresa?.id ?? null,
+    });
+  }, [open, venda, loadingReceipt, itens, parcelas, empresa]);
 
   if (!venda) return null;
 
-  const vendaId = venda.id.slice(0, 8);
-  const clienteNome = (venda as any).clientes?.nome ?? "Consumidor";
-  const pagamentos = Array.isArray(venda.pagamentos) ? (venda.pagamentos as any[]) : [];
-  const fileName = `recibo_venda_${vendaId}.pdf`;
-
-  const captureOptions = {
-    type: "venda" as const,
-    id: vendaId,
-    empresa: empresa?.nome ?? "Empresa",
-    data: format(new Date(venda.data_venda), "dd/MM/yyyy HH:mm", { locale: ptBR }),
-    cliente: { nome: clienteNome, id: venda.cliente_id?.slice(0, 8) ?? "—" },
-    itens: [],
-    resumo: { subtotal: Number(venda.subtotal), descontos: Number(venda.desconto_total), total: Number(venda.total) },
-    pagamentos: pagamentos.map((p: any) => ({ forma: FORMA_LABELS[p.forma] ?? p.forma, valor: p.valor })),
-  };
-
   const runAction = async (action: "download" | "print" | "share", loadingText: string, successText?: string) => {
-    if (!contentRef.current) {
+    if (loadingReceipt) {
+      toast.error("Aguarde o recibo terminar de carregar.");
+      return;
+    }
+
+    if (!exportRef.current) {
       toast.error("O recibo ainda não está pronto.");
       return;
     }
+
     const id = toast.loading(loadingText);
     try {
-      await exportReceiptFromElement(
-        contentRef.current,
-        fileName,
-        action,
-        (venda as any).clientes?.telefone,
-        captureOptions
-      );
+      await exportReceiptFromElement(exportRef.current, fileName, action, (venda as any).clientes?.telefone, {
+        type: "venda",
+        id: vendaId,
+        cliente: { nome: clienteNome, id: venda.cliente_id?.slice(0, 8) ?? "—" },
+        resumo: {
+          subtotal: Number(venda.subtotal ?? 0),
+          descontos: Number(venda.desconto_total ?? 0),
+          total: Number(venda.total ?? 0),
+        },
+      });
       toast.dismiss(id);
       if (successText) toast.success(successText);
     } catch (error) {
@@ -86,14 +76,14 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
 
   const actions = (
     <>
-      <Button variant="outline" className="w-full gap-1.5" onClick={() => runAction("download", "Gerando PDF...", "PDF do recibo gerado.")}>
-        <FileDown className="w-4 h-4" /> Exportar PDF
+      <Button variant="outline" className="w-full gap-1.5" disabled={loadingReceipt} onClick={() => runAction("download", "Gerando PDF...", "PDF do recibo gerado.")}>
+        <FileDown className="h-4 w-4" /> Exportar PDF
       </Button>
-      <Button variant="outline" className="w-full gap-1.5" onClick={() => runAction("print", "Preparando impressão...")}>
-        <Printer className="w-4 h-4" /> Imprimir
+      <Button variant="outline" className="w-full gap-1.5" disabled={loadingReceipt} onClick={() => runAction("print", "Preparando impressão...")}>
+        <Printer className="h-4 w-4" /> Imprimir
       </Button>
-      <Button variant="outline" className="w-full gap-1.5" onClick={() => runAction("share", "Preparando compartilhamento...")}>
-        <MessageCircle className="w-4 h-4" /> WhatsApp
+      <Button variant="outline" className="w-full gap-1.5" disabled={loadingReceipt} onClick={() => runAction("share", "Preparando compartilhamento...")}>
+        <MessageCircle className="h-4 w-4" /> WhatsApp
       </Button>
     </>
   );
@@ -102,10 +92,11 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
     <ReceiptDialogShell
       open={open}
       onOpenChange={onOpenChange}
-      title={<>{venda.status === "cancelada" ? "Comprovante de Cancelamento" : "Recibo de Venda"} #{vendaId}</>}
+      title={undefined}
       actions={actions}
+      exportRef={exportRef}
     >
-      <ReceiptVendaContent ref={contentRef} venda={venda} itens={itens} parcelas={parcelas} />
+      <ReceiptVendaContent venda={venda} itens={itens} parcelas={parcelas} />
     </ReceiptDialogShell>
   );
 }
