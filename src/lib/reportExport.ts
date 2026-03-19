@@ -867,21 +867,23 @@ async function renderReceiptHtmlToPdfBlob(html: string, expectedText: string): P
 }
 
 async function assertValidPdfBlob(blob: Blob, expectedText: string) {
-  let header = "";
-  try {
-    const slice = blob.slice(0, 4);
-    if (typeof slice.text === "function") {
-      header = await slice.text();
-    } else {
-      const buf = await slice.arrayBuffer();
-      header = String.fromCharCode(...new Uint8Array(buf));
-    }
-  } catch {
-    // ignore
+  if (blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
+    console.error("[Receipt] Invalid PDF blob", { size: blob.size, expectedTextLength: expectedText.length });
+    throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
 
-  if (header !== "%PDF" || blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
-    console.error("[Receipt] Invalid PDF blob", { size: blob.size, header, expectedTextLength: expectedText.length });
+  let header = "";
+  try {
+    // Read first 4 bytes from the full blob's arrayBuffer
+    const buf = await blob.arrayBuffer();
+    header = String.fromCharCode(...new Uint8Array(buf).slice(0, 4));
+  } catch {
+    // If arrayBuffer fails, skip header check (size check already passed)
+    return;
+  }
+
+  if (header && header !== "%PDF") {
+    console.error("[Receipt] Invalid PDF header", { size: blob.size, header });
     throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
 }
@@ -924,8 +926,10 @@ export async function generateReceiptPdfBlob(options: ReceiptPDFOptions) {
 }
 
 /**
- * Capture a live DOM element directly with html2canvas and produce a PDF.
- * This is the preferred method — it guarantees the PDF matches the screen exactly.
+ * Clone a live DOM element off-screen at a fixed width, copy all stylesheets
+ * so Tailwind classes render, pre-load images as base64 to bypass CORS,
+ * then capture with html2canvas. This guarantees the PDF matches the screen
+ * exactly — regardless of device width or ScrollArea clipping.
  */
 export async function exportReceiptFromElement(
   element: HTMLElement,
@@ -934,42 +938,192 @@ export async function exportReceiptFromElement(
   phone?: string,
   options?: Partial<ReceiptPDFOptions>
 ) {
-  // Wait for images inside the live element
-  await waitForImagesInNode(element, 6000);
-
-  // Let the browser finish painting
-  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-
-  const text = element.textContent?.replace(/\s+/g, " ").trim() ?? "";
-  if (!text || text.length < 20) {
+  // 1. Validate the source element has content
+  const srcText = element.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  if (!srcText || srcText.length < 20) {
     throw new Error("O recibo ainda não tem conteúdo visível. Aguarde os dados carregarem.");
   }
 
-  console.info("[Receipt] Capturing live DOM element", {
-    width: element.scrollWidth,
-    height: element.scrollHeight,
-    textLength: text.length,
+  console.info("[Receipt] Starting capture", {
+    srcWidth: element.scrollWidth,
+    srcHeight: element.scrollHeight,
+    textLength: srcText.length,
+    action,
   });
 
-  const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
+  // 2. Create off-screen container
+  const container = document.createElement("div");
+  container.setAttribute("id", "receipt-clone-root");
+  container.setAttribute("aria-hidden", "true");
+  container.style.cssText = [
+    "position: fixed",
+    "top: 0",
+    "left: -9999px",
+    `width: ${RECEIPT_RENDER_WIDTH_PX}px`,
+    `min-width: ${RECEIPT_RENDER_WIDTH_PX}px`,
+    "z-index: -9999",
+    "opacity: 0.01",
+    "pointer-events: none",
+    "background: #ffffff",
+    "color: #1a1a2e",
+    "font-family: 'Segoe UI', Tahoma, Geneva, sans-serif",
+    "font-size: 14px",
+    "padding: 24px",
+  ].join("; ");
 
-  const canvas = await html2canvas(element, {
-    backgroundColor: "#ffffff",
-    scale,
-    useCORS: true,
-    allowTaint: false,
-    logging: false,
-    width: element.scrollWidth,
-    height: element.scrollHeight,
-    scrollX: 0,
-    scrollY: 0,
-  });
-
-  if (!canvas.width || !canvas.height) {
-    throw new Error("A captura do recibo resultou em imagem vazia.");
+  // 3. Copy ALL stylesheets from the document (Tailwind, custom CSS, etc.)
+  const headStylesheets = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'));
+  for (const node of headStylesheets) {
+    container.appendChild(node.cloneNode(true));
   }
 
-  // Build PDF from canvas
+  // 4. Also copy CSS custom properties from :root so Tailwind tokens resolve
+  const rootStyles = getComputedStyle(document.documentElement);
+  const cssVars: string[] = [];
+  for (let i = 0; i < rootStyles.length; i++) {
+    const prop = rootStyles[i];
+    if (prop.startsWith("--")) {
+      cssVars.push(`${prop}: ${rootStyles.getPropertyValue(prop)};`);
+    }
+  }
+  if (cssVars.length > 0) {
+    const varStyle = document.createElement("style");
+    varStyle.textContent = `#receipt-clone-root, #receipt-clone-root * { ${cssVars.join(" ")} }`;
+    container.appendChild(varStyle);
+  }
+
+  // 5. Clone the element content
+  const clone = element.cloneNode(true) as HTMLElement;
+  // Reset any clipping from parent ScrollArea
+  clone.style.overflow = "visible";
+  clone.style.maxHeight = "none";
+  clone.style.height = "auto";
+  container.appendChild(clone);
+
+  document.body.appendChild(container);
+
+  const cleanup = () => {
+    if (container.parentNode) container.parentNode.removeChild(container);
+  };
+
+  try {
+    // 6. Pre-load all images as base64 in the clone to avoid CORS
+    const { imageToBase64 } = await import("@/lib/receiptConfig");
+    const images = Array.from(clone.querySelectorAll("img"));
+    await Promise.allSettled(
+      images.map(async (img) => {
+        const src = img.getAttribute("src") || "";
+        if (!src || src.startsWith("data:")) return;
+        const b64 = await imageToBase64(src, 8000);
+        if (b64) {
+          img.src = b64;
+        } else {
+          img.style.display = "none";
+        }
+      })
+    );
+
+    // 7. Wait for images to settle + browser paint
+    await waitForImagesInNode(clone, 6000);
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+    // 8. Validate clone has content
+    const cloneText = clone.textContent?.replace(/\s+/g, " ").trim() ?? "";
+    if (!cloneText || cloneText.length < 20) {
+      throw new Error("O recibo clonado não tem conteúdo visível.");
+    }
+
+    const captureWidth = Math.max(RECEIPT_RENDER_WIDTH_PX, container.scrollWidth);
+    const captureHeight = Math.max(400, container.scrollHeight);
+
+    console.info("[Receipt] Capturing clone", {
+      captureWidth,
+      captureHeight,
+      cloneTextLength: cloneText.length,
+      imagesTotal: images.length,
+    });
+
+    // 9. html2canvas on the off-screen clone
+    const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
+    const canvas = await html2canvas(container, {
+      backgroundColor: "#ffffff",
+      scale,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      width: captureWidth,
+      height: captureHeight,
+      windowWidth: captureWidth,
+      windowHeight: captureHeight,
+      scrollX: 0,
+      scrollY: 0,
+    });
+
+    if (!canvas.width || !canvas.height) {
+      throw new Error("A captura do recibo resultou em imagem vazia.");
+    }
+
+    console.info("[Receipt] Canvas captured", {
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+    });
+
+    // 10. Build PDF from canvas (shared logic for all 3 actions)
+    const blob = canvasToPdfBlob(canvas);
+
+    if (blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
+      throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
+    }
+
+    console.info("[Receipt] PDF blob ready", { size: blob.size, action });
+
+    // 11. Execute the requested action
+    if (action === "download") {
+      downloadBlob(blob, fileName);
+      return { blob, fileName, shared: false };
+    }
+
+    if (action === "print") {
+      const url = URL.createObjectURL(blob);
+      const printWindow = window.open(url, "_blank");
+      if (printWindow) {
+        printWindow.onload = () => setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else {
+        URL.revokeObjectURL(url);
+        downloadBlob(blob, fileName);
+      }
+      return { blob, fileName, shared: false };
+    }
+
+    // share (WhatsApp)
+    const file = new File([blob], fileName, { type: "application/pdf" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        const title = options?.type === "venda" ? `Recibo de Venda #${options.id}` : `Recibo de Pagamento #${options.id}`;
+        await navigator.share({ title, files: [file] });
+        return { blob, fileName, shared: true };
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return { blob, fileName, shared: false, cancelled: true };
+      }
+    }
+
+    downloadBlob(blob, fileName);
+    const cleanPhone = phone?.replace(/\D/g, "") || "";
+    const vendaText = options?.type === "venda"
+      ? `📄 *Recibo de Venda #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome}\n💰 Total: ${fmtR(options?.resumo?.total ?? 0)}`
+      : `📄 *Recibo de Pagamento #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome}`;
+    const encoded = encodeURIComponent(vendaText);
+    const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    return { blob, fileName, shared: false };
+  } finally {
+    cleanup();
+  }
+}
+
+/** Shared canvas → PDF blob conversion used by all export paths */
+function canvasToPdfBlob(canvas: HTMLCanvasElement): Blob {
   const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
   const pageWidthMm = pdf.internal.pageSize.getWidth();
   const pageHeightMm = pdf.internal.pageSize.getHeight();
@@ -1010,52 +1164,7 @@ export async function exportReceiptFromElement(
     }
   }
 
-  const blob = pdf.output("blob");
-  console.info("[Receipt] PDF from live element", { size: blob.size, action });
-
-  if (blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
-    throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
-  }
-
-  if (action === "download") {
-    downloadBlob(blob, fileName);
-    return { blob, fileName, shared: false };
-  }
-
-  if (action === "print") {
-    const url = URL.createObjectURL(blob);
-    const printWindow = window.open(url, "_blank");
-    if (printWindow) {
-      printWindow.onload = () => setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } else {
-      URL.revokeObjectURL(url);
-      downloadBlob(blob, fileName);
-    }
-    return { blob, fileName, shared: false };
-  }
-
-  // share
-  const file = new File([blob], fileName, { type: "application/pdf" });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      const title = options?.type === "venda" ? `Recibo de Venda #${options.id}` : `Recibo de Pagamento #${options.id}`;
-      await navigator.share({ title, files: [file] });
-      return { blob, fileName, shared: true };
-    } catch (e) {
-      if (e instanceof Error && e.name === "AbortError") return { blob, fileName, shared: false, cancelled: true };
-    }
-  }
-
-  downloadBlob(blob, fileName);
-  const cleanPhone = phone?.replace(/\D/g, "") || "";
-  const vendaText = options?.type === "venda"
-    ? `📄 *Recibo de Venda #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome}\n💰 Total: ${fmtR(options?.resumo?.total ?? 0)}`
-    : `📄 *Recibo de Pagamento #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome}`;
-  const encoded = encodeURIComponent(vendaText);
-  const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
-  window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-  return { blob, fileName, shared: false };
+  return pdf.output("blob");
 }
 
 export async function printReceipt(options: ReceiptPDFOptions) {

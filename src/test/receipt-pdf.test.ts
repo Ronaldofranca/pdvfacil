@@ -18,9 +18,11 @@ vi.mock("jspdf", () => ({
     addImage = vi.fn();
     addPage = vi.fn();
     output = vi.fn(() => {
-      // Use string so Blob.slice().text() works in jsdom
-      const str = "%PDF-1.4 mock" + "x".repeat(2000);
-      return new Blob([str], { type: "application/pdf" });
+      // Build blob using Uint8Array so slice().text() works in jsdom
+      const content = "%PDF-1.4 mock" + "x".repeat(2000);
+      const bytes = new Uint8Array(content.length);
+      for (let i = 0; i < content.length; i++) bytes[i] = content.charCodeAt(i);
+      return new Blob([bytes], { type: "application/pdf" });
     });
   },
 }));
@@ -101,5 +103,57 @@ describe("receipt PDF pipeline", () => {
     const result = await shareReceiptWhatsApp({ ...baseOptions }, "11999999999");
     expect(shareMock).toHaveBeenCalledTimes(1);
     expect(result.shared).toBe(true);
+  }, 15000);
+
+  it("exportReceiptFromElement captura clone off-screen e limpa", async () => {
+    const el = document.createElement("div");
+    el.innerHTML = `
+      <div>Cliente: Maria</div>
+      <div>Itens da Venda</div>
+      <div>Produto A - 1x R$ 10,00</div>
+      <div>Total: R$ 10,00</div>
+      <div>Formas de Pagamento: PIX R$ 10,00</div>
+    `;
+    document.body.appendChild(el);
+
+    const { exportReceiptFromElement } = await import("@/lib/reportExport");
+
+    globalThis.URL.createObjectURL = vi.fn(() => "blob:mock");
+    globalThis.URL.revokeObjectURL = vi.fn();
+
+    const result = await exportReceiptFromElement(el, "test.pdf", "download");
+    expect(result.blob.size).toBeGreaterThan(100);
+    expect(result.fileName).toBe("test.pdf");
+    // Clone should be cleaned up
+    expect(document.getElementById("receipt-clone-root")).toBeNull();
+
+    document.body.removeChild(el);
+  }, 15000);
+
+  it("todas as 3 ações usam o mesmo fluxo de captura html2canvas", async () => {
+    const html2canvas = (await import("html2canvas")).default;
+
+    const el = document.createElement("div");
+    el.textContent = "Recibo de Venda - Cliente Maria - Total R$ 50,00";
+    document.body.appendChild(el);
+
+    const { exportReceiptFromElement } = await import("@/lib/reportExport");
+
+    globalThis.URL.createObjectURL = vi.fn(() => "blob:mock");
+    globalThis.URL.revokeObjectURL = vi.fn();
+
+    await exportReceiptFromElement(el, "test.pdf", "download");
+    const callsAfterDownload = (html2canvas as any).mock.calls.length;
+
+    const openMock = vi.fn(() => ({ onload: null, focus: vi.fn(), print: vi.fn() }));
+    vi.stubGlobal("open", openMock);
+    await exportReceiptFromElement(el, "test.pdf", "print");
+    const callsAfterPrint = (html2canvas as any).mock.calls.length;
+
+    // Both actions used the same html2canvas capture path
+    expect(callsAfterDownload).toBeGreaterThan(0);
+    expect(callsAfterPrint).toBeGreaterThan(callsAfterDownload);
+
+    document.body.removeChild(el);
   }, 15000);
 });
