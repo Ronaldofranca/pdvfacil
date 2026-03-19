@@ -69,6 +69,7 @@ export default function PedidosPage() {
   const converterEmVenda = (pedido: typeof pedidoDetail) => {
     if (!pedido || !itensDetail) return;
     const cart: CartItem[] = itensDetail.map((i) => ({
+      line_id: `pedido_${i.id ?? crypto.randomUUID()}`,
       produto_id: i.produto_id,
       nome: i.nome_produto,
       quantidade: Number(i.quantidade),

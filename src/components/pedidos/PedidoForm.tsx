@@ -38,44 +38,21 @@ export function PedidoForm({ open, onOpenChange }: Props) {
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   const addToCart = (produto: any) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.produto_id === produto.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.produto_id === produto.id
-            ? { ...i, quantidade: i.quantidade + 1, subtotal: (i.quantidade + 1) * i.preco_vendido }
-            : i
-        );
-      }
-      return [...prev, {
-        produto_id: produto.id,
-        nome: produto.nome,
-        quantidade: 1,
-        preco_original: Number(produto.preco),
-        preco_vendido: Number(produto.preco),
-        desconto: 0,
-        bonus: false,
-        subtotal: Number(produto.preco),
-      }];
-    });
+    setCart((prev) => addItemToCart(prev, produto));
   };
 
-  const changeQty = (idx: number, delta: number) => {
-    setCart((prev) => prev.map((item, i) => {
-      if (i !== idx) return item;
-      const newQty = Math.max(1, item.quantidade + delta);
-      return { ...item, quantidade: newQty, subtotal: item.bonus ? 0 : newQty * item.preco_vendido - item.desconto };
-    }));
+  const changeQty = (lineId: string, delta: number) => {
+    setCart((prev) => changeLineQty(prev, lineId, delta));
   };
 
-  const removeItem = (idx: number) => setCart((prev) => prev.filter((_, i) => i !== idx));
+  const removeItem = (lineId: string) => setCart((prev) => removeCartLine(prev, lineId));
 
-  const toggleBonus = (idx: number) => {
-    setCart((prev) => prev.map((item, i) => {
-      if (i !== idx) return item;
-      const bonus = !item.bonus;
-      return { ...item, bonus, subtotal: bonus ? 0 : item.quantidade * item.preco_vendido - item.desconto };
-    }));
+  const toggleBonus = (lineId: string, isBonus: boolean) => {
+    if (isBonus) {
+      setCart((prev) => unmarkOneGift(prev, lineId));
+    } else {
+      setCart((prev) => markOneUnitAsGift(prev, lineId));
+    }
   };
 
   const total = cart.reduce((s, i) => s + i.subtotal, 0);
