@@ -108,7 +108,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
       if (!initialCart?.length && !initialClienteId) {
         const saved = pdvPersistence.restore();
         if (saved && saved.cart?.length > 0) {
-          setCart(saved.cart);
+          setCart(ensureAllLineIds(saved.cart));
           setClienteId(saved.clienteId || "");
           setObservacoes(saved.observacoes || "");
           setPagamentos(saved.pagamentos?.length ? saved.pagamentos : [{ forma: "dinheiro", valor: 0 }]);
