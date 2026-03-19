@@ -872,8 +872,10 @@ async function assertValidPdfBlob(blob: Blob, expectedText: string) {
     const slice = blob.slice(0, 4);
     if (typeof slice.text === "function") {
       header = await slice.text();
-    } else {
-      const buf = await slice.arrayBuffer();
+    }
+    // Fallback: if text() returned empty, try arrayBuffer
+    if (!header && blob.size >= 4) {
+      const buf = await blob.slice(0, 4).arrayBuffer();
       header = String.fromCharCode(...new Uint8Array(buf));
     }
   } catch {
