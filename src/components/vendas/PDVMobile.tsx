@@ -68,7 +68,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
   const [searchCliente, setSearchCliente] = useState("");
-  const [editingItem, setEditingItem] = useState<number | null>(null);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<"todos" | "produtos" | "kits">("todos");
   const [kitDetailId, setKitDetailId] = useState<string | null>(null);
   const [expandedCartKit, setExpandedCartKit] = useState<string | null>(null);
