@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_RECEIPT_CONFIG } from "@/lib/receiptConfig";
 
-// ─── Mock html2canvas ───
 vi.mock("html2canvas", () => ({
   default: vi.fn(async () => {
     const canvas = document.createElement("canvas");
@@ -11,7 +9,6 @@ vi.mock("html2canvas", () => ({
   }),
 }));
 
-// ─── Mock jsPDF ───
 const pdfBlobContent = "%PDF-1.4 mock receipt pdf for print test with enough bytes to pass validation";
 vi.mock("jspdf", () => ({
   default: class MockJsPDF {
@@ -26,8 +23,8 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("printReceipt", () => {
-  it("gera PDF e abre janela para impressão", async () => {
+describe("receipt print action", () => {
+  it("gera PDF do mesmo DOM do recibo e abre a impressão", async () => {
     const openMock = vi.fn().mockReturnValue({
       onload: null,
       focus: vi.fn(),
@@ -35,25 +32,26 @@ describe("printReceipt", () => {
     });
     vi.spyOn(window, "open").mockImplementation(openMock);
 
-    const { printReceipt } = await import("@/lib/reportExport");
+    const { exportReceiptFromElement } = await import("@/lib/reportExport");
 
-    await printReceipt({
+    const el = document.createElement("div");
+    el.style.width = "794px";
+    el.style.height = "500px";
+    el.textContent = "Recibo de Venda Cliente Maria Produto A Total R$ 10,00";
+    document.body.appendChild(el);
+
+    globalThis.URL.createObjectURL = vi.fn(() => "blob:mock");
+    globalThis.URL.revokeObjectURL = vi.fn();
+
+    await exportReceiptFromElement(el, "recibo.pdf", "print", undefined, {
       type: "venda",
       id: "abc123",
-      empresa: "Empresa Teste",
-      logoUrl: "data:image/png;base64,AAA",
-      data: "01/01/2026 10:00",
       cliente: { nome: "Maria", id: "cli-1" },
-      itens: [
-        { nome: "Produto A", quantidade: 1, precoUnitario: 10, desconto: 0, subtotal: 10 },
-      ],
       resumo: { subtotal: 10, descontos: 0, total: 10 },
-      pagamentos: [{ forma: "PIX", valor: 10 }],
-      receiptConfig: DEFAULT_RECEIPT_CONFIG,
     });
 
     expect(openMock).toHaveBeenCalledTimes(1);
-    // First arg should be a blob URL
     expect(openMock.mock.calls[0][0]).toMatch(/^blob:/);
+    document.body.removeChild(el);
   });
 });
