@@ -118,7 +118,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
         }
       }
       if (initialCart?.length) {
-        setCart(initialCart);
+        setCart(ensureAllLineIds(initialCart));
         setStep("carrinho");
       }
       if (initialClienteId) {
