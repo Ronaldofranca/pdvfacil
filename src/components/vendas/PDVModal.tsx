@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle, Layers } from "lucide-react";
 import { usePDVPersistence } from "@/hooks/useFormPersistence";
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
+import { addItemToCart, markOneUnitAsGift, unmarkOneGift, updateCartItem, changeLineQty, removeCartLine, ensureAllLineIds } from "@/lib/cartUtils";
+import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
