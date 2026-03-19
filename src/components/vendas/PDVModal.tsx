@@ -220,55 +220,25 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
 
   // ─── Cart operations ───
   const addToCart = (produto: any) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.produto_id === produto.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.produto_id === produto.id
-            ? { ...i, quantidade: i.quantidade + 1, subtotal: (i.quantidade + 1) * i.preco_vendido }
-            : i
-        );
-      }
-      const item: CartItem = {
-        produto_id: produto.id,
-        nome: produto.nome,
-        quantidade: 1,
-        preco_original: Number(produto.preco),
-        preco_vendido: Number(produto.preco),
-        desconto: 0,
-        bonus: false,
-        subtotal: Number(produto.preco),
-        custo_unitario: Number(produto.custo ?? 0),
-      };
-      if (produto.is_kit && produto.kit_itens) {
-        item.is_kit = true;
-        item.kit_itens = produto.kit_itens;
-      }
-      return [...prev, item];
-    });
+    setCart((prev) => addItemToCart(prev, produto));
   };
 
-  const updateItem = (idx: number, updates: Partial<CartItem>) => {
-    setCart((prev) =>
-      prev.map((item, i) => {
-        if (i !== idx) return item;
-        const merged = { ...item, ...updates };
-        if (merged.bonus) {
-          merged.subtotal = 0;
-        } else {
-          merged.subtotal = merged.quantidade * merged.preco_vendido - merged.desconto;
-        }
-        return merged;
-      })
-    );
+  const updateItem = (lineId: string, updates: Partial<CartItem>) => {
+    setCart((prev) => updateCartItem(prev, lineId, updates));
   };
 
-  const removeItem = (idx: number) => setCart((prev) => prev.filter((_, i) => i !== idx));
+  const removeItem = (lineId: string) => setCart((prev) => removeCartLine(prev, lineId));
 
-  const changeQty = (idx: number, delta: number) => {
-    const item = cart[idx];
-    const newQty = Math.max(1, item.quantidade + delta);
-    updateItem(idx, { quantidade: newQty });
+  const changeQty = (lineId: string, delta: number) => {
+    setCart((prev) => changeLineQty(prev, lineId, delta));
+  };
+
+  const handleMarkGift = (lineId: string, isBonus: boolean) => {
+    if (isBonus) {
+      setCart((prev) => unmarkOneGift(prev, lineId));
+    } else {
+      setCart((prev) => markOneUnitAsGift(prev, lineId));
+    }
   };
 
   // ─── Tier discount ───

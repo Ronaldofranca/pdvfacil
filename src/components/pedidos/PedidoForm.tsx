@@ -167,8 +167,8 @@ export function PedidoForm({ open, onOpenChange }: Props) {
               {cart.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Carrinho vazio — adicione produtos</p>
               ) : (
-                cart.map((item, idx) => (
-                  <Card key={item.produto_id} className="p-3 space-y-2">
+                cart.map((item) => (
+                  <Card key={item.line_id} className="p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -180,14 +180,14 @@ export function PedidoForm({ open, onOpenChange }: Props) {
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1">
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(idx, -1)}><Minus className="w-3 h-3" /></Button>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(item.line_id, -1)}><Minus className="w-3 h-3" /></Button>
                         <span className="w-8 text-center text-sm font-medium">{item.quantidade}</span>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(idx, 1)}><Plus className="w-3 h-3" /></Button>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => changeQty(item.line_id, 1)}><Plus className="w-3 h-3" /></Button>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleBonus(idx)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleBonus(item.line_id, item.bonus)}>
                         <Gift className={`w-3.5 h-3.5 ${item.bonus ? "text-primary" : "text-muted-foreground"}`} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeItem(idx)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeItem(item.line_id)}>
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </Button>
                     </div>
