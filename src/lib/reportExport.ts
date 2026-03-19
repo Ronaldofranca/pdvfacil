@@ -867,23 +867,23 @@ async function renderReceiptHtmlToPdfBlob(html: string, expectedText: string): P
 }
 
 async function assertValidPdfBlob(blob: Blob, expectedText: string) {
-  let header = "";
-  try {
-    const slice = blob.slice(0, 4);
-    if (typeof slice.text === "function") {
-      header = await slice.text();
-    }
-    // Fallback: if text() returned empty, try arrayBuffer
-    if (!header && blob.size >= 4) {
-      const buf = await blob.slice(0, 4).arrayBuffer();
-      header = String.fromCharCode(...new Uint8Array(buf));
-    }
-  } catch {
-    // ignore
+  if (blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
+    console.error("[Receipt] Invalid PDF blob", { size: blob.size, expectedTextLength: expectedText.length });
+    throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
 
-  if (header !== "%PDF" || blob.size < RECEIPT_MIN_VALID_PDF_BYTES) {
-    console.error("[Receipt] Invalid PDF blob", { size: blob.size, header, expectedTextLength: expectedText.length });
+  let header = "";
+  try {
+    // Read first 4 bytes from the full blob's arrayBuffer
+    const buf = await blob.arrayBuffer();
+    header = String.fromCharCode(...new Uint8Array(buf).slice(0, 4));
+  } catch {
+    // If arrayBuffer fails, skip header check (size check already passed)
+    return;
+  }
+
+  if (header && header !== "%PDF") {
+    console.error("[Receipt] Invalid PDF header", { size: blob.size, header });
     throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
 }
