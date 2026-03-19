@@ -41,6 +41,8 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
     });
   }, [open, venda, loadingReceipt, itens, parcelas, empresa]);
 
+  if (!venda) return null;
+
   const runAction = async (action: "download" | "print" | "share", loadingText: string, successText?: string) => {
     if (loadingReceipt) {
       toast.error("Aguarde o recibo terminar de carregar.");

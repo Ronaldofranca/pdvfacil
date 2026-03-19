@@ -56,6 +56,8 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
     });
   }, [open, parcela, loadingReceipt, pagamentos, parcelasRestantes]);
 
+  if (!parcela) return null;
+
   const runAction = async (action: "download" | "print" | "share", loadingText: string, successText?: string) => {
     if (loadingReceipt) {
       toast.error("Aguarde o recibo terminar de carregar.");
