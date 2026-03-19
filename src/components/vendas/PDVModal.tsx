@@ -150,7 +150,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
           if (saved.crediarioConfig) setCrediarioConfig(saved.crediarioConfig);
         }
       }
-      if (initialCart?.length) setCart(initialCart);
+      if (initialCart?.length) setCart(ensureAllLineIds(initialCart));
       if (initialClienteId) setClienteId(initialClienteId);
     }
     if (!open) restoredRef.current = false;
