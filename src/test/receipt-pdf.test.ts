@@ -18,8 +18,11 @@ vi.mock("jspdf", () => ({
     addImage = vi.fn();
     addPage = vi.fn();
     output = vi.fn(() => {
-      const str = "%PDF-1.4 mock" + "x".repeat(2000);
-      return new Blob([str], { type: "application/pdf" });
+      // Build blob using Uint8Array so slice().text() works in jsdom
+      const content = "%PDF-1.4 mock" + "x".repeat(2000);
+      const bytes = new Uint8Array(content.length);
+      for (let i = 0; i < content.length; i++) bytes[i] = content.charCodeAt(i);
+      return new Blob([bytes], { type: "application/pdf" });
     });
   },
 }));
