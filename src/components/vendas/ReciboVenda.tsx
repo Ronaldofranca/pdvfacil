@@ -21,11 +21,8 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
   const { data: parcelas, isLoading: parcelasLoading, isFetching: parcelasFetching } = useParcelas(venda?.id ? { vendaId: venda.id } : undefined);
   const { data: empresas, isLoading: empresasLoading } = useEmpresas();
   const empresa = empresas?.[0];
-
-  if (!venda) return null;
-
-  const vendaId = venda.id.slice(0, 8);
-  const clienteNome = (venda as any).clientes?.nome ?? "Consumidor";
+  const vendaId = venda?.id?.slice(0, 8) ?? "";
+  const clienteNome = (venda as any)?.clientes?.nome ?? "Consumidor";
   const fileName = `recibo_venda_${vendaId}.pdf`;
   const loadingReceipt = itensLoading || itensFetching || parcelasLoading || parcelasFetching || empresasLoading;
 

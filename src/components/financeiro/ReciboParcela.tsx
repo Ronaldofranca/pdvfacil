@@ -24,20 +24,22 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
       : undefined;
   const { data: todasParcelas, isLoading: parcelasLoading, isFetching: parcelasFetching } = useParcelas(parcelasFilter);
 
-  if (!parcela) return null;
-
-  const clienteNome = (parcela as any).clientes?.nome ?? "Cliente não identificado";
+  const clienteNome = (parcela as any)?.clientes?.nome ?? "Cliente não identificado";
   const ultimoPagamento = pagamentos?.[0];
-  const valorPagoAntes = ultimoPagamento
-    ? Number(parcela.valor_pago) - Number(ultimoPagamento.valor_pago)
-    : Number(parcela.valor_pago);
-  const saldoAnterior = Number(parcela.valor_total) - Math.max(0, valorPagoAntes);
+  const valorPagoAntes = parcela
+    ? ultimoPagamento
+      ? Number(parcela.valor_pago) - Number(ultimoPagamento.valor_pago)
+      : Number(parcela.valor_pago)
+    : 0;
+  const saldoAnterior = parcela ? Number(parcela.valor_total) - Math.max(0, valorPagoAntes) : 0;
 
-  const parcelasRestantes = todasParcelas?.filter(
-    (p) => p.id !== parcela.id && (p.status === "pendente" || p.status === "parcial" || p.status === "vencida")
-  );
+  const parcelasRestantes = parcela
+    ? todasParcelas?.filter(
+        (p) => p.id !== parcela.id && (p.status === "pendente" || p.status === "parcial" || p.status === "vencida")
+      )
+    : undefined;
 
-  const fileName = `recibo_pagamento_${parcela.id.slice(0, 8)}.pdf`;
+  const fileName = `recibo_pagamento_${parcela?.id?.slice(0, 8) ?? ""}.pdf`;
   const loadingReceipt = pagamentosLoading || pagamentosFetching || parcelasLoading || parcelasFetching;
 
   useEffect(() => {
