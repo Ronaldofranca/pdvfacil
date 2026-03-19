@@ -14,6 +14,7 @@ import { useClientes } from "@/hooks/useClientes";
 import { useCriarPedido } from "@/hooks/usePedidos";
 import { useAuth } from "@/contexts/AuthContext";
 import type { CartItem } from "@/hooks/useVendas";
+import { addItemToCart, markOneUnitAsGift, unmarkOneGift, removeCartLine, changeLineQty, ensureAllLineIds } from "@/lib/cartUtils";
 import { toast } from "sonner";
 
 interface Props {
