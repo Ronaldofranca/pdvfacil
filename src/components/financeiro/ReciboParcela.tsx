@@ -99,8 +99,9 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
   );
 
   return (
-    <ReceiptDialogShell open={open} onOpenChange={onOpenChange} title={undefined} actions={actions} exportRef={exportRef}>
+    <ReceiptDialogShell open={open} onOpenChange={onOpenChange} title={undefined} actions={actions}>
       <ReceiptParcelaContent
+        ref={contentRef}
         parcela={parcela}
         pagamentos={pagamentos}
         parcelasRestantes={parcelasRestantes}

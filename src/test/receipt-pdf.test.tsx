@@ -206,6 +206,10 @@ describe("receipt unified pipeline", () => {
     el.textContent = content;
     document.body.appendChild(el);
 
+    vi.spyOn(el, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, width: 794, height: 2000, top: 0, right: 794, bottom: 2000, left: 0, toJSON: () => ({}) });
+    Object.defineProperty(el, "scrollWidth", { value: 794, configurable: true });
+    Object.defineProperty(el, "scrollHeight", { value: 2000, configurable: true });
+
     globalThis.URL.createObjectURL = vi.fn(() => "blob:mock");
     globalThis.URL.revokeObjectURL = vi.fn();
 
