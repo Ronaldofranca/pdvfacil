@@ -473,15 +473,21 @@ export async function exportReceiptFromElement(
       ...imagePreparation,
     });
 
-    const cloneState = await ensureReceiptElementReady(clone);
+    // Use source dimensions for capture — clone dimensions may not be computed in all environments
+    await nextPaint();
+    const cloneRect = clone.getBoundingClientRect();
+    const cloneWidth = Math.max(Math.ceil(cloneRect.width), clone.scrollWidth, sourceState.width);
+    const cloneHeight = Math.max(Math.ceil(cloneRect.height), clone.scrollHeight, sourceState.height);
+
     console.info("[Receipt] recibo pronto para exportação", {
       action,
       fileName,
-      cloneState,
+      cloneWidth,
+      cloneHeight,
     });
 
-    const captureWidth = Math.max(cloneState.width, host.scrollWidth);
-    const captureHeight = Math.max(cloneState.height, host.scrollHeight);
+    const captureWidth = Math.max(cloneWidth, host.scrollWidth);
+    const captureHeight = Math.max(cloneHeight, host.scrollHeight);
     const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
 
     console.info("[Receipt] início da geração do PDF", {
