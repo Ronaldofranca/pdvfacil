@@ -64,7 +64,7 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
       return;
     }
 
-    if (!exportRef.current) {
+    if (!contentRef.current) {
       toast.error("O recibo ainda não está pronto.");
       return;
     }
