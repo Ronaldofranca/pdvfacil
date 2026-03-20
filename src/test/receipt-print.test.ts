@@ -40,6 +40,10 @@ describe("receipt print action", () => {
     el.textContent = "Recibo de Venda Cliente Maria Produto A Total R$ 10,00";
     document.body.appendChild(el);
 
+    vi.spyOn(el, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, width: 794, height: 500, top: 0, right: 794, bottom: 500, left: 0, toJSON: () => ({}) });
+    Object.defineProperty(el, "scrollWidth", { value: 794, configurable: true });
+    Object.defineProperty(el, "scrollHeight", { value: 500, configurable: true });
+
     globalThis.URL.createObjectURL = vi.fn(() => "blob:mock");
     globalThis.URL.revokeObjectURL = vi.fn();
 
