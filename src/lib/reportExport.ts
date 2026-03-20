@@ -327,9 +327,17 @@ async function assertValidPdfBlob(blob: Blob) {
     throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
 
-  // Use slice + text() for wider compatibility (jsdom, older browsers)
-  const headerSlice = blob.slice(0, 4);
-  const header = await headerSlice.text();
+  // Read header bytes using FileReader for maximum compatibility
+  const header = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const arr = new Uint8Array(reader.result as ArrayBuffer);
+      resolve(String.fromCharCode(...arr.slice(0, 4)));
+    };
+    reader.onerror = () => reject(new Error("Falha ao ler o PDF gerado."));
+    reader.readAsArrayBuffer(blob.slice(0, 4));
+  });
+
   if (header !== "%PDF") {
     throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
