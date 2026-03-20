@@ -36,6 +36,17 @@ interface ReceiptVendaContentProps {
   parcelas: any[] | undefined;
 }
 
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <Badge
+      variant={status === "finalizada" ? "default" : status === "cancelada" ? "destructive" : "secondary"}
+      className="h-5 px-1.5 text-[10px] leading-none"
+    >
+      {STATUS_LABELS[status] ?? status}
+    </Badge>
+  );
+}
+
 export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaContentProps>(
   ({ venda, itens, parcelas }, ref) => {
     if (!venda) return null;
@@ -48,21 +59,21 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
     const titulo = venda.status === "cancelada" ? "Comprovante de Cancelamento" : "Recibo de Venda";
 
     return (
-      <div ref={ref} data-receipt-document="venda" className="space-y-4 bg-background text-sm sm:space-y-5">
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{titulo}</p>
-              <h2 className="text-xl font-semibold text-foreground">#{vendaId}</h2>
-              <p className="text-xs text-muted-foreground">Emitido em {format(dataVenda, "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+      <div ref={ref} data-receipt-document="venda" className="space-y-3 bg-background text-sm">
+        {/* Header */}
+        <div className="rounded-lg border bg-card p-3 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">{titulo}</p>
+              <h2 className="text-base font-semibold text-foreground">#{vendaId}</h2>
+              <p className="text-[10px] text-muted-foreground">Emitido em {format(dataVenda, "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
             </div>
-            <Badge variant={venda.status === "finalizada" ? "default" : venda.status === "cancelada" ? "destructive" : "secondary"}>
-              {STATUS_LABELS[venda.status] ?? venda.status}
-            </Badge>
+            <StatusBadge status={venda.status} />
           </div>
         </div>
 
-        <div className="space-y-2 text-sm">
+        {/* Sale details */}
+        <div className="space-y-1.5 text-sm">
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Cliente</span>
             <span className="font-medium text-right">{clienteNome}</span>
@@ -79,9 +90,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Status</span>
-            <Badge variant={venda.status === "finalizada" ? "default" : venda.status === "cancelada" ? "destructive" : "secondary"}>
-              {STATUS_LABELS[venda.status] ?? venda.status}
-            </Badge>
+            <StatusBadge status={venda.status} />
           </div>
         </div>
 
@@ -97,36 +106,41 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
 
         <Separator />
 
+        {/* Items */}
         <div className="space-y-2">
           <p className="text-sm font-semibold">Itens da Venda</p>
           {itens?.map((item) => (
             <div key={item.id} className="rounded border p-2 text-sm">
-              <div className="flex items-start gap-3">
-                <img
-                  src={(item as any).produtos?.imagem_url || "/placeholder.svg"}
-                  alt={item.nome_produto}
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 max-h-10 max-w-[2.5rem] flex-shrink-0 rounded bg-muted object-cover"
-                  style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, objectFit: "cover" }}
-                />
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded bg-muted">
+                  <img
+                    src={(item as any).produtos?.imagem_url || "/placeholder.svg"}
+                    alt={item.nome_produto}
+                    width={32}
+                    height={32}
+                    className="h-full w-full object-cover"
+                    loading="eager"
+                    crossOrigin="anonymous"
+                    onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="truncate font-medium">{item.nome_produto}</p>
-                    {(item as any).item_type === "kit" && <Badge variant="outline" className="px-1 py-0 text-[10px]">Kit</Badge>}
+                  <div className="flex items-center gap-1">
+                    <p className="truncate text-xs font-medium">{item.nome_produto}</p>
+                    {(item as any).item_type === "kit" && <Badge variant="outline" className="h-4 px-1 py-0 text-[9px]">Kit</Badge>}
                   </div>
-                  <p className="break-words text-xs text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     {Number(item.quantidade)}x {fmtR(Number(item.preco_vendido))}
                     {item.bonus && " (Bônus)"}
                     {Number(item.desconto) > 0 && ` — Desc: ${fmtR(Number(item.desconto))}`}
                   </p>
                 </div>
-                <span className="whitespace-nowrap font-medium">{fmtR(Number(item.subtotal))}</span>
+                <span className="whitespace-nowrap text-xs font-medium">{fmtR(Number(item.subtotal))}</span>
               </div>
               {(item as any)._kit_composicao?.length > 0 && (
-                <div className="ml-13 mt-1.5 space-y-0.5 border-l-2 border-muted pl-3">
+                <div className="ml-10 mt-1 space-y-0.5 border-l-2 border-muted pl-2">
                   {(item as any)._kit_composicao.map((comp: any, idx: number) => (
-                    <p key={idx} className="text-[11px] text-muted-foreground">• {comp.quantidade}x {comp.produto_nome}</p>
+                    <p key={idx} className="text-[10px] text-muted-foreground">• {comp.quantidade}x {comp.produto_nome}</p>
                   ))}
                 </div>
               )}
@@ -136,6 +150,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
 
         <Separator />
 
+        {/* Financial summary */}
         <div className="space-y-1 text-sm">
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Subtotal</span>
@@ -155,6 +170,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
 
         <Separator />
 
+        {/* Payment methods */}
         {pagamentos.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm font-semibold">Formas de Pagamento</p>
@@ -167,6 +183,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
           </div>
         )}
 
+        {/* Installments */}
         {hasCrediario && parcelas && parcelas.length > 0 && (
           <>
             <Separator />
@@ -178,7 +195,10 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
                     <p className="break-words font-medium">{p.numero}ª Parcela — {fmtR(Number(p.valor_total))}</p>
                     <p className="text-xs text-muted-foreground">Venc: {format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy")}</p>
                   </div>
-                  <Badge variant={p.status === "paga" ? "default" : p.status === "vencida" ? "destructive" : p.status === "parcial" ? "outline" : "secondary"} className="text-xs">
+                  <Badge
+                    variant={p.status === "paga" ? "default" : p.status === "vencida" ? "destructive" : p.status === "parcial" ? "outline" : "secondary"}
+                    className="h-5 px-1.5 text-[10px] leading-none"
+                  >
                     {PARCELA_STATUS[p.status] ?? p.status}
                   </Badge>
                 </div>
@@ -187,6 +207,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
           </>
         )}
 
+        {/* Notes */}
         {venda.observacoes && (
           <>
             <Separator />

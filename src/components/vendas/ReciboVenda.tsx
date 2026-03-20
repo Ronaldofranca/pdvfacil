@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function ReciboVenda({ open, onOpenChange, venda }: Props) {
-  const exportRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const { data: itens, isLoading: itensLoading, isFetching: itensFetching } = useVendaItens(venda?.id ?? null);
   const { data: parcelas, isLoading: parcelasLoading, isFetching: parcelasFetching } = useParcelas(venda?.id ? { vendaId: venda.id } : undefined);
   const { data: empresas, isLoading: empresasLoading } = useEmpresas();
@@ -49,14 +49,14 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
       return;
     }
 
-    if (!exportRef.current) {
+    if (!contentRef.current) {
       toast.error("O recibo ainda não está pronto.");
       return;
     }
 
     const id = toast.loading(loadingText);
     try {
-      await exportReceiptFromElement(exportRef.current, fileName, action, (venda as any).clientes?.telefone, {
+      await exportReceiptFromElement(contentRef.current, fileName, action, (venda as any).clientes?.telefone, {
         type: "venda",
         id: vendaId,
         cliente: { nome: clienteNome, id: venda.cliente_id?.slice(0, 8) ?? "—" },
@@ -94,9 +94,8 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
       onOpenChange={onOpenChange}
       title={undefined}
       actions={actions}
-      exportRef={exportRef}
     >
-      <ReceiptVendaContent venda={venda} itens={itens} parcelas={parcelas} />
+      <ReceiptVendaContent ref={contentRef} venda={venda} itens={itens} parcelas={parcelas} />
     </ReceiptDialogShell>
   );
 }
