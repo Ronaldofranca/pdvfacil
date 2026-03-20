@@ -71,7 +71,7 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
 
     const id = toast.loading(loadingText);
     try {
-      await exportReceiptFromElement(exportRef.current, fileName, action, (parcela as any).clientes?.telefone, {
+      await exportReceiptFromElement(contentRef.current, fileName, action, (parcela as any).clientes?.telefone, {
         type: "pagamento",
         id: parcela.id.slice(0, 8),
         cliente: { nome: clienteNome, id: parcela.cliente_id?.slice(0, 8) ?? "—" },
