@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
-  const exportRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const { data: pagamentos, isLoading: pagamentosLoading, isFetching: pagamentosFetching } = usePagamentosDaParcela(parcela?.id ?? null);
 
   const parcelasFilter = parcela?.venda_id
@@ -64,14 +64,14 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
       return;
     }
 
-    if (!exportRef.current) {
+    if (!contentRef.current) {
       toast.error("O recibo ainda não está pronto.");
       return;
     }
 
     const id = toast.loading(loadingText);
     try {
-      await exportReceiptFromElement(exportRef.current, fileName, action, (parcela as any).clientes?.telefone, {
+      await exportReceiptFromElement(contentRef.current, fileName, action, (parcela as any).clientes?.telefone, {
         type: "pagamento",
         id: parcela.id.slice(0, 8),
         cliente: { nome: clienteNome, id: parcela.cliente_id?.slice(0, 8) ?? "—" },
@@ -99,8 +99,9 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
   );
 
   return (
-    <ReceiptDialogShell open={open} onOpenChange={onOpenChange} title={undefined} actions={actions} exportRef={exportRef}>
+    <ReceiptDialogShell open={open} onOpenChange={onOpenChange} title={undefined} actions={actions}>
       <ReceiptParcelaContent
+        ref={contentRef}
         parcela={parcela}
         pagamentos={pagamentos}
         parcelasRestantes={parcelasRestantes}

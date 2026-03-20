@@ -9,17 +9,18 @@ interface ReceiptDialogShellProps {
   title?: ReactNode;
   children: ReactNode;
   actions: ReactNode;
+  /** @deprecated Use ref directly on the content component instead */
   exportRef?: RefObject<HTMLDivElement | null>;
 }
 
-export function ReceiptDialogShell({ open, onOpenChange, title, children, actions, exportRef }: ReceiptDialogShellProps) {
+export function ReceiptDialogShell({ open, onOpenChange, title, children, actions }: ReceiptDialogShellProps) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-full flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:rounded-lg [&>button]:right-3 [&>button]:top-3">
-          <div ref={exportRef} className="min-h-0 flex flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex flex-1 flex-col overflow-hidden">
             {title ? (
               <DialogHeader className="shrink-0 border-b px-4 pb-3 pt-4 text-left">
                 <DialogTitle className="pr-8 text-base">{title}</DialogTitle>
@@ -42,7 +43,7 @@ export function ReceiptDialogShell({ open, onOpenChange, title, children, action
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[90vh] max-h-[52rem] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0">
-        <div ref={exportRef} className="min-h-0 flex flex-1 flex-col overflow-hidden">
+        <div className="min-h-0 flex flex-1 flex-col overflow-hidden">
           {title ? (
             <DialogHeader className="shrink-0 border-b px-6 pb-3 pt-4 text-left">
               <DialogTitle className="pr-8 text-lg">{title}</DialogTitle>

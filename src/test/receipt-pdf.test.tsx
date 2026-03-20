@@ -19,10 +19,8 @@ vi.mock("jspdf", () => ({
     addImage = vi.fn();
     addPage = vi.fn();
     output = vi.fn(() => {
-      const content = "%PDF-1.4 mock" + "x".repeat(2000);
-      const bytes = new Uint8Array(content.length);
-      for (let i = 0; i < content.length; i++) bytes[i] = content.charCodeAt(i);
-      return new Blob([bytes], { type: "application/pdf" });
+      const content = "%PDF-1.4 mock receipt" + "x".repeat(2000);
+      return new Blob([content], { type: "application/pdf" });
     });
   },
 }));
@@ -52,16 +50,33 @@ describe("receipt unified pipeline", () => {
     vi.clearAllMocks();
   });
 
-  it("usa o mesmo bloco visível como fonte oficial do recibo", async () => {
-    const exportRef = createRef<HTMLDivElement>();
+  it("ref aponta diretamente para o conteúdo do recibo, não para o ScrollArea", () => {
+    const contentRef = createRef<HTMLDivElement>();
     render(
       <ReceiptDialogShell
         open
         onOpenChange={() => {}}
         title={undefined}
-        exportRef={exportRef}
         actions={<button type="button">Exportar PDF</button>}
       >
+        <ReceiptVendaContent ref={contentRef} venda={venda} itens={itens} parcelas={parcelas} />
+      </ReceiptDialogShell>
+    );
+
+    // The ref points directly to the receipt content element
+    expect(contentRef.current).toBeTruthy();
+    expect(contentRef.current?.getAttribute("data-receipt-document")).toBe("venda");
+    // Content is inside the ref
+    expect(contentRef.current?.textContent).toContain("Recibo de Venda");
+    expect(contentRef.current?.textContent).toContain("Maria");
+    expect(contentRef.current?.textContent).toContain("Produto A");
+    // Buttons are NOT inside the ref
+    expect(contentRef.current?.textContent).not.toContain("Exportar PDF");
+  });
+
+  it("exibe todos os blocos do recibo corretamente", () => {
+    render(
+      <ReceiptDialogShell open onOpenChange={() => {}} title={undefined} actions={<button type="button">PDF</button>}>
         <ReceiptVendaContent venda={venda} itens={itens} parcelas={parcelas} />
       </ReceiptDialogShell>
     );
@@ -70,10 +85,34 @@ describe("receipt unified pipeline", () => {
     expect(screen.getByText("Maria")).toBeInTheDocument();
     expect(screen.getByText("Itens da Venda")).toBeInTheDocument();
     expect(screen.getByText("Formas de Pagamento")).toBeInTheDocument();
-    expect(screen.getByText("Parcelas do Crediário")).toBeInTheDocument();
-    expect(exportRef.current?.textContent).toContain("Recibo de Venda");
-    expect(exportRef.current?.textContent).toContain("Produto A");
-    expect(exportRef.current?.textContent).not.toContain("Exportar PDF");
+  });
+
+  it("badges de status usam tamanho reduzido", () => {
+    const contentRef = createRef<HTMLDivElement>();
+    render(
+      <ReceiptDialogShell open onOpenChange={() => {}} title={undefined} actions={<div />}>
+        <ReceiptVendaContent ref={contentRef} venda={venda} itens={itens} parcelas={parcelas} />
+      </ReceiptDialogShell>
+    );
+
+    const badges = contentRef.current?.querySelectorAll("[data-receipt-document] .h-5");
+    expect(badges?.length).toBeGreaterThan(0);
+  });
+
+  it("imagens dos produtos têm container fixo com object-cover", () => {
+    const contentRef = createRef<HTMLDivElement>();
+    render(
+      <ReceiptDialogShell open onOpenChange={() => {}} title={undefined} actions={<div />}>
+        <ReceiptVendaContent ref={contentRef} venda={venda} itens={itens} parcelas={parcelas} />
+      </ReceiptDialogShell>
+    );
+
+    const imgs = contentRef.current?.querySelectorAll("img");
+    expect(imgs?.length).toBeGreaterThan(0);
+    const img = imgs![0];
+    expect(img.classList.contains("object-cover")).toBe(true);
+    expect(img.getAttribute("width")).toBe("32");
+    expect(img.getAttribute("height")).toBe("32");
   });
 
   it("gera PDF do DOM visível, limpa o clone e não sai em branco", async () => {
@@ -93,6 +132,11 @@ describe("receipt unified pipeline", () => {
       <div>Parcelas do Crediário</div>
     `;
     document.body.appendChild(el);
+
+    // Mock dimensions for jsdom
+    vi.spyOn(el, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, width: 794, height: 600, top: 0, right: 794, bottom: 600, left: 0, toJSON: () => ({}) });
+    Object.defineProperty(el, "scrollWidth", { value: 794, configurable: true });
+    Object.defineProperty(el, "scrollHeight", { value: 600, configurable: true });
 
     globalThis.URL.createObjectURL = vi.fn(() => "blob:mock");
     globalThis.URL.revokeObjectURL = vi.fn();
@@ -120,6 +164,10 @@ describe("receipt unified pipeline", () => {
     el.textContent = "Recibo de Venda Cliente Maria Produto A Total R$ 10,00";
     document.body.appendChild(el);
 
+    vi.spyOn(el, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, width: 794, height: 400, top: 0, right: 794, bottom: 400, left: 0, toJSON: () => ({}) });
+    Object.defineProperty(el, "scrollWidth", { value: 794, configurable: true });
+    Object.defineProperty(el, "scrollHeight", { value: 400, configurable: true });
+
     globalThis.URL.createObjectURL = vi.fn(() => "blob:mock");
     globalThis.URL.revokeObjectURL = vi.fn();
 
@@ -138,6 +186,38 @@ describe("receipt unified pipeline", () => {
     expect(afterDownload).toBeGreaterThan(0);
     expect(afterPrint).toBeGreaterThan(afterDownload);
     expect(afterShare).toBeGreaterThan(afterPrint);
+
+    document.body.removeChild(el);
+  }, 15000);
+
+  it("exportação captura conteúdo completo independente de scroll", async () => {
+    const html2canvas = (await import("html2canvas")).default as any;
+    const { exportReceiptFromElement } = await import("@/lib/reportExport");
+
+    // Simulate a tall receipt inside a short scroll container
+    const el = document.createElement("div");
+    el.style.width = "794px";
+    el.style.height = "2000px"; // tall content
+    let content = "Recibo de Venda Cliente Maria ";
+    for (let i = 0; i < 30; i++) content += `Item ${i + 1} Produto ${i + 1} `;
+    content += "Total R$ 300,00 Parcelas do Crediário";
+    el.textContent = content;
+    document.body.appendChild(el);
+
+    vi.spyOn(el, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, width: 794, height: 2000, top: 0, right: 794, bottom: 2000, left: 0, toJSON: () => ({}) });
+    Object.defineProperty(el, "scrollWidth", { value: 794, configurable: true });
+    Object.defineProperty(el, "scrollHeight", { value: 2000, configurable: true });
+
+    globalThis.URL.createObjectURL = vi.fn(() => "blob:mock");
+    globalThis.URL.revokeObjectURL = vi.fn();
+
+    await exportReceiptFromElement(el, "test.pdf", "download");
+
+    // html2canvas should be called with the clone's full dimensions
+    const lastCall = html2canvas.mock.calls[html2canvas.mock.calls.length - 1];
+    const options = lastCall[1];
+    expect(options.height).toBeGreaterThanOrEqual(40);
+    expect(options.scrollY).toBe(0);
 
     document.body.removeChild(el);
   }, 15000);

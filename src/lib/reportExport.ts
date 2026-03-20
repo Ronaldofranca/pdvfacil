@@ -327,8 +327,17 @@ async function assertValidPdfBlob(blob: Blob) {
     throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
 
-  const buffer = await blob.arrayBuffer();
-  const header = String.fromCharCode(...new Uint8Array(buffer).slice(0, 4));
+  // Read header bytes using FileReader for maximum compatibility
+  const header = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const arr = new Uint8Array(reader.result as ArrayBuffer);
+      resolve(String.fromCharCode(...arr.slice(0, 4)));
+    };
+    reader.onerror = () => reject(new Error("Falha ao ler o PDF gerado."));
+    reader.readAsArrayBuffer(blob.slice(0, 4));
+  });
+
   if (header !== "%PDF") {
     throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
@@ -473,15 +482,21 @@ export async function exportReceiptFromElement(
       ...imagePreparation,
     });
 
-    const cloneState = await ensureReceiptElementReady(clone);
+    // Use source dimensions for capture — clone dimensions may not be computed in all environments
+    await nextPaint();
+    const cloneRect = clone.getBoundingClientRect();
+    const cloneWidth = Math.max(Math.ceil(cloneRect.width), clone.scrollWidth, sourceState.width);
+    const cloneHeight = Math.max(Math.ceil(cloneRect.height), clone.scrollHeight, sourceState.height);
+
     console.info("[Receipt] recibo pronto para exportação", {
       action,
       fileName,
-      cloneState,
+      cloneWidth,
+      cloneHeight,
     });
 
-    const captureWidth = Math.max(cloneState.width, host.scrollWidth);
-    const captureHeight = Math.max(cloneState.height, host.scrollHeight);
+    const captureWidth = Math.max(cloneWidth, host.scrollWidth);
+    const captureHeight = Math.max(cloneHeight, host.scrollHeight);
     const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
 
     console.info("[Receipt] início da geração do PDF", {
