@@ -19,10 +19,8 @@ vi.mock("jspdf", () => ({
     addImage = vi.fn();
     addPage = vi.fn();
     output = vi.fn(() => {
-      const content = "%PDF-1.4 mock" + "x".repeat(2000);
-      const bytes = new Uint8Array(content.length);
-      for (let i = 0; i < content.length; i++) bytes[i] = content.charCodeAt(i);
-      return new Blob([bytes], { type: "application/pdf" });
+      const content = "%PDF-1.4 mock receipt" + "x".repeat(2000);
+      return new Blob([content], { type: "application/pdf" });
     });
   },
 }));

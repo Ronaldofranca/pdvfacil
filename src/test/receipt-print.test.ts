@@ -9,7 +9,7 @@ vi.mock("html2canvas", () => ({
   }),
 }));
 
-const pdfBlobContent = "%PDF-1.4 mock receipt pdf for print test with enough bytes to pass validation";
+const pdfBlobContent = "%PDF-1.4 mock receipt pdf for print test" + "x".repeat(2000);
 vi.mock("jspdf", () => ({
   default: class MockJsPDF {
     internal = { pageSize: { getWidth: () => 210, getHeight: () => 297 } };
