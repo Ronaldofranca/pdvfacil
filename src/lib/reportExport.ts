@@ -327,8 +327,9 @@ async function assertValidPdfBlob(blob: Blob) {
     throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
 
-  const buffer = await blob.arrayBuffer();
-  const header = String.fromCharCode(...new Uint8Array(buffer).slice(0, 4));
+  // Use slice + text() for wider compatibility (jsdom, older browsers)
+  const headerSlice = blob.slice(0, 4);
+  const header = await headerSlice.text();
   if (header !== "%PDF") {
     throw new Error("O PDF do recibo foi gerado vazio ou inválido.");
   }
