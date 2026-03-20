@@ -135,6 +135,11 @@ describe("receipt unified pipeline", () => {
     `;
     document.body.appendChild(el);
 
+    // Mock dimensions for jsdom
+    vi.spyOn(el, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, width: 794, height: 600, top: 0, right: 794, bottom: 600, left: 0, toJSON: () => ({}) });
+    Object.defineProperty(el, "scrollWidth", { value: 794, configurable: true });
+    Object.defineProperty(el, "scrollHeight", { value: 600, configurable: true });
+
     globalThis.URL.createObjectURL = vi.fn(() => "blob:mock");
     globalThis.URL.revokeObjectURL = vi.fn();
 
