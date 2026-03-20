@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
-  const exportRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const { data: pagamentos, isLoading: pagamentosLoading, isFetching: pagamentosFetching } = usePagamentosDaParcela(parcela?.id ?? null);
 
   const parcelasFilter = parcela?.venda_id
