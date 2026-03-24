@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FileDown, Printer, MessageCircle } from "lucide-react";
 import { usePagamentosDaParcela, useParcelas } from "@/hooks/useParcelas";
+import { useConfiguracoes } from "@/hooks/useConfiguracoes";
+import { useEmpresas } from "@/hooks/useEmpresas";
 import { exportReceiptFromElement } from "@/lib/reportExport";
 import { ReceiptDialogShell } from "@/components/receipts/ReceiptDialogShell";
 import { ReceiptParcelaContent } from "@/components/receipts/ReceiptParcelaContent";
@@ -23,6 +25,9 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
       ? { clienteId: parcela.cliente_id }
       : undefined;
   const { data: todasParcelas, isLoading: parcelasLoading, isFetching: parcelasFetching } = useParcelas(parcelasFilter);
+  const { data: config, isLoading: configLoading } = useConfiguracoes();
+  const { data: empresas, isLoading: empresasLoading } = useEmpresas();
+  const empresa = empresas?.[0];
 
   const clienteNome = (parcela as any)?.clientes?.nome ?? "Cliente não identificado";
   const ultimoPagamento = pagamentos?.[0];
@@ -40,7 +45,7 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
     : undefined;
 
   const fileName = `recibo_pagamento_${parcela?.id?.slice(0, 8) ?? ""}.pdf`;
-  const loadingReceipt = pagamentosLoading || pagamentosFetching || parcelasLoading || parcelasFetching;
+  const loadingReceipt = pagamentosLoading || pagamentosFetching || parcelasLoading || parcelasFetching || configLoading || empresasLoading;
 
   useEffect(() => {
     if (!open || !parcela) return;
@@ -106,6 +111,8 @@ export function ReciboParcela({ open, onOpenChange, parcela }: Props) {
         pagamentos={pagamentos}
         parcelasRestantes={parcelasRestantes}
         saldoAnterior={saldoAnterior}
+        config={config}
+        empresa={empresa}
       />
     </ReceiptDialogShell>
   );

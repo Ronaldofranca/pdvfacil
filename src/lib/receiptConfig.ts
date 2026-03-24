@@ -19,8 +19,38 @@ export interface ReceiptConfig {
   recibo_exibir_parcelas: boolean;
   recibo_exibir_observacoes: boolean;
   recibo_exibir_imagem_produto: boolean;
+  recibo_logo_largura: number;
+  recibo_titulo_venda: string;
+  recibo_cor_titulo_venda: string;
   recibo_mensagem_final: string;
   recibo_rodape: string;
+  
+  // Font sizes (in px)
+  recibo_tamanho_fonte_empresa: number;
+  recibo_tamanho_fonte_titulo: number;
+  recibo_tamanho_fonte_venda_id: number;
+  recibo_tamanho_fonte_data: number;
+  recibo_tamanho_fonte_labels: number;
+  recibo_tamanho_fonte_valores: number;
+  recibo_tamanho_fonte_item_nome: number;
+  recibo_tamanho_fonte_item_subtitulo: number;
+  recibo_tamanho_fonte_subtotal: number;
+  recibo_tamanho_fonte_total: number;
+  recibo_tamanho_fonte_pagamento: number;
+  recibo_tamanho_fonte_parcelas: number;
+  recibo_tamanho_fonte_rodape: number;
+
+  // Border toggles
+  recibo_borda_cabecalho: boolean;
+  recibo_borda_dados_venda: boolean;
+  recibo_borda_itens: boolean;
+  recibo_borda_item_linha: boolean;
+  recibo_borda_pagamento: boolean;
+  recibo_borda_parcelas: boolean;
+  recibo_borda_rodape: boolean;
+
+  // Dimensions
+  recibo_altura_cabecalho: number; // vertical padding as a base Height
 }
 
 export const DEFAULT_RECEIPT_CONFIG: ReceiptConfig = {
@@ -42,16 +72,77 @@ export const DEFAULT_RECEIPT_CONFIG: ReceiptConfig = {
   recibo_exibir_parcelas: true,
   recibo_exibir_observacoes: true,
   recibo_exibir_imagem_produto: true,
+  recibo_logo_largura: 100,
+  recibo_titulo_venda: "Recibo de Venda",
+  recibo_cor_titulo_venda: "#10b981",
   recibo_mensagem_final: "Obrigado pela preferência!",
   recibo_rodape: "Este recibo não tem valor fiscal.",
+
+  // Default Font sizes
+  recibo_tamanho_fonte_empresa: 18,
+  recibo_tamanho_fonte_titulo: 10,
+  recibo_tamanho_fonte_venda_id: 14,
+  recibo_tamanho_fonte_data: 10,
+  recibo_tamanho_fonte_labels: 10,
+  recibo_tamanho_fonte_valores: 11,
+  recibo_tamanho_fonte_item_nome: 12,
+  recibo_tamanho_fonte_item_subtitulo: 10,
+  recibo_tamanho_fonte_subtotal: 12,
+  recibo_tamanho_fonte_total: 16,
+  recibo_tamanho_fonte_pagamento: 11,
+  recibo_tamanho_fonte_parcelas: 11,
+  recibo_tamanho_fonte_rodape: 10,
+
+  // Default Border toggles
+  recibo_borda_cabecalho: false,
+  recibo_borda_dados_venda: true,
+  recibo_borda_itens: false,
+  recibo_borda_item_linha: true,
+  recibo_borda_pagamento: true,
+  recibo_borda_parcelas: true,
+  recibo_borda_rodape: true,
+
+  // Default Dimensions
+  recibo_altura_cabecalho: 24,
 };
 
 export function getReceiptConfig(config: any): ReceiptConfig {
   if (!config) return { ...DEFAULT_RECEIPT_CONFIG };
-  const result: any = {};
-  for (const [key, defaultVal] of Object.entries(DEFAULT_RECEIPT_CONFIG)) {
-    result[key] = config[key] ?? defaultVal;
+  const result: any = { ...DEFAULT_RECEIPT_CONFIG };
+  
+  // 1. Direct field mapping
+  for (const key of Object.keys(DEFAULT_RECEIPT_CONFIG)) {
+    if (config[key] !== undefined && config[key] !== null) {
+      result[key] = config[key];
+    }
   }
+
+  // 2. Extract overloaded "extra" config from recibo_mensagem_final
+  // Format: "Real Message <!--RECIBO_EXTRA_JSON:{...}-->"
+  const extraMarker = "<!--RECIBO_EXTRA_JSON:";
+  const msgField = config.recibo_mensagem_final || "";
+  
+  if (typeof msgField === 'string' && msgField.includes(extraMarker)) {
+    try {
+      const parts = msgField.split(extraMarker);
+      const jsonStrWithEnd = parts[1];
+      const jsonStr = jsonStrWithEnd.split("-->")[0];
+      const extra = JSON.parse(jsonStr);
+      
+      // Clean the visible message
+      result.recibo_mensagem_final = parts[0].trim();
+      
+      // Merge extra fields
+      for (const [ek, ev] of Object.entries(extra)) {
+         if (ek in DEFAULT_RECEIPT_CONFIG) {
+           result[ek] = ev;
+         }
+      }
+    } catch (e) {
+      console.warn("[getReceiptConfig] Failed to parse extra config:", e);
+    }
+  }
+
   return result as ReceiptConfig;
 }
 
