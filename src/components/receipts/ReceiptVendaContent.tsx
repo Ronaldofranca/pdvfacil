@@ -46,15 +46,15 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
     if (!venda) return null;
 
     const rc = getReceiptConfig(config);
-    
+
     const StatusBadge = ({ status }: { status: string }) => {
       const label = STATUS_LABELS[status] ?? status;
       const isFinalizada = status === "finalizada";
       const isCancelada = status === "cancelada";
-      
+
       return (
         <Badge
-          style={{ 
+          style={{
             backgroundColor: isFinalizada ? rc.recibo_cor_principal : isCancelada ? "#ef4444" : "#f1f5f9",
             color: isFinalizada ? "#ffffff" : isCancelada ? "#ffffff" : "#64748b",
             borderColor: "transparent"
@@ -74,19 +74,19 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
     const titulo = venda.status === "cancelada" ? "Comprovante de Cancelamento" : (rc.recibo_titulo_venda || "Recibo de Venda");
 
     return (
-      <div 
-        ref={ref} 
-        data-receipt-document="venda" 
+      <div
+        ref={ref}
+        data-receipt-document="venda"
         className="bg-white"
-        style={{ 
+        style={{
           color: rc.recibo_cor_texto,
           fontSize: `${rc.recibo_tamanho_fonte_labels}px` // fallback base
         }}
       >
         {/* Company Header */}
-        <div 
+        <div
           className="flex justify-between gap-4 items-start"
-          style={{ 
+          style={{
             background: `linear-gradient(135deg, ${rc.recibo_cor_cabecalho} 0%, ${rc.recibo_cor_cabecalho}dd 100%)`,
             color: rc.recibo_cor_fonte_cabecalho,
             padding: `${rc.recibo_altura_cabecalho}px 20px`,
@@ -143,22 +143,22 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
 
         <div className="p-5 space-y-5">
           {/* Sale details */}
-          <div 
+          <div
             className="p-3 rounded-lg"
-            style={{ 
+            style={{
               border: rc.recibo_borda_dados_venda ? `1px solid ${rc.recibo_cor_bordas}` : 'none',
               background: rc.recibo_borda_dados_venda ? 'transparent' : `${rc.recibo_cor_bordas}11`
             }}
           >
-            <p 
-              className="uppercase font-bold tracking-wider mb-2 pb-1" 
-              style={{ 
-                color: rc.recibo_cor_titulos, 
+            <p
+              className="uppercase font-bold tracking-wider mb-2 pb-1"
+              style={{
+                color: rc.recibo_cor_titulos,
                 borderBottom: `2px solid ${rc.recibo_cor_bordas}`,
                 fontSize: `${rc.recibo_tamanho_fonte_titulo}px`
               }}
             >
-              <span className="inline-block w-[3px] h-[12px] rounded mr-1.5 align-middle" style={{ background: rc.recibo_cor_principal }} /> 
+              <span className="inline-block w-[3px] h-[12px] rounded mr-1.5 align-middle" style={{ background: rc.recibo_cor_principal }} />
               Dados da Venda
             </p>
             <div className="grid grid-cols-1 gap-1.5">
@@ -184,28 +184,28 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
           {/* Items */}
           <div
             className="p-3 rounded-lg"
-            style={{ 
+            style={{
               border: rc.recibo_borda_itens ? `1px solid ${rc.recibo_cor_bordas}` : 'none'
             }}
           >
-            <p 
-              className="uppercase font-bold tracking-wider mb-2 pb-1" 
-              style={{ 
-                color: rc.recibo_cor_titulos, 
+            <p
+              className="uppercase font-bold tracking-wider mb-2 pb-1"
+              style={{
+                color: rc.recibo_cor_titulos,
                 borderBottom: `2px solid ${rc.recibo_cor_bordas}`,
                 fontSize: `${rc.recibo_tamanho_fonte_titulo}px`
               }}
             >
-              <span className="inline-block w-[3px] h-[12px] rounded mr-1.5 align-middle" style={{ background: rc.recibo_cor_principal }} /> 
+              <span className="inline-block w-[3px] h-[12px] rounded mr-1.5 align-middle" style={{ background: rc.recibo_cor_principal }} />
               Produtos
             </p>
             <div className="space-y-1">
               {itens?.map((item) => (
-                <div 
-                  key={item.id} 
-                  className="p-2" 
-                  style={{ 
-                    borderBottom: rc.recibo_borda_item_linha ? `1px solid ${rc.recibo_cor_bordas}44` : 'none' 
+                <div
+                  key={item.id}
+                  className="p-2"
+                  style={{
+                    borderBottom: rc.recibo_borda_item_linha ? `1px solid ${rc.recibo_cor_bordas}44` : 'none'
                   }}
                 >
                   <div className="flex items-center gap-3">
@@ -236,7 +236,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
                       <span className="font-bold" style={{ fontSize: `${rc.recibo_tamanho_fonte_item_nome}px` }}>{fmtR(Number(item.subtotal))}</span>
                     </div>
                   </div>
-                  
+
                   {/* Kit Composition */}
                   {(item as any)._kit_composicao?.length > 0 && (
                     <div className="ml-12 mt-1 space-y-0.5 border-l-2 pl-2" style={{ borderColor: rc.recibo_cor_bordas }}>
@@ -271,16 +271,16 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
 
           {/* Payment info */}
           {rc.recibo_exibir_forma_pagamento && pagamentos.length > 0 && (
-            <div 
+            <div
               className="space-y-1.5 mt-2 rounded-lg"
               style={{ border: rc.recibo_borda_pagamento ? `1px solid ${rc.recibo_cor_bordas}` : 'none' }}
             >
               {pagamentos.map((p: any, i: number) => (
-                <div 
-                  key={i} 
-                  className="flex justify-between gap-4 p-2.5 rounded border" 
-                  style={{ 
-                    background: `${rc.recibo_cor_bordas}22`, 
+                <div
+                  key={i}
+                  className="flex justify-between gap-4 p-2.5 rounded border"
+                  style={{
+                    background: `${rc.recibo_cor_bordas}22`,
                     borderColor: rc.recibo_cor_bordas,
                     fontSize: `${rc.recibo_tamanho_fonte_pagamento}px`
                   }}
@@ -301,10 +301,10 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
           )}
 
           {/* Footer message */}
-          <div 
-            className="text-center pt-8 pb-4 space-y-2" 
-            style={{ 
-              borderTop: rc.recibo_borda_rodape ? `1px solid ${rc.recibo_cor_bordas}` : 'none' 
+          <div
+            className="text-center pt-8 pb-4 space-y-2"
+            style={{
+              borderTop: rc.recibo_borda_rodape ? `1px solid ${rc.recibo_cor_bordas}` : 'none'
             }}
           >
             {rc.recibo_mensagem_final && (
