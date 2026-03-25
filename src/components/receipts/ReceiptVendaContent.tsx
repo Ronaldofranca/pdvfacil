@@ -222,7 +222,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1">
-                        <p className="font-bold leading-tight" style={{ fontSize: `${rc.recibo_tamanho_fonte_item_nome}px` }}>{item.nome_produto}</p>
+                        <p className="font-bold leading-tight break-words whitespace-normal" style={{ fontSize: `${rc.recibo_tamanho_fonte_item_nome}px` }}>{item.nome_produto}</p>
                         {(item as any).item_type === "kit" && (
                           <Badge variant="outline" className="h-3 px-1 text-[8px] font-bold uppercase" style={{ borderColor: rc.recibo_cor_principal, color: rc.recibo_cor_principal }}>Kit</Badge>
                         )}

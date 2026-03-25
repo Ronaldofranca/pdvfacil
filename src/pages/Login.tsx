@@ -168,6 +168,9 @@ export default function LoginPage() {
         <p className="text-center text-xs text-muted-foreground">
           Não tem conta? Entre em contato com o administrador.
         </p>
+        <p className="text-center text-[10px] text-muted-foreground/60 pt-4">
+          Criado com carinho por Ronaldo França
+        </p>
       </div>
     </div>
   );
