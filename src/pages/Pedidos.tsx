@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardList, Search, Plus, Eye, Truck, ShoppingCart, CheckCircle, XCircle, CalendarClock, Filter } from "lucide-react";
+import { ClipboardList, Search, Plus, Eye, Truck, ShoppingCart, CheckCircle, XCircle, CalendarClock, Filter, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +65,8 @@ export default function PedidosPage() {
     if (data === amanha) return <Badge variant="secondary" className="text-[10px]">Amanhã</Badge>;
     return null;
   };
+
+  const isPortalOrder = (obs?: string) => !!obs && obs.toLowerCase().includes("pedido feito pelo portal");
 
   const converterEmVenda = (pedido: typeof pedidoDetail) => {
     if (!pedido || !itensDetail) return;
@@ -166,8 +168,24 @@ export default function PedidosPage() {
                   {!isMobile && <TableCell className="font-mono text-xs">{p.id.slice(0, 8)}</TableCell>}
                   <TableCell className="font-medium">
                     <div className="min-w-0">
-                      <p className="truncate">{p.clientes?.nome ?? "—"}</p>
-                      {isMobile && <p className="text-xs text-muted-foreground">#{p.id.slice(0, 8)}</p>}
+                      <div className="flex items-center gap-2">
+                        <p className="truncate">{p.clientes?.nome ?? "—"}</p>
+                        {isPortalOrder(p.observacoes) && (
+                          <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20 gap-1 px-1.5 hidden sm:inline-flex">
+                            <Globe className="w-3 h-3" /> Portal
+                          </Badge>
+                        )}
+                      </div>
+                      {isMobile && (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-xs text-muted-foreground">#{p.id.slice(0, 8)}</p>
+                          {isPortalOrder(p.observacoes) && (
+                            <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20 gap-1 px-1.5">
+                              <Globe className="w-2 h-2" /> Portal
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -213,7 +231,10 @@ export default function PedidosPage() {
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="font-semibold text-foreground">{mobileItem.clientes?.nome ?? "—"}</p>
+                <p className="font-semibold text-foreground flex items-center gap-2">
+                  {mobileItem.clientes?.nome ?? "—"}
+                  {isPortalOrder(mobileItem.observacoes) && <Globe className="w-3 h-3 text-primary" />}
+                </p>
                 <p className="text-xs text-muted-foreground">Pedido #{mobileItem.id.slice(0, 8)}</p>
               </div>
               {getStatusBadge(mobileItem.status)}
@@ -283,7 +304,14 @@ export default function PedidosPage() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-muted-foreground">ID:</span> <span className="font-mono">{pedidoDetail.id.slice(0, 8)}</span></div>
                 <div><span className="text-muted-foreground">Status:</span> {getStatusBadge(pedidoDetail.status)}</div>
-                <div><span className="text-muted-foreground">Cliente:</span> {pedidoDetail.clientes?.nome ?? "—"}</div>
+                <div className="col-span-2 flex items-center gap-2">
+                  <span className="text-muted-foreground">Cliente:</span> {pedidoDetail.clientes?.nome ?? "—"}
+                  {isPortalOrder(pedidoDetail.observacoes) && (
+                    <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20 gap-1">
+                      <Globe className="w-3 h-3" /> Via Portal
+                    </Badge>
+                  )}
+                </div>
                 <div><span className="text-muted-foreground">Data Pedido:</span> {format(new Date(pedidoDetail.data_pedido), "dd/MM/yyyy", { locale: ptBR })}</div>
                 <div><span className="text-muted-foreground">Entrega:</span> {format(new Date(pedidoDetail.data_prevista_entrega + "T12:00:00"), "dd/MM/yyyy")}</div>
                 {pedidoDetail.horario_entrega && <div><span className="text-muted-foreground">Horário:</span> {pedidoDetail.horario_entrega}</div>}

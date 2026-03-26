@@ -21,13 +21,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
-import { useParcelas } from "@/hooks/useParcelas";
+import { useParcelas, usePagamentos } from "@/hooks/useParcelas";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GerarParcelasForm } from "@/components/financeiro/GerarParcelasForm";
 import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
 import { ReciboParcela } from "@/components/financeiro/ReciboParcela";
-import { format } from "date-fns";
+import { DateRangeFilter } from "@/components/vendas/DateRangeFilter";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const STATUS_CFG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
@@ -42,15 +43,36 @@ export default function FinanceiroPage() {
   const { canRegisterPagamento } = usePermissions();
   const [statusFilter, setStatusFilter] = useState("todas");
   const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  
   const [gerarOpen, setGerarOpen] = useState(false);
   const [pagamentoState, setPagamentoState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [reciboState, setReciboState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [mobileParcela, setMobileParcela] = useState<any | null>(null);
   const [detailState, setDetailState] = useState<{ open: boolean; data?: any }>({ open: false });
 
-  const filters = statusFilter !== "todas" ? { status: statusFilter } : undefined;
-  const { data: parcelas, isLoading } = useParcelas(filters);
-  const { data: todasParcelas } = useParcelas();
+  const { data: parcelas, isLoading } = useParcelas({ 
+    status: statusFilter,
+    startDate: startDate ? startOfDay(startDate) : undefined,
+    endDate: endDate ? endOfDay(endDate) : undefined
+  });
+  
+  const { data: todasParcelasNoPeriodo } = useParcelas({ 
+    startDate: startDate ? startOfDay(startDate) : undefined,
+    endDate: endDate ? endOfDay(endDate) : undefined
+  });
+
+  const { data: pagamentosNoPeriodo } = usePagamentos({
+    startDate: startDate ? startOfDay(startDate) : undefined,
+    endDate: endDate ? endOfDay(endDate) : undefined
+  });
+
+  // Busca todas as parcelas pendentes/parciais globais (sem filtro de data)
+  // para calcular o total vencido corretamente com base na data de vencimento real
+  const { data: todasParcelasPendentesGlobal } = useParcelas({
+    status: "pendente"
+  });
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -58,12 +80,48 @@ export default function FinanceiroPage() {
     (p as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) || !search
   );
 
-  // Resumo sempre baseado em TODAS as parcelas
+  // Resumo baseado no período selecionado e no cliente pesquisado
+  const isDateInRange = (dateStr: string | null, start: Date | undefined, end: Date | undefined) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr + "T12:00:00");
+    const s = start ? startOfDay(start) : null;
+    const e = end ? endOfDay(end) : null;
+    return (!s || d >= s) && (!e || d <= e);
+  };
+
+  const matchesSearch = (nome: string | null | undefined) => 
+    !search || (nome?.toLowerCase().includes(search.toLowerCase()) ?? false);
+
   const totalPendente =
-    todasParcelas?.filter((p) => p.status === "pendente" || p.status === "parcial").reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
-  const totalVencido = todasParcelas?.filter((p) => p.status === "vencida").reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
-  const totalPago = todasParcelas?.filter((p) => p.status === "paga").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
-  const totalParcial = todasParcelas?.filter((p) => p.status === "parcial").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+    todasParcelasNoPeriodo?.filter((p) => 
+      (p.status === "pendente" || p.status === "parcial") && 
+      isDateInRange(p.vencimento, startDate, endDate) &&
+      matchesSearch((p as any).clientes?.nome)
+    ).reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
+  
+  // Card Vencido: parcelas com saldo > 0 e vencimento anterior a hoje (calculado no frontend)
+  // Ignora o campo `status` do banco, que não é atualizado automaticamente.
+  // Respeita busca por cliente (mesma lógica do card Pendente).
+  const today = new Date(new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }).split("/").reverse().join("-") + "T00:00:00");
+  const totalVencido = todasParcelasPendentesGlobal?.filter((p) => {
+    if (!matchesSearch((p as any).clientes?.nome)) return false;
+    if (Number(p.saldo) <= 0) return false;
+    const due = new Date(p.vencimento + "T00:00:00");
+    return due < today;
+  }).reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
+  
+  const totalParcial = 
+    todasParcelasNoPeriodo?.filter((p) => 
+      p.status === "parcial" && 
+      isDateInRange(p.vencimento, startDate, endDate) &&
+      matchesSearch((p as any).clientes?.nome)
+    ).reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+  
+  // O valor "Recebido" agora vem da tabela de pagamentos no período, respeitando a busca
+  const totalRecebido = pagamentosNoPeriodo?.filter((pay) => 
+    matchesSearch((pay as any).parcelas?.clientes?.nome)
+  ).reduce((s, pay) => s + Number(pay.valor_pago), 0) ?? 0;
+
   const visibleColumnCount = isMobile ? 5 : 8;
 
   const openMobileActions = (parcela: any) => {
@@ -100,33 +158,43 @@ export default function FinanceiroPage() {
           <p className="text-lg font-bold text-destructive">{fmt(totalVencido)}</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-xs text-muted-foreground">Parcialmente Pago</p>
-          <p className="text-lg font-bold text-accent-foreground">{fmt(totalParcial)}</p>
+          <p className="text-xs text-muted-foreground">Parcial Recebido</p>
+          <p className="text-lg font-bold text-amber-500">{fmt(totalParcial)}</p>
         </Card>
         <Card className="p-4 text-center">
           <p className="text-xs text-muted-foreground">Recebido</p>
-          <p className="text-lg font-bold text-primary">{fmt(totalPago)}</p>
+          <p className="text-lg font-bold text-primary">{fmt(totalRecebido)}</p>
         </Card>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="relative min-w-[200px] flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input className="pl-9" placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <Filter className="mr-1.5 w-3.5 h-3.5" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todas">Todas</SelectItem>
-            <SelectItem value="pendente">Pendentes</SelectItem>
-            <SelectItem value="parcial">Parcialmente Pagas</SelectItem>
-            <SelectItem value="vencida">Vencidas</SelectItem>
-            <SelectItem value="paga">Pagas</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="w-full sm:w-auto">
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <Filter className="mr-1.5 w-3.5 h-3.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todos Status</SelectItem>
+              <SelectItem value="pendente">Pendentes</SelectItem>
+              <SelectItem value="parcial">Parcialmente Pagas</SelectItem>
+              <SelectItem value="vencida">Vencidas</SelectItem>
+              <SelectItem value="paga">Pagas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {isMobile && (

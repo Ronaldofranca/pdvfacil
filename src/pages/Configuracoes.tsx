@@ -540,6 +540,7 @@ export default function ConfiguracoesPage() {
                 <SwitchRow label="Mostrar Pedidos" description="Permite ao cliente ver e criar pedidos" checked={(config as any)?.portal_mostrar_pedidos ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pedidos: v })} />
                 <SwitchRow label="Mostrar Parcelas" description="Permite ao cliente ver parcelas e saldos" checked={(config as any)?.portal_mostrar_parcelas ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_parcelas: v })} />
                 <SwitchRow label="Mostrar Histórico de Compras" description="Permite ao cliente ver compras anteriores" checked={(config as any)?.portal_mostrar_compras ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_compras: v })} />
+                <SwitchRow label="Mostrar Histórico de Pagamentos" description="Permite ao cliente visualizar os recibos e baixas de pagamentos" checked={(config as any)?.portal_mostrar_pagamentos ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pagamentos: v })} />
                 <SwitchRow label="Mostrar Chave PIX" description="Exibe a chave PIX para pagamento no portal" checked={(config as any)?.portal_mostrar_pix ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pix: v })} />
               </div>
             </CardContent>
@@ -773,40 +774,127 @@ function EmpresaForm({ empresa, onSave }: { empresa: any; onSave: (v: any) => vo
     email: empresa.email ?? "",
     endereco: empresa.endereco ?? "",
   });
+  const [uploading, setUploading] = useState(false);
 
   const handleChange = (key: string, value: string) => setForm((p) => ({ ...p, [key]: value }));
 
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${empresa.id}/logos/${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('catalogo')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('catalogo')
+        .getPublicUrl(filePath);
+
+      onSave({ logo_url: publicUrl });
+      toast.success("Logo atualizada com sucesso!");
+    } catch (error: any) {
+      toast.error("Erro ao fazer upload: " + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    try {
+      onSave({ logo_url: null });
+      toast.success("Logo removida!");
+    } catch (error: any) {
+      toast.error("Erro ao remover logo");
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center py-4 border-b">
+        <div className="relative group cursor-pointer overflow-hidden h-24 w-24 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted">
+          {empresa.logo_url ? (
+            <img src={empresa.logo_url} alt="Logo" className="h-full w-full object-contain" />
+          ) : (
+            <Building2 className="h-8 w-8 text-muted-foreground opacity-50" />
+          )}
+          {uploading && (
+            <div className="absolute inset-0 bg-background/60 flex items-center justify-center z-20">
+              <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            className="absolute inset-0 opacity-0 cursor-pointer z-10 w-full h-full"
+            onChange={handleUploadLogo}
+            disabled={uploading}
+            title="Escolher imagem"
+          />
+        </div>
+        
+        <div className="space-y-1 flex-1">
+          <h4 className="text-sm font-semibold">Logomarca da Empresa</h4>
+          <p className="text-xs text-muted-foreground">Esta logo será exibida nos seus recibos, catálogo e portal do cliente.</p>
+          <div className="flex gap-2 mt-3 items-center">
+            <label className="relative inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 text-sm font-medium cursor-pointer transition-colors shadow-sm">
+              {empresa.logo_url ? "Substituir Logo" : "Fazer Upload"}
+              <input
+                type="file"
+                accept="image/*"
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                onChange={handleUploadLogo}
+                disabled={uploading}
+              />
+            </label>
+            {empresa.logo_url && (
+              <Button variant="ghost" size="sm" className="text-destructive h-9" onClick={handleRemoveLogo}>
+                Remover
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
         <div className="space-y-2">
           <Label>Nome da Empresa</Label>
-          <Input value={form.nome} onChange={(e) => handleChange("nome", e.target.value)} />
+          <Input value={form.nome} onChange={(e) => handleChange("nome", e.target.value)} onBlur={() => onSave({ nome: form.nome })} />
         </div>
         <div className="space-y-2">
           <Label>Razão Social</Label>
-          <Input value={form.razao_social} onChange={(e) => handleChange("razao_social", e.target.value)} />
+          <Input value={form.razao_social} onChange={(e) => handleChange("razao_social", e.target.value)} onBlur={() => onSave({ razao_social: form.razao_social })} />
         </div>
         <div className="space-y-2">
           <Label>CNPJ</Label>
-          <Input value={form.cnpj} onChange={(e) => handleChange("cnpj", e.target.value)} />
+          <Input value={form.cnpj} onChange={(e) => handleChange("cnpj", e.target.value)} onBlur={() => onSave({ cnpj: form.cnpj })} />
         </div>
         <div className="space-y-2">
           <Label>Telefone</Label>
-          <Input value={form.telefone} onChange={(e) => handleChange("telefone", e.target.value)} />
+          <Input value={form.telefone} onChange={(e) => handleChange("telefone", e.target.value)} onBlur={() => onSave({ telefone: form.telefone })} />
         </div>
         <div className="space-y-2">
           <Label>Email</Label>
-          <Input value={form.email} onChange={(e) => handleChange("email", e.target.value)} />
+          <Input value={form.email} onChange={(e) => handleChange("email", e.target.value)} onBlur={() => onSave({ email: form.email })} />
         </div>
-        <div className="space-y-2 sm:col-span-2">
+        <div className="space-y-2">
           <Label>Endereço</Label>
-          <Input value={form.endereco} onChange={(e) => handleChange("endereco", e.target.value)} />
+          <Input value={form.endereco} onChange={(e) => handleChange("endereco", e.target.value)} onBlur={() => onSave({ endereco: form.endereco })} />
         </div>
       </div>
-      <Button onClick={() => onSave(form)}>
-        <Save className="h-4 w-4 mr-1" /> Salvar Empresa
-      </Button>
+      
+      <div className="pt-4 flex justify-end">
+        <Button onClick={() => onSave(form)} className="gap-2">
+          <Save className="h-4 w-4" /> Salvar Alterações
+        </Button>
+      </div>
     </div>
   );
 }

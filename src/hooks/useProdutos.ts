@@ -60,6 +60,10 @@ export interface ProdutoInput {
   unidade?: string;
   imagem_url?: string | null;
   ativo?: boolean;
+  beneficios?: any;
+  modo_uso?: string;
+  diferenciais?: any;
+  observacoes?: string;
 }
 
 export function useProdutos() {
@@ -91,6 +95,10 @@ export function useUpsertProduto() {
         unidade: p.unidade ?? "un",
         imagem_url: p.imagem_url ?? null,
         ativo: p.ativo ?? true,
+        beneficios: (raw as any).beneficios || [],
+        modo_uso: (raw as any).modo_uso || "",
+        diferenciais: (raw as any).diferenciais || [],
+        observacoes: (raw as any).observacoes || "",
         updated_at: new Date().toISOString(),
       };
       const { data, error } = p.id

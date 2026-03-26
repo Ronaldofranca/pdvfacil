@@ -19,7 +19,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { ReciboVenda } from "@/components/vendas/ReciboVenda";
 import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
-import { format } from "date-fns";
+import { DateRangeFilter } from "@/components/vendas/DateRangeFilter";
+import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -38,6 +39,8 @@ export default function VendasPage() {
 
   const [pdvOpen, setPdvOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [reciboVenda, setReciboVenda] = useState<any>(null);
   const [mobileActionVendaId, setMobileActionVendaId] = useState<string | null>(null);
@@ -64,10 +67,21 @@ export default function VendasPage() {
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
-  const filtered = vendas?.filter((v) =>
-    (v as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) ||
-    v.id.includes(search)
-  );
+  const filtered = vendas?.filter((v) => {
+    const matchesSearch = 
+      (v as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) ||
+      v.id.includes(search);
+    
+    // Range filter: check if data_venda is within [startDate, endDate]
+    const itemDate = new Date(v.data_venda);
+    const matchesStart = !startDate || itemDate >= startOfDay(startDate);
+    const matchesEnd = !endDate || itemDate <= endOfDay(endDate);
+    
+    // Safety check for inverted interval
+    const isValidInterval = !startDate || !endDate || startDate <= endDate;
+
+    return matchesSearch && matchesStart && matchesEnd && isValidInterval;
+  });
 
   const visibleColumnCount = isMobile ? 4 : 6;
 
@@ -108,14 +122,24 @@ export default function VendasPage() {
         )}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          className="pl-9"
-          placeholder="Buscar por cliente ou ID..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Buscar por cliente ou ID..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="w-full sm:w-auto">
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+          />
+        </div>
       </div>
 
       {isMobile && (

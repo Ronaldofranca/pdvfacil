@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Navigate, useOutletContext } from "react-router-dom";
 import { History, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +13,13 @@ function fmtR(v: number) {
 }
 
 export default function PortalComprasPage() {
+  const { config } = useOutletContext<{ config: any }>();
   const { cliente } = usePortalAuth();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  if (config && config.portal_mostrar_compras === false) {
+    return <Navigate to="/portal" replace />;
+  }
 
   const { data: vendas, isLoading } = useQuery({
     queryKey: ["portal-vendas", cliente?.id],
