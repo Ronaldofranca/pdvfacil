@@ -78,7 +78,7 @@ export default function CatalogoAdminPage() {
         setSections(config.secoes as unknown as CatalogSection[]);
       }
       if (Array.isArray((config as any).secoes_produto) && (config as any).secoes_produto.length > 0) {
-        setProductSections((config as any).secoes_produto as CatalogSection[]);
+        setProductSections((config as any).secoes_produto as unknown as CatalogSection[]);
       }
       setImagemInstitucionalUrl(config.imagem_institucional_url || "");
       if (config.tema_config && typeof config.tema_config === 'object') {
