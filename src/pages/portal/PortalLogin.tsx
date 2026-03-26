@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Zap, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,9 +30,33 @@ export default function PortalLoginPage() {
     if (!email.trim() || !password) return;
     setLoading(true);
     const { error } = await signIn(email, password);
-    setLoading(false);
+    
     if (error) {
+      setLoading(false);
       toast({ title: "Credenciais inválidas", description: "Verifique seu email e senha.", variant: "destructive" });
+    } else {
+      // Verificação estrita: Esta tela é APENAS para clientes
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userData.user.id);
+
+        const isCliente = roles?.some((r: any) => r.role === "cliente");
+        if (!isCliente) {
+          // Admin ou Vendedor tentando usar o portal
+          await signOut();
+          setLoading(false);
+          toast({
+            title: "Acesso Negado",
+            description: "Esta tela é exclusiva para Clientes. Acesse pelo link administrativo.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      setLoading(false);
     }
   };
 
@@ -45,9 +70,32 @@ export default function PortalLoginPage() {
     if (!password) return;
     setLoading(true);
     const { error } = await signInWithCPF(normalized, password);
-    setLoading(false);
+    
     if (error) {
+      setLoading(false);
       toast({ title: "Credenciais inválidas", description: "Verifique seu CPF e senha.", variant: "destructive" });
+    } else {
+      // Verificação estrita
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userData.user.id);
+
+        const isCliente = roles?.some((r: any) => r.role === "cliente");
+        if (!isCliente) {
+          await signOut();
+          setLoading(false);
+          toast({
+            title: "Acesso Negado",
+            description: "Esta tela é exclusiva para Clientes. Acesse pelo link administrativo.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      setLoading(false);
     }
   };
 

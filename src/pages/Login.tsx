@@ -97,9 +97,9 @@ export default function LoginPage() {
     }
 
     const { error } = await signIn(trimmedEmail, password);
-    setLoading(false);
-
+    
     if (error) {
+      setLoading(false);
       const remaining = rateLimitResult.remaining;
       setRemainingAttempts(typeof remaining === "number" ? remaining : null);
 
@@ -109,9 +109,32 @@ export default function LoginPage() {
         variant: "destructive",
       });
     } else {
+      // Verificação estrita: Esta tela é APENAS para admin/equipe interna
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", userData.user.id)
+          .maybeSingle();
+
+        if (!profile) {
+          // É um cliente tentando fazer login na tela de master
+          await supabase.auth.signOut();
+          setLoading(false);
+          toast({
+            title: "Acesso Negado",
+            description: "Esta tela é restrita para funcionários. Clientes devem acessar o Portal pelo link correto.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       // Reset rate limit on successful login
       await checkRateLimit(trimmedEmail, "reset");
       setRemainingAttempts(null);
+      setLoading(false);
       navigate("/", { replace: true });
     }
   };
