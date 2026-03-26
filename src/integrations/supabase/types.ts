@@ -239,6 +239,53 @@ export type Database = {
           },
         ]
       }
+      catalogo_banners: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          empresa_id: string
+          id: string
+          imagem_url: string
+          link: string | null
+          ordem: number | null
+          subtitulo: string | null
+          titulo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          empresa_id: string
+          id?: string
+          imagem_url: string
+          link?: string | null
+          ordem?: number | null
+          subtitulo?: string | null
+          titulo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          empresa_id?: string
+          id?: string
+          imagem_url?: string
+          link?: string | null
+          ordem?: number | null
+          subtitulo?: string | null
+          titulo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogo_banners_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalogo_config: {
         Row: {
           banner_url: string | null
@@ -255,15 +302,21 @@ export type Database = {
           descricao: string
           empresa_id: string
           estilo_cards: string
+          footer_config: Json | null
+          header_config: Json | null
           id: string
+          imagem_institucional_url: string | null
           secao_beneficios: boolean
           secao_categorias: boolean
           secao_cta: boolean
           secao_destaque: boolean
           secao_testemunhos: boolean
+          secoes: Json | null
+          secoes_produto: Json | null
           seo_descricao: string
           seo_titulo: string
           subtitulo: string
+          tema_config: Json | null
           tipografia: string
           titulo: string
           updated_at: string
@@ -284,15 +337,21 @@ export type Database = {
           descricao?: string
           empresa_id: string
           estilo_cards?: string
+          footer_config?: Json | null
+          header_config?: Json | null
           id?: string
+          imagem_institucional_url?: string | null
           secao_beneficios?: boolean
           secao_categorias?: boolean
           secao_cta?: boolean
           secao_destaque?: boolean
           secao_testemunhos?: boolean
+          secoes?: Json | null
+          secoes_produto?: Json | null
           seo_descricao?: string
           seo_titulo?: string
           subtitulo?: string
+          tema_config?: Json | null
           tipografia?: string
           titulo?: string
           updated_at?: string
@@ -313,15 +372,21 @@ export type Database = {
           descricao?: string
           empresa_id?: string
           estilo_cards?: string
+          footer_config?: Json | null
+          header_config?: Json | null
           id?: string
+          imagem_institucional_url?: string | null
           secao_beneficios?: boolean
           secao_categorias?: boolean
           secao_cta?: boolean
           secao_destaque?: boolean
           secao_testemunhos?: boolean
+          secoes?: Json | null
+          secoes_produto?: Json | null
           seo_descricao?: string
           seo_titulo?: string
           subtitulo?: string
+          tema_config?: Json | null
           tipografia?: string
           titulo?: string
           updated_at?: string
@@ -2338,12 +2403,15 @@ export type Database = {
           custo: number
           descricao: string
           destaque: boolean
+          diferenciais: Json | null
           empresa_id: string
           id: string
           imagem_url: string | null
           lancamento: boolean
           mais_vendido: boolean
+          modo_uso: string | null
           nome: string
+          observacoes: string | null
           preco: number
           promocao: boolean
           seo_descricao: string
@@ -2362,12 +2430,15 @@ export type Database = {
           custo?: number
           descricao?: string
           destaque?: boolean
+          diferenciais?: Json | null
           empresa_id: string
           id?: string
           imagem_url?: string | null
           lancamento?: boolean
           mais_vendido?: boolean
+          modo_uso?: string | null
           nome: string
+          observacoes?: string | null
           preco?: number
           promocao?: boolean
           seo_descricao?: string
@@ -2386,12 +2457,15 @@ export type Database = {
           custo?: number
           descricao?: string
           destaque?: boolean
+          diferenciais?: Json | null
           empresa_id?: string
           id?: string
           imagem_url?: string | null
           lancamento?: boolean
           mais_vendido?: boolean
+          modo_uso?: string | null
           nome?: string
+          observacoes?: string | null
           preco?: number
           promocao?: boolean
           seo_descricao?: string
@@ -2915,12 +2989,15 @@ export type Database = {
           created_at: string | null
           descricao: string | null
           destaque: boolean | null
+          diferenciais: Json | null
           empresa_id: string | null
           id: string | null
           imagem_url: string | null
           lancamento: boolean | null
           mais_vendido: boolean | null
+          modo_uso: string | null
           nome: string | null
+          observacoes: string | null
           preco: number | null
           promocao: boolean | null
           seo_descricao: string | null
@@ -2938,12 +3015,15 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           destaque?: boolean | null
+          diferenciais?: Json | null
           empresa_id?: string | null
           id?: string | null
           imagem_url?: string | null
           lancamento?: boolean | null
           mais_vendido?: boolean | null
+          modo_uso?: string | null
           nome?: string | null
+          observacoes?: string | null
           preco?: number | null
           promocao?: boolean | null
           seo_descricao?: string | null
@@ -2961,12 +3041,15 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           destaque?: boolean | null
+          diferenciais?: Json | null
           empresa_id?: string | null
           id?: string | null
           imagem_url?: string | null
           lancamento?: boolean | null
           mais_vendido?: boolean | null
+          modo_uso?: string | null
           nome?: string | null
+          observacoes?: string | null
           preco?: number | null
           promocao?: boolean | null
           seo_descricao?: string | null
