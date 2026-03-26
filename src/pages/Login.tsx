@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [blocked, setBlocked] = useState(false);
   const [blockedUntil, setBlockedUntil] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
-  const { signIn, session, profile, rolesLoaded, signOut } = useAuth();
+  const { signIn, session, profile, rolesLoaded, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -24,13 +24,14 @@ export default function LoginPage() {
     if (session && rolesLoaded) {
       if (profile) {
         navigate("/", { replace: true });
-      } else {
-        // They are a client trying to load the admin login page.
-        // We log them out so they can see the admin login form!
-        signOut();
+      } else if (hasRole("cliente")) {
+        // Only redirect to portal if we're CERTAIN they are a client
+        navigate("/portal", { replace: true });
       }
+      // If no profile and no client role, stay here (might be loading or broken account)
+      // but DO NOT signOut() as that breaks the session on F5 refresh.
     }
-  }, [session, profile, rolesLoaded, navigate, signOut]);
+  }, [session, profile, rolesLoaded, navigate, hasRole]);
 
   // Countdown timer for block
   useEffect(() => {

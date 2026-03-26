@@ -23,13 +23,11 @@ export default function PortalLoginPage() {
     if (session && !loading) {
       if (isCliente) {
         navigate("/portal", { replace: true });
-      } else {
-        // Logado como Admin/Vendedor tentando ver a tela de cliente.
-        // Desloga o admin para a tela de cliente funcionar limpa.
-        signOut();
       }
+      // Se for Admin acessando a tela de cliente, deixamos ele na tela de login
+      // mas NÃO damos signOut automático no useEffect para não quebrar o F5.
     }
-  }, [session, isCliente, navigate, signOut, loading]);
+  }, [session, isCliente, navigate, loading]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();

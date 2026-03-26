@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -58,6 +58,73 @@ import PortalPagamentosPage from "./pages/portal/PortalPagamentos";
 
 const queryClient = new QueryClient();
 
+const MainRoutes = () => {
+  const { session } = useAuth();
+  
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      
+      <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
+      <Route path="/documentacao" element={<ProtectedRoute><DocumentacaoPage /></ProtectedRoute>} />
+      
+      {/* Public catalog routes */}
+      <Route path="/catalogo" element={<CatalogoPublicoPage />} />
+      <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
+      <Route path="/catalogo/produtos" element={<CatalogoPublicoPage />} />
+      <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
+
+      {/* Portal do Cliente */}
+      <Route path="/portal/login" element={<PortalLoginPage />} />
+      <Route path="/portal" element={<PortalProtectedRoute><PortalLayout /></PortalProtectedRoute>}>
+        <Route index element={<PortalHomePage />} />
+        <Route path="pedidos" element={<PortalPedidosPage />} />
+        <Route path="novo-pedido" element={<PortalNovoPedidoPage />} />
+        <Route path="parcelas" element={<PortalParcelasPage />} />
+        <Route path="compras" element={<PortalComprasPage />} />
+        <Route path="pagamentos" element={<PortalPagamentosPage />} />
+        <Route path="dados" element={<PortalDadosPage />} />
+      </Route>
+
+      {/* Rota principal: se logged out, mostra login. Se logged in, Dashboard. */}
+      {!session ? (
+        <Route path="/" element={<LoginPage />} />
+      ) : (
+        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/pedidos" element={<PedidosPage />} />
+          <Route path="/agenda-entregas" element={<AgendaEntregasPage />} />
+          <Route path="/vendas" element={<VendasPage />} />
+          <Route path="/clientes" element={<ClientesPage />} />
+          <Route path="/produtos" element={<ProdutosPage />} />
+          <Route path="/estoque" element={<EstoquePage />} />
+          <Route path="/catalogo-interno" element={<CatalogoInternalPage />} />
+          <Route path="/romaneio" element={<RomaneioPage />} />
+          <Route path="/financeiro" element={<FinanceiroPage />} />
+          <Route path="/cobrancas" element={<CobrancasPage />} />
+          <Route path="/caixa" element={<CaixaPage />} />
+          <Route path="/relatorios" element={<RelatoriosPage />} />
+          <Route path="/usuarios" element={<ProtectedRoute requiredRole="admin"><UsuariosPage /></ProtectedRoute>} />
+          <Route path="/empresas" element={<ProtectedRoute requiredRole="admin"><EmpresasPage /></ProtectedRoute>} />
+          <Route path="/notificacoes" element={<NotificacoesPage />} />
+          <Route path="/sync" element={<SyncPage />} />
+          <Route path="/backup" element={<ProtectedRoute requiredRole="admin"><BackupPage /></ProtectedRoute>} />
+          <Route path="/importacao" element={<ProtectedRoute requiredRole="admin"><ImportacaoPage /></ProtectedRoute>} />
+          <Route path="/audit" element={<ProtectedRoute requiredRole="admin"><AuditPage /></ProtectedRoute>} />
+          <Route path="/mapa-clientes" element={<MapaClientesPage />} />
+          <Route path="/metas" element={<MetasComissoesPage />} />
+          <Route path="/previsao-estoque" element={<PrevisaoEstoquePage />} />
+          <Route path="/alertas" element={<AlertasPage />} />
+          <Route path="/configuracoes" element={<ProtectedRoute requiredRole="admin"><ConfiguracoesPage /></ProtectedRoute>} />
+          <Route path="/conciliacao" element={<ConciliacaoPage />} />
+          <Route path="/mais" element={<MaisPage />} />
+        </Route>
+      )}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -67,65 +134,12 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <OfflineProvider>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              
-              <Route path="/aceitar-convite" element={<AceitarConvitePage />} />
-              <Route path="/documentacao" element={<ProtectedRoute><DocumentacaoPage /></ProtectedRoute>} />
-              {/* Public catalog routes */}
-              <Route path="/catalogo" element={<CatalogoPublicoPage />} />
-              <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
-              <Route path="/catalogo/produtos" element={<CatalogoPublicoPage />} />
-              <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
-
-              {/* Portal do Cliente */}
-              <Route path="/portal/login" element={<PortalLoginPage />} />
-              <Route path="/portal" element={<PortalProtectedRoute><PortalLayout /></PortalProtectedRoute>}>
-                <Route index element={<PortalHomePage />} />
-                <Route path="pedidos" element={<PortalPedidosPage />} />
-                <Route path="novo-pedido" element={<PortalNovoPedidoPage />} />
-                <Route path="parcelas" element={<PortalParcelasPage />} />
-                <Route path="compras" element={<PortalComprasPage />} />
-                <Route path="pagamentos" element={<PortalPagamentosPage />} />
-                <Route path="dados" element={<PortalDadosPage />} />
-              </Route>
-
-              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/pedidos" element={<PedidosPage />} />
-                <Route path="/agenda-entregas" element={<AgendaEntregasPage />} />
-                <Route path="/vendas" element={<VendasPage />} />
-                <Route path="/clientes" element={<ClientesPage />} />
-                <Route path="/produtos" element={<ProdutosPage />} />
-                <Route path="/estoque" element={<EstoquePage />} />
-                <Route path="/catalogo-interno" element={<CatalogoInternalPage />} />
-                <Route path="/romaneio" element={<RomaneioPage />} />
-                <Route path="/financeiro" element={<FinanceiroPage />} />
-                <Route path="/cobrancas" element={<CobrancasPage />} />
-                <Route path="/caixa" element={<CaixaPage />} />
-                <Route path="/relatorios" element={<RelatoriosPage />} />
-                <Route path="/usuarios" element={<ProtectedRoute requiredRole="admin"><UsuariosPage /></ProtectedRoute>} />
-                <Route path="/empresas" element={<ProtectedRoute requiredRole="admin"><EmpresasPage /></ProtectedRoute>} />
-                <Route path="/notificacoes" element={<NotificacoesPage />} />
-                <Route path="/sync" element={<SyncPage />} />
-                <Route path="/backup" element={<ProtectedRoute requiredRole="admin"><BackupPage /></ProtectedRoute>} />
-                <Route path="/importacao" element={<ProtectedRoute requiredRole="admin"><ImportacaoPage /></ProtectedRoute>} />
-                <Route path="/audit" element={<ProtectedRoute requiredRole="admin"><AuditPage /></ProtectedRoute>} />
-                <Route path="/mapa-clientes" element={<MapaClientesPage />} />
-                <Route path="/metas" element={<MetasComissoesPage />} />
-                <Route path="/previsao-estoque" element={<PrevisaoEstoquePage />} />
-                <Route path="/alertas" element={<AlertasPage />} />
-                <Route path="/configuracoes" element={<ProtectedRoute requiredRole="admin"><ConfiguracoesPage /></ProtectedRoute>} />
-                <Route path="/conciliacao" element={<ConciliacaoPage />} />
-                <Route path="/mais" element={<MaisPage />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </OfflineProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </ThemeProvider>
+              <MainRoutes />
+            </OfflineProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

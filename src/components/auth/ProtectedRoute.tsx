@@ -33,10 +33,11 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
   }
 
   if (!profile) {
-    // Se logou com sucesso mas não tem perfil (é um cliente, ou conta quebrada)
-    // Invés de mandar para o portal, nós simplesmente NEGAMOS o acesso ao painel master.
-    // Assim garantimos que o '/' sempre volta pro '/login' original caso dê erro.
-    supabase.auth.signOut();
+    // Se logou mas não tem perfil master, pode ser um cliente ou erro de carregamento.
+    // NÃO vamos mais dar signOut automático para não quebrar a sessão no F5.
+    if (hasRole("cliente")) {
+      return <Navigate to="/portal" replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 
