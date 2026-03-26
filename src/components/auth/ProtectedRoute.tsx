@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AppRole, Permission } from "@/types/auth";
 
@@ -32,8 +33,11 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
   }
 
   if (!profile) {
-    // If auth is loaded, session exists, but no internal profile -> Must be a Customer portal user!
-    return <Navigate to="/portal" replace />;
+    // Se logou com sucesso mas não tem perfil (é um cliente, ou conta quebrada)
+    // Invés de mandar para o portal, nós simplesmente NEGAMOS o acesso ao painel master.
+    // Assim garantimos que o '/' sempre volta pro '/login' original caso dê erro.
+    supabase.auth.signOut();
+    return <Navigate to="/login" replace />;
   }
 
   if (requiredRole && !hasRole(requiredRole)) {
