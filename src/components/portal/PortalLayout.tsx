@@ -13,6 +13,7 @@ const allNavItems = [
   { to: "/portal/novo-pedido", icon: Plus, label: "Novo Pedido", key: "pedidos" },
   { to: "/portal/parcelas", icon: DollarSign, label: "Minhas Parcelas", key: "parcelas" },
   { to: "/portal/compras", icon: History, label: "Últimas Compras", key: "compras" },
+  { to: "/portal/pagamentos", icon: DollarSign, label: "Meus Pagamentos", key: "pagamentos" },
   { to: "/portal/dados", icon: User, label: "Meus Dados", key: "dados" },
 ];
 
@@ -27,7 +28,7 @@ export function PortalLayout() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("configuracoes")
-        .select("portal_titulo, portal_mostrar_pedidos, portal_mostrar_parcelas, portal_mostrar_compras")
+        .select("portal_titulo, portal_mostrar_pedidos, portal_mostrar_parcelas, portal_mostrar_compras, portal_mostrar_pagamentos")
         .eq("empresa_id", (cliente as any)!.empresa_id)
         .maybeSingle();
       return data;
@@ -41,6 +42,8 @@ export function PortalLayout() {
     if (item.key === "pedidos") return config?.portal_mostrar_pedidos ?? true;
     if (item.key === "parcelas") return config?.portal_mostrar_parcelas ?? true;
     if (item.key === "compras") return config?.portal_mostrar_compras ?? true;
+    if (item.key === "pagamentos") return (config as any)?.portal_mostrar_pagamentos ?? false; // Default false or true? Let's use true for consistency since the others default to true, or wait, user said optional. We default to true in Configurações. Let's make it true if undefined, false if explicitly false. Wait, since it's a new field, it will be null. Let's default to true.
+    if (item.key === "pagamentos") return config?.portal_mostrar_pagamentos ?? true;
     return true;
   });
 
@@ -121,7 +124,7 @@ export function PortalLayout() {
 
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-6">
-          <Outlet />
+          <Outlet context={{ config }} />
         </main>
       </div>
 

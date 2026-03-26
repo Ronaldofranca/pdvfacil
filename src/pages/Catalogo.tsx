@@ -1,95 +1,105 @@
 import { useState, useEffect } from "react";
-import { BookOpen, Save, Eye, Palette, Layout, Settings2, Image, Type, Share2, Copy } from "lucide-react";
+import { BookOpen, Save, Eye, Palette, Layout, Settings2, Image, Type, Share2, PanelLeftClose, PanelLeftOpen, Smartphone, Tablet, Monitor, Sparkles, Plus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { useCatalogoConfig, useUpsertCatalogoConfig } from "@/hooks/useCatalogo";
-import { useProdutos } from "@/hooks/useProdutos";
+import { useCatalogoConfig, useUpsertCatalogoConfig, useCatalogoBanners } from "@/hooks/useCatalogo";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CatalogSectionBuilder, CatalogSection } from "@/components/catalogo/CatalogSectionBuilder";
+import { CatalogBannerManager } from "@/components/catalogo/CatalogBannerManager";
+import { CatalogVisualEditor, CatalogTheme } from "@/components/catalogo/CatalogVisualEditor";
+import { CatalogHeaderFooterEditor, CatalogHeaderFooter } from "@/components/catalogo/CatalogHeaderFooterEditor";
+import { Badge } from "@/components/ui/badge";
+import { useProdutos, useUpsertProduto } from "@/hooks/useProdutos";
+import { supabase } from "@/integrations/supabase/client";
+import { ImageUpload } from "@/components/produtos/ImageUpload";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const FONTS = [
-  { value: "Inter", label: "Inter (Moderna)" },
-  { value: "Georgia", label: "Georgia (Elegante)" },
-  { value: "Playfair Display", label: "Playfair Display (Premium)" },
-  { value: "Poppins", label: "Poppins (Amigável)" },
-  { value: "Roboto", label: "Roboto (Clean)" },
+const DEFAULT_SECTIONS: CatalogSection[] = [
+  { id: "banners", label: "Slider de Banners", active: true },
+  { id: "categories", label: "Categorias", active: true },
+  { id: "featured", label: "Produtos em Destaque", active: true },
+  { id: "promotions", label: "Ofertas Imperdíveis", active: true },
+  { id: "new_arrivals", label: "Lançamentos", active: true },
+  { id: "testimonials", label: "Depoimentos de Clientes", active: true },
+  { id: "institutional", label: "Sobre a Marca", active: true },
+  { id: "cta", label: "Chamada para Contato", active: true },
 ];
 
-const CARD_STYLES = [
-  { value: "rounded", label: "Arredondado" },
-  { value: "sharp", label: "Reto" },
-  { value: "minimal", label: "Minimalista" },
-  { value: "shadow", label: "Com Sombra" },
+const DEFAULT_PRODUCT_SECTIONS: CatalogSection[] = [
+  { id: "images", label: "Galeria de Imagens", active: true },
+  { id: "info", label: "Informações Básicas", active: true },
+  { id: "benefits", label: "Benefícios", active: true },
+  { id: "use_mode", label: "Como Usar", active: true },
+  { id: "differentials", label: "Diferenciais", active: true },
+  { id: "testimonials", label: "Depoimentos", active: true },
+  { id: "observations", label: "Observações", active: true },
 ];
 
 export default function CatalogoAdminPage() {
   const { profile } = useAuth();
   const { data: config, isLoading } = useCatalogoConfig();
-  const upsert = useUpsertCatalogoConfig();
+  const { data: banners } = useCatalogoBanners();
   const { data: produtos } = useProdutos();
+  const upsert = useUpsertCatalogoConfig();
+  const upsertProduto = useUpsertProduto();
 
-  const [form, setForm] = useState({
-    titulo: "Nosso Catálogo",
-    subtitulo: "",
-    descricao: "",
-    banner_url: "",
-    whatsapp_numero: "",
-    cor_primaria: "#10b981",
-    cor_secundaria: "#1e293b",
-    cor_fundo: "#0f1117",
-    cor_botoes: "#10b981",
-    tipografia: "Inter",
-    estilo_cards: "rounded",
-    secao_destaque: true,
-    secao_categorias: true,
-    secao_testemunhos: true,
-    secao_beneficios: true,
-    secao_cta: true,
-    beneficios: [] as { icone: string; titulo: string; descricao: string }[],
-    cta_titulo: "",
-    cta_descricao: "",
-    cta_botao_texto: "Fale Conosco",
-    cta_botao_link: "",
-    seo_titulo: "",
-    seo_descricao: "",
+  const [sections, setSections] = useState<CatalogSection[]>(DEFAULT_SECTIONS);
+  const [productSections, setProductSections] = useState<CatalogSection[]>(DEFAULT_PRODUCT_SECTIONS);
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [theme, setTheme] = useState<CatalogTheme>({
+    primary: "#10b981",
+    background: "#0f1117",
+    text: "#f8fafc",
+    button: "#10b981",
+    typography: "Inter",
+    cardStyle: "rounded",
   });
+  const [headerFooter, setHeaderFooter] = useState<CatalogHeaderFooter>({
+    brand_name: "",
+    logo_url: "",
+    socials: { instagram: "", whatsapp: "" },
+    footer_message: "",
+  });
+  const [imagemInstitucionalUrl, setImagemInstitucionalUrl] = useState<string>("");
+
+  const [previewDevice, setPreviewDevice] = useState<"mobile" | "tablet" | "desktop">("mobile");
+  const [showPreview, setShowPreview] = useState(true);
 
   useEffect(() => {
     if (config) {
-      setForm({
-        titulo: config.titulo || "Nosso Catálogo",
-        subtitulo: config.subtitulo || "",
-        descricao: config.descricao || "",
-        banner_url: config.banner_url || "",
-        whatsapp_numero: config.whatsapp_numero || "",
-        cor_primaria: config.cor_primaria || "#10b981",
-        cor_secundaria: config.cor_secundaria || "#1e293b",
-        cor_fundo: config.cor_fundo || "#0f1117",
-        cor_botoes: config.cor_botoes || "#10b981",
-        tipografia: config.tipografia || "Inter",
-        estilo_cards: config.estilo_cards || "rounded",
-        secao_destaque: config.secao_destaque ?? true,
-        secao_categorias: config.secao_categorias ?? true,
-        secao_testemunhos: config.secao_testemunhos ?? true,
-        secao_beneficios: config.secao_beneficios ?? true,
-        secao_cta: config.secao_cta ?? true,
-        beneficios: Array.isArray(config.beneficios) ? (config.beneficios as any[]) : [],
-        cta_titulo: config.cta_titulo || "",
-        cta_descricao: config.cta_descricao || "",
-        cta_botao_texto: config.cta_botao_texto || "Fale Conosco",
-        cta_botao_link: config.cta_botao_link || "",
-        seo_titulo: config.seo_titulo || "",
-        seo_descricao: config.seo_descricao || "",
-      });
+      if (Array.isArray(config.secoes) && config.secoes.length > 0) {
+        setSections(config.secoes as CatalogSection[]);
+      }
+      if (Array.isArray((config as any).secoes_produto) && (config as any).secoes_produto.length > 0) {
+        setProductSections((config as any).secoes_produto as CatalogSection[]);
+      }
+      setImagemInstitucionalUrl(config.imagem_institucional_url || "");
+      if (config.tema_config && typeof config.tema_config === 'object') {
+        setTheme(config.tema_config as any);
+      } else {
+        // Fallback to old flat fields
+        setTheme({
+          primary: config.cor_primaria || "#10b981",
+          background: config.cor_fundo || "#0f1117",
+          text: "#f8fafc",
+          button: config.cor_botoes || "#10b981",
+          typography: config.tipografia || "Inter",
+          cardStyle: (config.estilo_cards as any) || "rounded",
+        });
+      }
+      if (config.header_config || config.footer_config) {
+        setHeaderFooter({
+          ...(config.header_config as any),
+          ...(config.footer_config as any),
+        });
+      }
     }
   }, [config]);
 
@@ -97,332 +107,321 @@ export default function CatalogoAdminPage() {
     if (!profile) return;
     upsert.mutate({
       empresa_id: profile.empresa_id,
-      ...form,
-      beneficios: form.beneficios,
-    });
+      secoes: sections,
+      secoes_produto: productSections,
+      tema_config: theme,
+      header_config: headerFooter,
+      footer_config: headerFooter,
+      imagem_institucional_url: imagemInstitucionalUrl,
+      // Keep old fields for backward compatibility if needed
+      cor_primaria: theme.primary,
+      cor_fundo: theme.background,
+      cor_botoes: theme.button,
+      tipografia: theme.typography,
+    } as any);
   };
 
-  const updateField = (field: string, value: any) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const addBeneficio = () => {
-    setForm((prev) => ({
-      ...prev,
-      beneficios: [...prev.beneficios, { icone: "✨", titulo: "", descricao: "" }],
-    }));
-  };
-
-  const updateBeneficio = (idx: number, field: string, value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      beneficios: prev.beneficios.map((b, i) => (i === idx ? { ...b, [field]: value } : b)),
-    }));
-  };
-
-  const removeBeneficio = (idx: number) => {
-    setForm((prev) => ({
-      ...prev,
-      beneficios: prev.beneficios.filter((_, i) => i !== idx),
-    }));
-  };
-
-  // Toggle product flags
   const toggleProductFlag = async (produtoId: string, flag: string, value: boolean) => {
     const { error } = await supabase
       .from("produtos")
       .update({ [flag]: value, updated_at: new Date().toISOString() } as any)
       .eq("id", produtoId);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Produto atualizado");
-    }
+    if (error) { toast.error(error.message); } else { toast.success("Produto atualizado"); }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex items-center justify-center py-20 animate-pulse">Carregando editor...</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] -m-6 overflow-hidden">
+      {/* Header Admin */}
+      <div className="flex items-center justify-between p-4 border-b bg-background z-20">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-            <BookOpen className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Catálogo Online</h1>
-            <p className="text-sm text-muted-foreground">Configure seu mini site de catálogo</p>
-          </div>
+          <BookOpen className="w-5 h-5 text-primary" />
+          <h1 className="text-lg font-bold">Editor do Catálogo</h1>
+          <Badge variant="secondary" className="ml-2 font-mono text-[10px]">Versão Mini-Site</Badge>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => {
-              const publicUrl = `${window.location.origin}/catalogo`;
-              if (navigator.share) {
-                navigator.share({ title: "Catálogo", url: publicUrl }).catch(() => {});
-              } else {
-                navigator.clipboard.writeText(publicUrl);
-                toast.success("Link do catálogo copiado!");
-              }
-            }}
-          >
-            <Share2 className="w-4 h-4" /> Compartilhar
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setShowPreview(!showPreview)}>
+            {showPreview ? <PanelLeftClose className="w-4 h-4 mr-2" /> : <PanelLeftOpen className="w-4 h-4 mr-2" />}
+            Preview
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a href="/catalogo" target="_blank" rel="noopener noreferrer" className="gap-1.5">
-              <Eye className="w-4 h-4" /> Visualizar
-            </a>
+          <Separator orientation="vertical" className="h-4 mx-2" />
+          <Button variant="outline" size="sm" onClick={() => window.open("/catalogo", "_blank")}>
+            <Eye className="w-4 h-4 mr-2" /> Visualizar
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={upsert.isPending}>
-            <Save className="w-4 h-4" /> {upsert.isPending ? "Salvando..." : "Salvar"}
+          <Button size="sm" onClick={handleSave} disabled={upsert.isPending}>
+            <Save className="w-4 h-4 mr-2" /> {upsert.isPending ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="conteudo">
-        <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="conteudo" className="gap-1.5"><Layout className="w-3.5 h-3.5" /> Conteúdo</TabsTrigger>
-          <TabsTrigger value="visual" className="gap-1.5"><Palette className="w-3.5 h-3.5" /> Visual</TabsTrigger>
-          <TabsTrigger value="produtos" className="gap-1.5"><Image className="w-3.5 h-3.5" /> Destaques</TabsTrigger>
-          <TabsTrigger value="seo" className="gap-1.5"><Settings2 className="w-3.5 h-3.5" /> SEO</TabsTrigger>
-        </TabsList>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Editor Area */}
+        <div className="flex-1 overflow-y-auto p-6 bg-muted/30">
+          <div className="max-w-2xl mx-auto space-y-6">
+            <Tabs defaultValue="secoes">
+              <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 bg-background border flex-wrap">
+                <TabsTrigger value="secoes" className="gap-1.5"><Layout className="w-3.5 h-3.5" /> Site</TabsTrigger>
+                <TabsTrigger value="produto_secoes" className="gap-1.5"><Smartphone className="w-3.5 h-3.5" /> Página Produto</TabsTrigger>
+                <TabsTrigger value="banners" className="gap-1.5"><Image className="w-3.5 h-3.5" /> Banners</TabsTrigger>
+                <TabsTrigger value="visual" className="gap-1.5"><Palette className="w-3.5 h-3.5" /> Visual</TabsTrigger>
+                <TabsTrigger value="header" className="gap-1.5"><Monitor className="w-3.5 h-3.5" /> Header/Footer</TabsTrigger>
+                <TabsTrigger value="produtos" className="gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Conteúdo</TabsTrigger>
+              </TabsList>
 
-        {/* CONTEÚDO */}
-        <TabsContent value="conteudo" className="space-y-6 mt-4">
-          <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-foreground">Página Inicial</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Título Principal</Label>
-                <Input value={form.titulo} onChange={(e) => updateField("titulo", e.target.value)} />
-              </div>
-              <div>
-                <Label>Subtítulo</Label>
-                <Input value={form.subtitulo} onChange={(e) => updateField("subtitulo", e.target.value)} />
-              </div>
-            </div>
-            <div>
-              <Label>Descrição</Label>
-              <Textarea value={form.descricao} onChange={(e) => updateField("descricao", e.target.value)} rows={3} />
-            </div>
-            <div>
-              <Label>URL do Banner</Label>
-              <Input value={form.banner_url} onChange={(e) => updateField("banner_url", e.target.value)} placeholder="https://..." />
-            </div>
-            <div>
-              <Label>WhatsApp (com DDD)</Label>
-              <Input value={form.whatsapp_numero} onChange={(e) => updateField("whatsapp_numero", e.target.value)} placeholder="5511999999999" />
-            </div>
-          </Card>
+              <div className="mt-6">
+                <TabsContent value="secoes" className="space-y-4 m-0">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold">Estrutura da Home</h3>
+                    <p className="text-xs text-muted-foreground">Arraste ou use as setas para definir a ordem das seções na página inicial.</p>
+                  </div>
+                  <CatalogSectionBuilder sections={sections} onSectionsChange={setSections} />
+                  
+                  <Separator className="my-6" />
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+                        <Image className="w-4 h-4" /> Foto Institucional
+                      </h3>
+                      <p className="text-xs text-muted-foreground">Esta imagem aparece na seção "Sobre a Marca" da sua Home.</p>
+                    </div>
+                    <Card className="p-4 bg-background/50">
+                      <ImageUpload 
+                        currentImageUrl={imagemInstitucionalUrl}
+                        onImageUploaded={(url) => {
+                          const finalUrl = typeof url === 'string' ? url : url.large;
+                          setImagemInstitucionalUrl(finalUrl);
+                        }}
+                        onImageRemoved={() => setImagemInstitucionalUrl("")}
+                        recommendedSize="1200 x 800 px"
+                        aspectRatio={3/2}
+                        storagePath="institucional"
+                      />
+                    </Card>
+                  </div>
+                </TabsContent>
 
-          <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-foreground">Seções Visíveis</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { key: "secao_destaque", label: "Produtos em Destaque" },
-                { key: "secao_categorias", label: "Categorias" },
-                { key: "secao_testemunhos", label: "Depoimentos" },
-                { key: "secao_beneficios", label: "Benefícios da Marca" },
-                { key: "secao_cta", label: "Chamada para Ação" },
-              ].map((s) => (
-                <div key={s.key} className="flex items-center justify-between p-3 rounded-lg border">
-                  <span className="text-sm font-medium">{s.label}</span>
-                  <Switch
-                    checked={(form as any)[s.key]}
-                    onCheckedChange={(v) => updateField(s.key, v)}
+                <TabsContent value="produto_secoes" className="space-y-4 m-0">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold">Estrutura da Página de Produto</h3>
+                    <p className="text-xs text-muted-foreground">Defina quais seções aparecem e em qual ordem na página individual do produto.</p>
+                  </div>
+                  <CatalogSectionBuilder sections={productSections} onSectionsChange={setProductSections} />
+                </TabsContent>
+
+                <TabsContent value="banners" className="m-0">
+                  <CatalogBannerManager />
+                </TabsContent>
+
+                <TabsContent value="visual" className="m-0">
+                  <CatalogVisualEditor theme={theme} onThemeChange={setTheme} />
+                </TabsContent>
+
+                <TabsContent value="header" className="m-0">
+                  <CatalogHeaderFooterEditor config={headerFooter} onConfigChange={setHeaderFooter} />
+                </TabsContent>
+
+                <TabsContent value="produtos" className="m-0">
+                  <Card className="p-4 space-y-4">
+                     <h3 className="text-sm font-semibold">Produtos em Destaque</h3>
+                     <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                        {produtos?.filter(p => p.ativo).map((p) => (
+                          <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border bg-background">
+                            <div>
+                              <p className="font-medium text-xs truncate w-40">{p.nome}</p>
+                              <p className="text-[10px] text-muted-foreground">{p.codigo}</p>
+                            </div>
+                            <div className="flex gap-1 flex-wrap justify-end">
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingProduct(p)}>
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              {[
+                                { key: "destaque", label: "Estrela", color: "default" as const },
+                                { key: "promocao", label: "%", color: "destructive" as const },
+                                { key: "lancamento", label: "Novo", color: "secondary" as const },
+                              ].map((flag) => (
+                                <Badge
+                                  key={flag.key}
+                                  variant={(p as any)[flag.key] ? flag.color : "outline"}
+                                  className="cursor-pointer text-[9px] px-1.5"
+                                  onClick={() => toggleProductFlag(p.id, flag.key, !(p as any)[flag.key])}
+                                >
+                                  {flag.label}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                     </div>
+                  </Card>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+        </div>
+
+        {/* Live Preview Sidebar */}
+        {showPreview && (
+          <div className="hidden lg:flex flex-col w-[400px] border-l bg-muted/10">
+            <div className="p-3 border-b flex items-center justify-between bg-background">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Preview Real-time</span>
+              <div className="flex items-center gap-1">
+                <Button variant={previewDevice === "mobile" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("mobile")}>
+                  <Smartphone className="w-3.5 h-3.5" />
+                </Button>
+                <Button variant={previewDevice === "tablet" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("tablet")}>
+                  <Tablet className="w-3.5 h-3.5" />
+                </Button>
+                <Button variant={previewDevice === "desktop" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("desktop")}>
+                  <Monitor className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-hidden p-4 flex justify-center bg-gray-200/50">
+               <div className={`bg-white shadow-2xl overflow-hidden transition-all duration-300 ${
+                 previewDevice === "mobile" ? "w-[280px] h-[550px]" : 
+                 previewDevice === "tablet" ? "w-[360px] h-[550px]" : "w-full h-full"
+               } rounded-[2rem] border-[8px] border-gray-800 relative`}>
+                 <div className="absolute inset-0 overflow-y-auto bg-[#0f1117] scrollbar-hide" style={{ backgroundColor: theme.background, fontFamily: theme.typography }}>
+                   {/* Mini Header */}
+                   <div className="p-4 flex items-center justify-between border-b border-white/5">
+                     <span className="text-xs font-bold" style={{ color: theme.text }}>{headerFooter.brand_name || "Sua Marca"}</span>
+                     <div className="w-5 h-5 rounded-full bg-white/10" />
+                   </div>
+                                     {/* Mini Site Sections */}
+                   <div className="flex-1">
+                     {sections.filter(s => s.active).map((s) => {
+                       const sectionBg = theme.colors?.sectionBackground || "transparent";
+                       const titleColor = theme.colors?.titles || theme.primary;
+                       
+                       return (
+                         <div key={s.id} className="p-4 border-b border-white/5 min-h-[80px] flex flex-col justify-center" style={{ backgroundColor: sectionBg }}>
+                           <span className="text-[10px] font-bold uppercase mb-1" style={{ color: titleColor }}>{s.label}</span>
+                           
+                           {/* Mini Product Card Simulation */}
+                           <div className="mt-2 p-2 rounded-lg bg-white/5 border border-white/10 space-y-1">
+                             <div className="aspect-square w-full rounded bg-white/10 mb-2" />
+                             {theme.visibility?.productTitle && <div className="h-2 w-full rounded bg-white/10" style={{ backgroundColor: theme.colors?.productName || "rgba(255,255,255,0.1)" }} />}
+                             {theme.visibility?.productPrice && <div className="h-2 w-1/2 rounded bg-white/10" style={{ backgroundColor: theme.colors?.productPrice || "rgba(255,255,255,0.1)" }} />}
+                             {theme.visibility?.productAction && <div className="h-4 w-full rounded mt-2" style={{ backgroundColor: theme.button }} />}
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                   
+                   {/* Mini Footer */}
+                   <div className="p-6 text-center space-y-2 opacity-50">
+                     <div className="w-10 h-1 rounded bg-white/10 mx-auto" />
+                     <p className="text-[8px]" style={{ color: theme.text }}>{headerFooter.footer_message || "© 2026 Catálogo"}</p>
+                   </div>
+                 </div>
+               </div>
+            </div>
+          </div>
+        )}
+      </div>
+      {/* Rich Product Content Editor Dialog */}
+      {editingProduct && (
+        <Dialog open={!!editingProduct} onOpenChange={(o) => !o && setEditingProduct(null)}>
+          <DialogContent className="max-w-xl max-h-[90vh] flex flex-col p-6 overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Conteúdo Rico: {editingProduct.nome}</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-6 py-4">
+                {/* Benefits */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-bold uppercase tracking-wider opacity-60">Benefícios</Label>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      const current = editingProduct.beneficios || [];
+                      setEditingProduct({ ...editingProduct, beneficios: [...current, ""] });
+                    }}>
+                      <Plus className="w-3 h-3 mr-1" /> Add
+                    </Button>
+                  </div>
+                  {(editingProduct.beneficios || []).map((b: string, i: number) => (
+                    <div key={i} className="flex gap-2">
+                      <Input value={b} onChange={(e) => {
+                        const next = [...editingProduct.beneficios];
+                        next[i] = e.target.value;
+                        setEditingProduct({ ...editingProduct, beneficios: next });
+                      }} />
+                      <Button variant="ghost" size="icon" className="text-destructive h-10 w-10 shrink-0" onClick={() => {
+                        const next = editingProduct.beneficios.filter((_: any, idx: number) => idx !== i);
+                        setEditingProduct({ ...editingProduct, beneficios: next });
+                      }}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Modo de Uso */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold uppercase tracking-wider opacity-60">Modo de Uso</Label>
+                  <Textarea 
+                    value={editingProduct.modo_uso} 
+                    onChange={(e) => setEditingProduct({ ...editingProduct, modo_uso: e.target.value })}
+                    rows={4}
+                    placeholder="Instruções passo a passo..."
                   />
                 </div>
-              ))}
-            </div>
-          </Card>
 
-          <Card className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-foreground">Benefícios da Marca</h3>
-              <Button variant="outline" size="sm" onClick={addBeneficio}>Adicionar</Button>
-            </div>
-            {form.beneficios.map((b, idx) => (
-              <div key={idx} className="grid grid-cols-[60px_1fr_1fr_auto] gap-2 items-end">
-                <div>
-                  <Label className="text-xs">Ícone</Label>
-                  <Input value={b.icone} onChange={(e) => updateBeneficio(idx, "icone", e.target.value)} className="text-center" />
-                </div>
-                <div>
-                  <Label className="text-xs">Título</Label>
-                  <Input value={b.titulo} onChange={(e) => updateBeneficio(idx, "titulo", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-xs">Descrição</Label>
-                  <Input value={b.descricao} onChange={(e) => updateBeneficio(idx, "descricao", e.target.value)} />
-                </div>
-                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeBeneficio(idx)}>✕</Button>
-              </div>
-            ))}
-          </Card>
-
-          <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-foreground">Chamada para Ação (CTA)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Título</Label>
-                <Input value={form.cta_titulo} onChange={(e) => updateField("cta_titulo", e.target.value)} />
-              </div>
-              <div>
-                <Label>Texto do Botão</Label>
-                <Input value={form.cta_botao_texto} onChange={(e) => updateField("cta_botao_texto", e.target.value)} />
-              </div>
-            </div>
-            <div>
-              <Label>Descrição</Label>
-              <Textarea value={form.cta_descricao} onChange={(e) => updateField("cta_descricao", e.target.value)} rows={2} />
-            </div>
-            <div>
-              <Label>Link do Botão</Label>
-              <Input value={form.cta_botao_link} onChange={(e) => updateField("cta_botao_link", e.target.value)} placeholder="https://wa.me/..." />
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* VISUAL */}
-        <TabsContent value="visual" className="space-y-6 mt-4">
-          <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-foreground flex items-center gap-2"><Palette className="w-4 h-4" /> Cores</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { key: "cor_primaria", label: "Primária" },
-                { key: "cor_secundaria", label: "Secundária" },
-                { key: "cor_fundo", label: "Fundo" },
-                { key: "cor_botoes", label: "Botões" },
-              ].map((c) => (
-                <div key={c.key}>
-                  <Label className="text-xs">{c.label}</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <input
-                      type="color"
-                      value={(form as any)[c.key]}
-                      onChange={(e) => updateField(c.key, e.target.value)}
-                      className="w-10 h-10 rounded-lg border cursor-pointer"
-                    />
-                    <Input
-                      value={(form as any)[c.key]}
-                      onChange={(e) => updateField(c.key, e.target.value)}
-                      className="flex-1 text-xs font-mono"
-                    />
+                {/* Diferenciais */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-bold uppercase tracking-wider opacity-60">Diferenciais</Label>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      const current = editingProduct.diferenciais || [];
+                      setEditingProduct({ ...editingProduct, diferenciais: [...current, ""] });
+                    }}>
+                      <Plus className="w-3 h-3 mr-1" /> Add
+                    </Button>
                   </div>
+                  {(editingProduct.diferenciais || []).map((d: string, i: number) => (
+                    <div key={i} className="flex gap-2">
+                      <Input value={d} onChange={(e) => {
+                        const next = [...editingProduct.diferenciais];
+                        next[i] = e.target.value;
+                        setEditingProduct({ ...editingProduct, diferenciais: next });
+                      }} />
+                      <Button variant="ghost" size="icon" className="text-destructive h-10 w-10 shrink-0" onClick={() => {
+                        const next = editingProduct.diferenciais.filter((_: any, idx: number) => idx !== i);
+                        setEditingProduct({ ...editingProduct, diferenciais: next });
+                      }}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </Card>
 
-          <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-foreground flex items-center gap-2"><Type className="w-4 h-4" /> Tipografia e Estilo</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Fonte</Label>
-                <Select value={form.tipografia} onValueChange={(v) => updateField("tipografia", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {FONTS.map((f) => (
-                      <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Estilo dos Cards</Label>
-                <Select value={form.estilo_cards} onValueChange={(v) => updateField("estilo_cards", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CARD_STYLES.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </Card>
-
-          {/* Preview */}
-          <Card className="p-6 space-y-3" style={{ backgroundColor: form.cor_fundo, fontFamily: form.tipografia }}>
-            <p className="text-xs text-muted-foreground">Preview</p>
-            <h2 className="text-2xl font-bold" style={{ color: form.cor_primaria }}>{form.titulo || "Título"}</h2>
-            <p style={{ color: "#9ca3af" }}>{form.descricao || "Descrição do catálogo"}</p>
-            <button
-              className="px-6 py-2 rounded-lg text-sm font-semibold"
-              style={{
-                backgroundColor: form.cor_botoes,
-                color: form.cor_fundo,
-                borderRadius: form.estilo_cards === "sharp" ? "4px" : form.estilo_cards === "rounded" ? "12px" : "8px",
-              }}
-            >
-              {form.cta_botao_texto || "Botão"}
-            </button>
-          </Card>
-        </TabsContent>
-
-        {/* DESTAQUES */}
-        <TabsContent value="produtos" className="space-y-6 mt-4">
-          <Card className="p-4">
-            <h3 className="font-semibold text-foreground mb-4">Marcar produtos para exibição no catálogo</h3>
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {produtos?.filter(p => p.ativo).map((p) => (
-                <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div>
-                    <p className="font-medium text-sm text-foreground">{p.nome}</p>
-                    <p className="text-xs text-muted-foreground">{p.codigo}</p>
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap justify-end">
-                    {[
-                      { key: "destaque", label: "Destaque", color: "default" as const },
-                      { key: "promocao", label: "Promoção", color: "destructive" as const },
-                      { key: "mais_vendido", label: "Mais Vendido", color: "secondary" as const },
-                      { key: "lancamento", label: "Lançamento", color: "outline" as const },
-                    ].map((flag) => (
-                      <Badge
-                        key={flag.key}
-                        variant={(p as any)[flag.key] ? flag.color : "outline"}
-                        className="cursor-pointer text-[10px] select-none"
-                        onClick={() => toggleProductFlag(p.id, flag.key, !(p as any)[flag.key])}
-                      >
-                        {flag.label}
-                      </Badge>
-                    ))}
-                  </div>
+                {/* Observações */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold uppercase tracking-wider opacity-60">Observações Extras</Label>
+                  <Input value={editingProduct.observacoes} onChange={(e) => setEditingProduct({ ...editingProduct, observacoes: e.target.value })} placeholder="Ex: Prazo de entrega estendido..." />
                 </div>
-              ))}
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* SEO */}
-        <TabsContent value="seo" className="space-y-6 mt-4">
-          <Card className="p-4 space-y-4">
-            <h3 className="font-semibold text-foreground">SEO do Catálogo</h3>
-            <div>
-              <Label>Título SEO</Label>
-              <Input value={form.seo_titulo} onChange={(e) => updateField("seo_titulo", e.target.value)} placeholder="Título para motores de busca" />
-            </div>
-            <div>
-              <Label>Descrição SEO</Label>
-              <Textarea value={form.seo_descricao} onChange={(e) => updateField("seo_descricao", e.target.value)} rows={3} placeholder="Descrição para motores de busca" />
-            </div>
-          </Card>
-
-          <Card className="p-4 space-y-3">
-            <h3 className="font-semibold text-foreground">SEO dos Produtos</h3>
-            <p className="text-sm text-muted-foreground">Configure slug e SEO de cada produto na página de Produtos, aba de edição.</p>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </div>
+            </ScrollArea>
+            <DialogFooter className="pt-4 border-t mt-4">
+              <Button variant="ghost" onClick={() => setEditingProduct(null)}>Cancelar</Button>
+              <Button onClick={async () => {
+                await upsertProduto.mutateAsync(editingProduct);
+                setEditingProduct(null);
+              }} disabled={upsertProduto.isPending}>
+                {upsertProduto.isPending ? "Salvando..." : "Salvar Conteúdo"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
+
+const Separator = ({ className, orientation }: { className?: string, orientation?: "horizontal" | "vertical" }) => (
+  <div className={`${className} bg-border ${orientation === "vertical" ? "w-[1px]" : "h-[1px]"}`} />
+);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Navigate, useOutletContext } from "react-router-dom";
 import { ShoppingBag, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,8 +31,13 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function PortalPedidosPage() {
+  const { config } = useOutletContext<{ config: any }>();
   const { cliente } = usePortalAuth();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  if (config && config.portal_mostrar_pedidos === false) {
+    return <Navigate to="/portal" replace />;
+  }
 
   const { data: pedidos, isLoading } = useQuery({
     queryKey: ["portal-pedidos", cliente?.id],

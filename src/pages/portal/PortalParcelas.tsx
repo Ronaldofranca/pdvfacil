@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Navigate, useOutletContext } from "react-router-dom";
 import { DollarSign, Copy, Check, MessageCircle, QrCode } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,10 +31,15 @@ const statusColors: Record<string, string> = {
 };
 
 export default function PortalParcelasPage() {
+  const { config: layoutConfig } = useOutletContext<{ config: any }>();
   const { cliente } = usePortalAuth();
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedParcela, setSelectedParcela] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+
+  if (layoutConfig && layoutConfig.portal_mostrar_parcelas === false) {
+    return <Navigate to="/portal" replace />;
+  }
 
   const { data: parcelas, isLoading } = useQuery({
     queryKey: ["portal-parcelas", cliente?.id],
@@ -74,8 +80,9 @@ export default function PortalParcelasPage() {
     },
   });
 
-  const abertas = parcelas?.filter((p) => p.status === "pendente" || p.status === "parcial") ?? [];
-  const vencidas = parcelas?.filter((p) => p.status === "vencida") ?? [];
+  const todayStr = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }).split("/").reverse().join("-");
+  const abertas = parcelas?.filter((p) => (p.status === "pendente" || p.status === "parcial") && p.vencimento >= todayStr) ?? [];
+  const vencidas = parcelas?.filter((p) => (p.status === "pendente" || p.status === "parcial") && Number(p.saldo) > 0 && p.vencimento < todayStr) ?? [];
   const pagas = parcelas?.filter((p) => p.status === "paga") ?? [];
   const showPix = config?.portal_mostrar_pix ?? true;
 

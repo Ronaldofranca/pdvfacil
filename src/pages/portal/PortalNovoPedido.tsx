@@ -9,7 +9,7 @@ import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate, useOutletContext } from "react-router-dom";
 
 function fmtR(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -24,9 +24,14 @@ interface CartItem {
 }
 
 export default function PortalNovoPedidoPage() {
+  const { config } = useOutletContext<{ config: any }>();
   const { cliente } = usePortalAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  if (config && config.portal_mostrar_pedidos === false) {
+    return <Navigate to="/portal" replace />;
+  }
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [obs, setObs] = useState("");

@@ -204,3 +204,55 @@ export function useDeleteProdutoImagem() {
     onError: (e: Error) => toast.error(e.message),
   });
 }
+// ─── Banners ───
+export function useCatalogoBanners() {
+  return useQuery({
+    queryKey: ["catalogo_banners"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("catalogo_banners")
+        .select("*")
+        .order("ordem");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useSaveCatalogoBanner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (banner: any) => {
+      if (banner.id) {
+        const { error } = await supabase
+          .from("catalogo_banners")
+          .update(banner)
+          .eq("id", banner.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("catalogo_banners").insert(banner);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["catalogo_banners"] });
+      toast.success("Banner salvo!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeleteCatalogoBanner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("catalogo_banners").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["catalogo_banners"] });
+      toast.success("Banner removido!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}

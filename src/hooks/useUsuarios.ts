@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+/** Todos os profiles do sistema com seus roles */
 export function useUsuarios() {
   return useQuery({
     queryKey: ["usuarios"],
@@ -12,6 +13,63 @@ export function useUsuarios() {
         .order("nome");
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+/** Apenas Admins e Gerentes (usuários com controle total / gerencial) */
+export function useAdmins() {
+  return useQuery({
+    queryKey: ["usuarios", "admins"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("profiles")
+        .select("*, user_roles(role)")
+        .order("nome");
+      if (error) throw error;
+      const rows: any[] = data ?? [];
+      return rows.filter((p) =>
+        p.user_roles?.some((r: any) => r.role === "admin" || r.role === "gerente")
+      );
+    },
+  });
+}
+
+/** Apenas Vendedores */
+export function useVendedores() {
+  return useQuery({
+    queryKey: ["usuarios", "vendedores"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("profiles")
+        .select("*, user_roles(role)")
+        .order("nome");
+      if (error) throw error;
+      const rows: any[] = data ?? [];
+      return rows.filter((p) =>
+        p.user_roles?.some((r: any) => r.role === "vendedor")
+      );
+    },
+  });
+}
+
+/**
+ * Clientes do sistema (tabela `clientes`).
+ * has_portal_access = true quando user_id está preenchido (cliente tem login no portal).
+ */
+export function useClientesPortal() {
+  return useQuery({
+    queryKey: ["usuarios", "clientes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("id, nome, email, telefone, cidade, ativo, user_id, cpf_cnpj, created_at")
+        .order("nome");
+      if (error) throw error;
+      return (data ?? []).map((c) => ({
+        ...c,
+        has_portal_access: !!c.user_id,
+      }));
     },
   });
 }
