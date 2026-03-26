@@ -1,4 +1,4 @@
-import { ShoppingBag, DollarSign, AlertTriangle, CheckCircle, Plus, MessageCircle, Copy, History } from "lucide-react";
+import { ShoppingBag, DollarSign, AlertTriangle, CheckCircle, Plus, MessageCircle, Copy, History, Receipt } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -84,8 +84,10 @@ export default function PortalHomePage() {
     },
   });
 
-  const abertas = parcelas?.filter((p) => p.status === "pendente" || p.status === "parcial") ?? [];
-  const vencidas = parcelas?.filter((p) => p.status === "vencida") ?? [];
+  // Vencidas: parcelas com saldo > 0 E vencimento < hoje (não depende do campo status do banco)
+  const todayStr = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }).split("/").reverse().join("-");
+  const abertas = parcelas?.filter((p) => (p.status === "pendente" || p.status === "parcial") && p.vencimento >= todayStr) ?? [];
+  const vencidas = parcelas?.filter((p) => (p.status === "pendente" || p.status === "parcial") && Number(p.saldo) > 0 && p.vencimento < todayStr) ?? [];
   const totalAberto = [...abertas, ...vencidas].reduce((s, p) => s + Number(p.saldo ?? 0), 0);
   const totalVencido = vencidas.reduce((s, p) => s + Number(p.saldo ?? 0), 0);
   const totalPago = parcelas?.filter((p) => p.status === "paga").reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
@@ -196,6 +198,9 @@ export default function PortalHomePage() {
             <Plus className="w-4 h-4" /> Novo Pedido
           </Button>
         )}
+        <Button variant="outline" onClick={() => navigate("/portal/pagamentos")} className="gap-2">
+          <Receipt className="w-4 h-4" /> Meus Pagamentos
+        </Button>
         {vendedorProfile && (
           <Button variant="outline" className="gap-2" asChild>
             <a href={`https://wa.me/55${(vendedorProfile.telefone || "").replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">

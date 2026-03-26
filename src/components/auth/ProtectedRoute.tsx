@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole, requiredPermission }: ProtectedRouteProps) {
-  const { session, loading, rolesLoaded, hasRole, hasPermission } = useAuth();
+  const { session, profile, loading, rolesLoaded, hasRole, hasPermission } = useAuth();
 
   if (loading) {
     return (
@@ -29,6 +29,11 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
+  }
+
+  if (!profile) {
+    // If auth is loaded, session exists, but no internal profile -> Must be a Customer portal user!
+    return <Navigate to="/portal" replace />;
   }
 
   if (requiredRole && !hasRole(requiredRole)) {

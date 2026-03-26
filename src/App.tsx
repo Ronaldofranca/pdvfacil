@@ -54,6 +54,7 @@ import PortalParcelasPage from "./pages/portal/PortalParcelas";
 import PortalComprasPage from "./pages/portal/PortalCompras";
 import PortalNovoPedidoPage from "./pages/portal/PortalNovoPedido";
 import PortalDadosPage from "./pages/portal/PortalDados";
+import PortalPagamentosPage from "./pages/portal/PortalPagamentos";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const App = () => (
                 <Route path="novo-pedido" element={<PortalNovoPedidoPage />} />
                 <Route path="parcelas" element={<PortalParcelasPage />} />
                 <Route path="compras" element={<PortalComprasPage />} />
+                <Route path="pagamentos" element={<PortalPagamentosPage />} />
                 <Route path="dados" element={<PortalDadosPage />} />
               </Route>
 

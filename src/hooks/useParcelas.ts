@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { invalidateDashboardQueries } from "@/hooks/useVendas";
 
 export function useParcelas(
-  filters?: { vendaId?: string; clienteId?: string; status?: string },
+  filters?: { vendaId?: string; clienteId?: string; status?: string; startDate?: Date; endDate?: Date },
   options?: { enabled?: boolean },
 ) {
   return useQuery({
@@ -15,13 +15,29 @@ export function useParcelas(
         .from("parcelas")
         .select("*, clientes(nome), vendas(id)")
         .order("vencimento");
+      
       if (filters?.vendaId) q = q.eq("venda_id", filters.vendaId);
       if (filters?.clienteId) q = q.eq("cliente_id", filters.clienteId);
+      
       if (filters?.status === "pendente") {
         q = q.in("status", ["pendente", "parcial"] as any[]);
-      } else if (filters?.status) {
+      } else if (filters?.status && filters.status !== "todas") {
         q = q.eq("status", filters.status as any);
       }
+
+      if (filters?.startDate || filters?.endDate) {
+        const start = filters?.startDate?.toISOString();
+        const end = filters?.endDate?.toISOString();
+        
+        if (start && end) {
+          q = q.or(`vencimento.gte.${start},vencimento.lte.${end},data_pagamento.gte.${start},data_pagamento.lte.${end}`);
+        } else if (start) {
+          q = q.or(`vencimento.gte.${start},data_pagamento.gte.${start}`);
+        } else if (end) {
+          q = q.or(`vencimento.lte.${end},data_pagamento.lte.${end}`);
+        }
+      }
+
       const { data, error } = await q;
       if (error) throw error;
       return data;
@@ -123,6 +139,26 @@ export function usePagamentosDaParcela(parcelaId: string | null) {
         .select("*")
         .eq("parcela_id", parcelaId!)
         .order("data_pagamento", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function usePagamentos(filters?: { startDate?: Date; endDate?: Date }) {
+  return useQuery({
+    queryKey: ["pagamentos", filters],
+    queryFn: async () => {
+      let q = supabase.from("pagamentos").select("*, parcelas(*, clientes(nome))");
+
+      if (filters?.startDate) {
+        q = q.gte("data_pagamento", filters.startDate.toISOString());
+      }
+      if (filters?.endDate) {
+        q = q.lte("data_pagamento", filters.endDate.toISOString());
+      }
+
+      const { data, error } = await q.order("data_pagamento", { ascending: false });
       if (error) throw error;
       return data;
     },

@@ -1,16 +1,17 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, X, Crop, ZoomIn, ZoomOut, Check, Loader2, ImageIcon, Trash2 } from "lucide-react";
+import { Upload, X, Crop, ZoomIn, ZoomOut, Check, Loader2, ImageIcon, Trash2, Link as LinkIcon, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ReactCrop, { type Crop as CropType, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import {
   validateImageFile,
   getImageInfo,
   processImage,
-  processImageFromCanvas,
   formatFileSize,
-  type ProcessedImages,
   type ImageInfo,
 } from "@/lib/imageUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,11 +20,21 @@ import { toast } from "sonner";
 
 interface Props {
   currentImageUrl?: string | null;
-  onImageUploaded: (urls: { thumbnail: string; medium: string; large: string; original: string }) => void;
+  onImageUploaded: (urls: { thumbnail: string; medium: string; large: string; original: string } | string) => void;
   onImageRemoved: () => void;
+  recommendedSize?: string;
+  aspectRatio?: number;
+  storagePath?: string;
 }
 
-export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }: Props) {
+export function ImageUpload({ 
+  currentImageUrl, 
+  onImageUploaded, 
+  onImageRemoved,
+  recommendedSize = "800 x 800 px",
+  aspectRatio = 1,
+  storagePath = "produtos"
+}: Props) {
   const { profile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -35,6 +46,9 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
   const [cropSrc, setCropSrc] = useState<string>("");
   const [crop, setCrop] = useState<CropType>();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  
+  const [urlInput, setUrlInput] = useState("");
+  const [urlError, setUrlError] = useState(false);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -54,6 +68,19 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
     setPreview(url);
   };
 
+  const handleUrlSubmit = () => {
+    if (!urlInput) return;
+    // Basic validation
+    if (!urlInput.startsWith("http")) {
+      setUrlError(true);
+      toast.error("URL inválida");
+      return;
+    }
+    setUrlError(false);
+    onImageUploaded(urlInput);
+    toast.success("URL da imagem aplicada!");
+  };
+
   const openCropper = () => {
     if (!preview) return;
     setCropSrc(preview);
@@ -63,12 +90,12 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { naturalWidth: width, naturalHeight: height } = e.currentTarget;
     const c = centerCrop(
-      makeAspectCrop({ unit: "%", width: 90 }, 1, width, height),
+      makeAspectCrop({ unit: "%", width: 90 }, aspectRatio, width, height),
       width,
       height
     );
     setCrop(c);
-  }, []);
+  }, [aspectRatio]);
 
   const applyCrop = async () => {
     if (!imgRef.current || !crop) return;
@@ -77,9 +104,6 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
 
     const pixelCrop = {
       x: (crop.x / 100) * image.naturalWidth,
@@ -106,13 +130,11 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
     const dataUrl = canvas.toDataURL("image/png");
     setPreview(dataUrl);
 
-    // Update info
     canvas.toBlob((blob) => {
       if (blob) {
         setImageInfo((prev) =>
           prev ? { ...prev, width: canvas.width, height: canvas.height, size: blob.size } : prev
         );
-        // Create a new file from the cropped blob
         const croppedFile = new File([blob], "cropped.png", { type: "image/png" });
         setSelectedFile(croppedFile);
       }
@@ -130,7 +152,7 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
 
       const empresaId = profile.empresa_id;
       const timestamp = Date.now();
-      const basePath = `${empresaId}/produtos/${timestamp}`;
+      const basePath = `${empresaId}/${storagePath}/${timestamp}`;
 
       const urls: Record<string, string> = {};
 
@@ -150,10 +172,12 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
         urls[key] = urlData.publicUrl;
       }
 
-      // Upload original as large fallback
       urls.original = urls.large;
 
       onImageUploaded(urls as any);
+      // Clear preview after successful upload
+      setPreview(null);
+      setSelectedFile(null);
       toast.success("Imagem enviada com sucesso!");
     } catch (err: any) {
       toast.error("Erro ao enviar imagem: " + err.message);
@@ -166,6 +190,7 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
     setPreview(null);
     setImageInfo(null);
     setSelectedFile(null);
+    setUrlInput("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     onImageRemoved();
   };
@@ -173,7 +198,7 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
   const displayImage = preview || currentImageUrl;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <input
         ref={fileInputRef}
         type="file"
@@ -183,88 +208,137 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
       />
 
       {displayImage ? (
-        <div className="space-y-3">
-          {/* Preview */}
-          <div className="relative aspect-square w-full max-w-[200px] rounded-xl overflow-hidden border bg-muted">
-            <img
-              src={displayImage}
-              alt="Preview"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute top-2 right-2 flex gap-1">
-              {preview && (
+        <div className="space-y-4">
+          <div className="relative group">
+            <div 
+              className="relative overflow-hidden rounded-xl border bg-muted shadow-sm transition-all group-hover:shadow-md"
+              style={{ aspectRatio: aspectRatio > 2 ? "21/9" : aspectRatio === 1 ? "1/1" : "16/9" }}
+            >
+              <img
+                src={displayImage}
+                alt="Preview"
+                className="w-full h-full object-cover"
+                onError={() => {
+                  if (displayImage.startsWith("http")) {
+                    setUrlError(true);
+                  }
+                }}
+              />
+              {urlError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-destructive/10 backdrop-blur-sm text-destructive gap-2 text-center p-4">
+                  <AlertCircle className="w-8 h-8" />
+                  <p className="text-xs font-bold">Erro ao carregar imagem da URL</p>
+                </div>
+              )}
+              <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {preview && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8 rounded-full shadow-lg"
+                    onClick={openCropper}
+                  >
+                    <Crop className="w-4 h-4" />
+                  </Button>
+                )}
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="destructive"
                   size="icon"
-                  className="h-7 w-7 rounded-full bg-background/80 backdrop-blur-sm"
-                  onClick={openCropper}
+                  className="h-8 w-8 rounded-full shadow-lg"
+                  onClick={handleRemove}
                 >
-                  <Crop className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4" />
                 </Button>
+              </div>
+            </div>
+            
+            {/* Overlay Recommendation Label */}
+            <div className="mt-2 flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">Recomendado</span>
+                <p className="text-xs font-medium">{recommendedSize}</p>
+              </div>
+              {imageInfo && (
+                <div className="text-right space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">Arquivo Atual</span>
+                  <p className="text-xs font-medium">{imageInfo.width} × {imageInfo.height} px • {formatFileSize(imageInfo.size)}</p>
+                </div>
               )}
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                className="h-7 w-7 rounded-full bg-background/80 backdrop-blur-sm"
-                onClick={handleRemove}
-              >
-                <X className="w-3.5 h-3.5" />
-              </Button>
             </div>
           </div>
 
-          {/* Image info */}
-          {imageInfo && (
-            <div className="text-xs text-muted-foreground space-y-0.5">
-              <p>{imageInfo.width} × {imageInfo.height}px</p>
-              <p>{formatFileSize(imageInfo.size)}</p>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-2">
+          {preview && (
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
+              className="w-full"
+              onClick={handleUpload}
+              disabled={uploading}
             >
-              Alterar
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Enviando para o servidor...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Confirmar Upload
+                </>
+              )}
             </Button>
-            {preview && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleUpload}
-                disabled={uploading}
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-3.5 h-3.5 mr-1.5" />
-                    Enviar
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
+          )}
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="w-full max-w-[200px] aspect-square rounded-xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-accent/50 transition-colors cursor-pointer"
-        >
-          <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
-          <span className="text-xs text-muted-foreground">Clique para adicionar</span>
-          <span className="text-[10px] text-muted-foreground/70">JPG, PNG, WEBP • Máx 5MB</span>
-        </button>
+        <Tabs defaultValue="upload" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="upload" className="gap-2">
+              <Upload className="w-3.5 h-3.5" /> Upload
+            </TabsTrigger>
+            <TabsTrigger value="url" className="gap-2">
+              <LinkIcon className="w-3.5 h-3.5" /> URL
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="upload">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-10 rounded-xl border-2 border-dashed border-muted-foreground/20 flex flex-col items-center justify-center gap-3 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
+            >
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ImageIcon className="w-6 h-6 text-primary" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold">Clique para subir arquivo</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Ideal: {recommendedSize} • JPG, PNG, WEBP
+                </p>
+              </div>
+            </button>
+          </TabsContent>
+          
+          <TabsContent value="url" className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs">Cole a URL da imagem pública</Label>
+              <div className="flex gap-2">
+                <Input 
+                  placeholder="https://exemplo.com/imagem.jpg" 
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  className="flex-1"
+                />
+                <Button type="button" size="icon" onClick={handleUrlSubmit}>
+                  <Check className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Certifique-se de que a imagem está em um servidor público (ex: Cloudinary, Imgur, ou seu próprio site).
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Crop Dialog */}
@@ -273,12 +347,12 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
           <DialogHeader>
             <DialogTitle>Recortar Imagem</DialogTitle>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-auto">
+          <div className="max-h-[60vh] overflow-auto bg-black/5 rounded-lg border">
             {cropSrc && (
               <ReactCrop
                 crop={crop}
                 onChange={(_, c) => setCrop(c)}
-                aspect={1}
+                aspect={aspectRatio}
               >
                 <img
                   ref={imgRef}
@@ -290,12 +364,12 @@ export function ImageUpload({ currentImageUrl, onImageUploaded, onImageRemoved }
               </ReactCrop>
             )}
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setCropDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button type="button" onClick={applyCrop}>
-              <Check className="w-4 h-4 mr-1.5" />
+            <Button type="button" onClick={applyCrop} className="gap-2">
+              <Check className="w-4 h-4" />
               Aplicar Corte
             </Button>
           </div>
