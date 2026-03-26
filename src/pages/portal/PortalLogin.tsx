@@ -20,10 +20,16 @@ export default function PortalLoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (session && isCliente) {
-      navigate("/portal", { replace: true });
+    if (session && !loading) {
+      if (isCliente) {
+        navigate("/portal", { replace: true });
+      } else {
+        // Logado como Admin/Vendedor tentando ver a tela de cliente.
+        // Desloga o admin para a tela de cliente funcionar limpa.
+        signOut();
+      }
     }
-  }, [session, isCliente, navigate]);
+  }, [session, isCliente, navigate, signOut, loading]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();

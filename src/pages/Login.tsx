@@ -15,16 +15,22 @@ export default function LoginPage() {
   const [blocked, setBlocked] = useState(false);
   const [blockedUntil, setBlockedUntil] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
-  const { signIn, session } = useAuth();
+  const { signIn, session, profile, rolesLoaded, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already logged in
+  // Redirect if already logged in (but ONLY if they have an admin/internal profile)
   useEffect(() => {
-    if (session) {
-      navigate("/", { replace: true });
+    if (session && rolesLoaded) {
+      if (profile) {
+        navigate("/", { replace: true });
+      } else {
+        // They are a client trying to load the admin login page.
+        // We log them out so they can see the admin login form!
+        signOut();
+      }
     }
-  }, [session, navigate]);
+  }, [session, profile, rolesLoaded, navigate, signOut]);
 
   // Countdown timer for block
   useEffect(() => {
