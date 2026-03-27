@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePortalAuth } from "@/hooks/usePortalAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { format } from "date-fns";
 import { buildPixPayload } from "@/lib/reportExport";
 import { toast } from "sonner";
@@ -24,12 +24,25 @@ export default function PortalHomePage() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("configuracoes")
-        .select("portal_titulo, portal_mensagem_boas_vindas, portal_rodape, portal_mostrar_pedidos, portal_mostrar_parcelas, portal_mostrar_compras, portal_mostrar_pix, pix_chave, pix_tipo, pix_nome_recebedor, pix_cidade_recebedor")
+        .select("portal_titulo, portal_mensagem_boas_vindas, portal_rodape, portal_mostrar_pedidos, portal_mostrar_parcelas, portal_mostrar_compras, portal_mostrar_pix, portal_mostrar_home, portal_mostrar_pagamentos, pix_chave, pix_tipo, pix_nome_recebedor, pix_cidade_recebedor")
         .eq("empresa_id", cliente!.empresa_id)
         .maybeSingle();
       return data;
     },
   });
+
+  if (config && (config as any).portal_mostrar_home === false) {
+    if (config.portal_mostrar_pedidos) return <Navigate to="/portal/pedidos" replace />;
+    if (config.portal_mostrar_parcelas) return <Navigate to="/portal/parcelas" replace />;
+    if (config.portal_mostrar_compras) return <Navigate to="/portal/compras" replace />;
+    if ((config as any).portal_mostrar_pagamentos) return <Navigate to="/portal/pagamentos" replace />;
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <h2 className="text-xl font-bold">Bem-vindo ao Portal</h2>
+        <p className="text-muted-foreground">Utilize o menu lateral para navegar.</p>
+      </div>
+    );
+  }
 
   const { data: parcelas } = useQuery({
     queryKey: ["portal-parcelas-resumo", cliente?.id],

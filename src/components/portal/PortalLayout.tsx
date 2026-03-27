@@ -28,7 +28,7 @@ export function PortalLayout() {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("configuracoes")
-        .select("portal_titulo, portal_mostrar_pedidos, portal_mostrar_parcelas, portal_mostrar_compras, portal_mostrar_pagamentos")
+        .select("portal_titulo, portal_mostrar_pedidos, portal_mostrar_parcelas, portal_mostrar_compras, portal_mostrar_pagamentos, portal_mostrar_perfil, portal_mostrar_home")
         .eq("empresa_id", (cliente as any)!.empresa_id)
         .maybeSingle();
       return data;
@@ -38,12 +38,12 @@ export function PortalLayout() {
   const portalTitle = config?.portal_titulo || "Portal do Cliente";
 
   const navItems = allNavItems.filter((item) => {
-    if (item.key === "home" || item.key === "dados") return true;
+    if (item.key === "home") return (config as any)?.portal_mostrar_home ?? true;
+    if (item.key === "dados") return (config as any)?.portal_mostrar_perfil ?? true;
     if (item.key === "pedidos") return config?.portal_mostrar_pedidos ?? true;
     if (item.key === "parcelas") return config?.portal_mostrar_parcelas ?? true;
     if (item.key === "compras") return config?.portal_mostrar_compras ?? true;
-    if (item.key === "pagamentos") return (config as any)?.portal_mostrar_pagamentos ?? false; // Default false or true? Let's use true for consistency since the others default to true, or wait, user said optional. We default to true in Configurações. Let's make it true if undefined, false if explicitly false. Wait, since it's a new field, it will be null. Let's default to true.
-    if (item.key === "pagamentos") return config?.portal_mostrar_pagamentos ?? true;
+    if (item.key === "pagamentos") return (config as any)?.portal_mostrar_pagamentos ?? true;
     return true;
   });
 

@@ -15,7 +15,7 @@ export default function PortalLoginPage() {
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithCPF, session, isCliente } = usePortalAuth();
+  const { signIn, signInWithCPF, signOut, session, isCliente } = usePortalAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 

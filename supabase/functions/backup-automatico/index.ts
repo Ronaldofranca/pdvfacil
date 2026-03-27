@@ -104,12 +104,22 @@ async function getGoogleAccessToken(serviceAccount: { client_email: string; priv
 }
 
 async function findOrCreateDriveFolder(accessToken: string, folderName: string, parentId: string): Promise<string> {
+  if (!parentId) {
+    throw new Error("ID da pasta pai (GOOGLE_DRIVE_FOLDER_ID) inválido ou vazio.");
+  }
+
   // Search for existing folder
   const q = `name='${folderName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
   const searchResp = await fetch(
     `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
+
+  if (!searchResp.ok) {
+    const errorBody = await searchResp.text();
+    throw new Error(`Erro ao buscar pasta no Drive [${searchResp.status}]: ${errorBody}`);
+  }
+
   const searchData = await searchResp.json();
   if (searchData.files && searchData.files.length > 0) {
     return searchData.files[0].id;
@@ -128,6 +138,12 @@ async function findOrCreateDriveFolder(accessToken: string, folderName: string, 
       parents: [parentId],
     }),
   });
+
+  if (!createResp.ok) {
+    const errorBody = await createResp.text();
+    throw new Error(`Erro ao criar pasta no Drive [${createResp.status}]: ${errorBody}`);
+  }
+
   const created = await createResp.json();
   return created.id;
 }
@@ -309,13 +325,21 @@ Deno.serve(async (req: Request) => {
 
     try {
       const serviceAccountJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_KEY");
-      if (serviceAccountJson && csvFiles.length > 0) {
+      const driveFolderId = Deno.env.get("GOOGLE_DRIVE_FOLDER_ID") || GOOGLE_DRIVE_FOLDER_ID;
+
+      if (!serviceAccountJson) {
+        driveStatus = "não configurado";
+        errors.push("Google Drive: Secret GOOGLE_SERVICE_ACCOUNT_KEY não configurada no Supabase.");
+      } else if (!driveFolderId) {
+        driveStatus = "não configurado";
+        errors.push("Google Drive: Secret GOOGLE_DRIVE_FOLDER_ID não configurada no Supabase.");
+      } else if (csvFiles.length > 0) {
         const serviceAccount = JSON.parse(serviceAccountJson);
         const accessToken = await getGoogleAccessToken(serviceAccount);
 
-        // Create date subfolder inside BACKUP_PDV
+        // Create date subfolder inside parent folder
         const dateFolder = `${tipo}_${new Date().toISOString().slice(0, 10)}`;
-        const subFolderId = await findOrCreateDriveFolder(accessToken, dateFolder, GOOGLE_DRIVE_FOLDER_ID);
+        const subFolderId = await findOrCreateDriveFolder(accessToken, dateFolder, driveFolderId);
 
         for (const file of csvFiles) {
           try {
@@ -334,7 +358,8 @@ Deno.serve(async (req: Request) => {
       }
     } catch (driveErr: any) {
       driveStatus = "falha";
-      errors.push(`Google Drive: ${driveErr.message}`);
+      console.error("Erro crítico Google Drive:", driveErr);
+      errors.push(`Erro Crítico Google Drive: ${driveErr.message}`);
     }
 
     const status = errors.length === 0 ? "sucesso" : tablesProcessed.length > 0 ? "parcial" : "falha";
