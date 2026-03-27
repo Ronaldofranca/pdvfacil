@@ -95,7 +95,7 @@ describe("receipt unified pipeline", () => {
       </ReceiptDialogShell>
     );
 
-    const badges = contentRef.current?.querySelectorAll("[data-receipt-document] .h-5");
+    const badges = contentRef.current?.querySelectorAll("[data-receipt-document] .text-\\[10px\\]");
     expect(badges?.length).toBeGreaterThan(0);
   });
 

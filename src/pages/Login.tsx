@@ -15,16 +15,23 @@ export default function LoginPage() {
   const [blocked, setBlocked] = useState(false);
   const [blockedUntil, setBlockedUntil] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
-  const { signIn, session } = useAuth();
+  const { signIn, session, profile, rolesLoaded, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already logged in
+  // Redirect if already logged in (but ONLY if they have an admin/internal profile)
   useEffect(() => {
-    if (session) {
-      navigate("/", { replace: true });
+    if (session && rolesLoaded) {
+      if (profile) {
+        navigate("/", { replace: true });
+      } else if (hasRole("cliente")) {
+        // Only redirect to portal if we're CERTAIN they are a client
+        navigate("/portal", { replace: true });
+      }
+      // If no profile and no client role, stay here (might be loading or broken account)
+      // but DO NOT signOut() as that breaks the session on F5 refresh.
     }
-  }, [session, navigate]);
+  }, [session, profile, rolesLoaded, navigate, hasRole]);
 
   // Countdown timer for block
   useEffect(() => {
@@ -97,9 +104,9 @@ export default function LoginPage() {
     }
 
     const { error } = await signIn(trimmedEmail, password);
-    setLoading(false);
-
+    
     if (error) {
+      setLoading(false);
       const remaining = rateLimitResult.remaining;
       setRemainingAttempts(typeof remaining === "number" ? remaining : null);
 
@@ -109,9 +116,32 @@ export default function LoginPage() {
         variant: "destructive",
       });
     } else {
+      // Verificação estrita: Esta tela é APENAS para admin/equipe interna
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", userData.user.id)
+          .maybeSingle();
+
+        if (!profile) {
+          // É um cliente tentando fazer login na tela de master
+          await supabase.auth.signOut();
+          setLoading(false);
+          toast({
+            title: "Acesso Negado",
+            description: "Esta tela é restrita para funcionários. Clientes devem acessar o Portal pelo link correto.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       // Reset rate limit on successful login
       await checkRateLimit(trimmedEmail, "reset");
       setRemainingAttempts(null);
+      setLoading(false);
       navigate("/", { replace: true });
     }
   };
@@ -167,6 +197,9 @@ export default function LoginPage() {
         </form>
         <p className="text-center text-xs text-muted-foreground">
           Não tem conta? Entre em contato com o administrador.
+        </p>
+        <p className="text-center text-[10px] text-muted-foreground/60 pt-4">
+          Criado com carinho por Ronaldo França
         </p>
       </div>
     </div>
