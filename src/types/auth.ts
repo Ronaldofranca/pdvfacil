@@ -1,4 +1,4 @@
-export type AppRole = "admin" | "gerente" | "vendedor";
+export type AppRole = "admin" | "gerente" | "vendedor" | "cliente";
 
 export type Permission =
   | "criar_venda"

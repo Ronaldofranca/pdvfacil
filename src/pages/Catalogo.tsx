@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useProdutos, useUpsertProduto } from "@/hooks/useProdutos";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageUpload } from "@/components/produtos/ImageUpload";
-import { Separator as UiSeparator } from "@/components/ui/separator";
+import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -75,10 +75,10 @@ export default function CatalogoAdminPage() {
   useEffect(() => {
     if (config) {
       if (Array.isArray(config.secoes) && config.secoes.length > 0) {
-        setSections(config.secoes as unknown as CatalogSection[]);
+        setSections(config.secoes as CatalogSection[]);
       }
       if (Array.isArray((config as any).secoes_produto) && (config as any).secoes_produto.length > 0) {
-        setProductSections((config as any).secoes_produto as unknown as CatalogSection[]);
+        setProductSections((config as any).secoes_produto as CatalogSection[]);
       }
       setImagemInstitucionalUrl(config.imagem_institucional_url || "");
       if (config.tema_config && typeof config.tema_config === 'object') {

@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AppRole, Permission } from "@/types/auth";
 
@@ -32,8 +33,12 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
   }
 
   if (!profile) {
-    // If auth is loaded, session exists, but no internal profile -> Must be a Customer portal user!
-    return <Navigate to="/portal" replace />;
+    // Se logou mas não tem perfil master, pode ser um cliente ou erro de carregamento.
+    // NÃO vamos mais dar signOut automático para não quebrar a sessão no F5.
+    if (hasRole("cliente")) {
+      return <Navigate to="/portal" replace />;
+    }
+    return <Navigate to="/login" replace />;
   }
 
   if (requiredRole && !hasRole(requiredRole)) {

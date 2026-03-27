@@ -4,6 +4,7 @@ import { FileDown, Printer, MessageCircle } from "lucide-react";
 import { useVendaItens } from "@/hooks/useVendas";
 import { useParcelas } from "@/hooks/useParcelas";
 import { useEmpresas } from "@/hooks/useEmpresas";
+import { useConfiguracoes } from "@/hooks/useConfiguracoes";
 import { exportReceiptFromElement } from "@/lib/reportExport";
 import { ReceiptDialogShell } from "@/components/receipts/ReceiptDialogShell";
 import { ReceiptVendaContent } from "@/components/receipts/ReceiptVendaContent";
@@ -20,11 +21,12 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
   const { data: itens, isLoading: itensLoading, isFetching: itensFetching } = useVendaItens(venda?.id ?? null);
   const { data: parcelas, isLoading: parcelasLoading, isFetching: parcelasFetching } = useParcelas(venda?.id ? { vendaId: venda.id } : undefined);
   const { data: empresas, isLoading: empresasLoading } = useEmpresas();
+  const { data: config, isLoading: configLoading } = useConfiguracoes();
   const empresa = empresas?.[0];
   const vendaId = venda?.id?.slice(0, 8) ?? "";
   const clienteNome = (venda as any)?.clientes?.nome ?? "Consumidor";
   const fileName = `recibo_venda_${vendaId}.pdf`;
-  const loadingReceipt = itensLoading || itensFetching || parcelasLoading || parcelasFetching || empresasLoading;
+  const loadingReceipt = itensLoading || itensFetching || parcelasLoading || parcelasFetching || empresasLoading || configLoading;
 
   useEffect(() => {
     if (!open || !venda) return;
@@ -95,7 +97,14 @@ export function ReciboVenda({ open, onOpenChange, venda }: Props) {
       title={undefined}
       actions={actions}
     >
-      <ReceiptVendaContent ref={contentRef} venda={venda} itens={itens} parcelas={parcelas} />
+      <ReceiptVendaContent 
+        ref={contentRef} 
+        venda={venda} 
+        itens={itens} 
+        parcelas={parcelas} 
+        empresa={empresa} 
+        config={config}
+      />
     </ReceiptDialogShell>
   );
 }
