@@ -125,7 +125,7 @@ export default function LoginPage() {
           .eq("user_id", userData.user.id)
           .maybeSingle();
 
-        if (!profile) {
+        if (hasRole("cliente")) {
           // É um cliente tentando fazer login na tela de master
           await supabase.auth.signOut();
           setLoading(false);

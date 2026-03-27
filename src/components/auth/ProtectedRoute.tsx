@@ -32,12 +32,13 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
     );
   }
 
+  // Se o usuário for explicitamente um cliente, ele não deve ver o painel administrativo.
+  if (hasRole("cliente")) {
+    return <Navigate to="/portal" replace />;
+  }
+
   if (!profile) {
-    // Se logou mas não tem perfil master, pode ser um cliente ou erro de carregamento.
-    // NÃO vamos mais dar signOut automático para não quebrar a sessão no F5.
-    if (hasRole("cliente")) {
-      return <Navigate to="/portal" replace />;
-    }
+    // Se logou mas não tem perfil master e não é cliente, algo está errado.
     return <Navigate to="/login" replace />;
   }
 

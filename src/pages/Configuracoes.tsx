@@ -537,10 +537,12 @@ export default function ConfiguracoesPage() {
               <Separator />
               <p className="text-sm font-semibold">Seções Visíveis no Portal</p>
               <div className="divide-y">
+                <SwitchRow label="Mostrar Início / Dashboard" description="Permite ao cliente ver o resumo financeiro e ações rápidas" checked={(config as any)?.portal_mostrar_home ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_home: v })} />
                 <SwitchRow label="Mostrar Pedidos" description="Permite ao cliente ver e criar pedidos" checked={(config as any)?.portal_mostrar_pedidos ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pedidos: v })} />
                 <SwitchRow label="Mostrar Parcelas" description="Permite ao cliente ver parcelas e saldos" checked={(config as any)?.portal_mostrar_parcelas ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_parcelas: v })} />
                 <SwitchRow label="Mostrar Histórico de Compras" description="Permite ao cliente ver compras anteriores" checked={(config as any)?.portal_mostrar_compras ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_compras: v })} />
                 <SwitchRow label="Mostrar Histórico de Pagamentos" description="Permite ao cliente visualizar os recibos e baixas de pagamentos" checked={(config as any)?.portal_mostrar_pagamentos ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pagamentos: v })} />
+                <SwitchRow label="Mostrar Meus Dados" description="Permite ao cliente visualizar seu perfil e dados cadastrais" checked={(config as any)?.portal_mostrar_perfil ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_perfil: v })} />
                 <SwitchRow label="Mostrar Chave PIX" description="Exibe a chave PIX para pagamento no portal" checked={(config as any)?.portal_mostrar_pix ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pix: v })} />
               </div>
             </CardContent>
