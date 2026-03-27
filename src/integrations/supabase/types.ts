@@ -781,8 +781,11 @@ export type Database = {
           pontos_por_indicacao: number
           portal_mensagem_boas_vindas: string
           portal_mostrar_compras: boolean
+          portal_mostrar_home: boolean
+          portal_mostrar_pagamentos: boolean
           portal_mostrar_parcelas: boolean
           portal_mostrar_pedidos: boolean
+          portal_mostrar_perfil: boolean
           portal_mostrar_pix: boolean
           portal_rodape: string
           portal_titulo: string
@@ -840,8 +843,11 @@ export type Database = {
           pontos_por_indicacao?: number
           portal_mensagem_boas_vindas?: string
           portal_mostrar_compras?: boolean
+          portal_mostrar_home?: boolean
+          portal_mostrar_pagamentos?: boolean
           portal_mostrar_parcelas?: boolean
           portal_mostrar_pedidos?: boolean
+          portal_mostrar_perfil?: boolean
           portal_mostrar_pix?: boolean
           portal_rodape?: string
           portal_titulo?: string
@@ -899,8 +905,11 @@ export type Database = {
           pontos_por_indicacao?: number
           portal_mensagem_boas_vindas?: string
           portal_mostrar_compras?: boolean
+          portal_mostrar_home?: boolean
+          portal_mostrar_pagamentos?: boolean
           portal_mostrar_parcelas?: boolean
           portal_mostrar_pedidos?: boolean
+          portal_mostrar_perfil?: boolean
           portal_mostrar_pix?: boolean
           portal_rodape?: string
           portal_titulo?: string
