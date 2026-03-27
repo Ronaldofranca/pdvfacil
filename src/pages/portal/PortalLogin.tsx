@@ -50,7 +50,7 @@ export default function PortalLoginPage() {
         const isCliente = roles?.some((r: any) => r.role === "cliente");
         if (!isCliente) {
           // Admin ou Vendedor tentando usar o portal
-          await signOut();
+          await supabase.auth.signOut();
           setLoading(false);
           toast({
             title: "Acesso Negado",
@@ -89,7 +89,7 @@ export default function PortalLoginPage() {
 
         const isCliente = roles?.some((r: any) => r.role === "cliente");
         if (!isCliente) {
-          await signOut();
+          await supabase.auth.signOut();
           setLoading(false);
           toast({
             title: "Acesso Negado",
