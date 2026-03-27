@@ -6,8 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { maskCPF } from "@/lib/cpfUtils";
 
+import { Navigate, useOutletContext } from "react-router-dom";
+
 export default function PortalDadosPage() {
+  const { config } = useOutletContext<{ config: any }>();
   const { cliente } = usePortalAuth();
+
+  if (config && (config as any).portal_mostrar_perfil === false) {
+    return <Navigate to="/portal" replace />;
+  }
 
   const { data: telefones } = useQuery({
     queryKey: ["portal-telefones", cliente?.id],

@@ -15,7 +15,7 @@ export default function PortalLoginPage() {
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithCPF, session, isCliente } = usePortalAuth();
+  const { signIn, signInWithCPF, signOut, session, isCliente } = usePortalAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -50,7 +50,7 @@ export default function PortalLoginPage() {
         const isCliente = roles?.some((r: any) => r.role === "cliente");
         if (!isCliente) {
           // Admin ou Vendedor tentando usar o portal
-          await supabase.auth.signOut();
+          await signOut();
           setLoading(false);
           toast({
             title: "Acesso Negado",
@@ -89,7 +89,7 @@ export default function PortalLoginPage() {
 
         const isCliente = roles?.some((r: any) => r.role === "cliente");
         if (!isCliente) {
-          await supabase.auth.signOut();
+          await signOut();
           setLoading(false);
           toast({
             title: "Acesso Negado",
