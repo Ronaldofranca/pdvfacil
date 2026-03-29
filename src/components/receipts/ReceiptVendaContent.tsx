@@ -59,7 +59,7 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
             color: isFinalizada ? "#ffffff" : isCancelada ? "#ffffff" : "#64748b",
             borderColor: "transparent"
           }}
-          className="py-1 px-2.5 text-[10px] items-center justify-center whitespace-nowrap overflow-visible font-bold uppercase tracking-wider"
+          className="h-5 px-2.5 text-[10px] inline-flex items-center justify-center whitespace-nowrap overflow-visible font-bold uppercase tracking-wider"
         >
           {label}
         </Badge>
@@ -210,7 +210,14 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
                 >
                   <div className="flex items-center gap-3">
                     {rc.recibo_exibir_imagem_produto && (
-                      <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded bg-muted border" style={{ borderColor: rc.recibo_cor_bordas }}>
+                      <div 
+                        className="flex-shrink-0 overflow-hidden rounded bg-muted border" 
+                        style={{ 
+                          borderColor: rc.recibo_cor_bordas,
+                          width: `${rc.recibo_imagem_produto_largura}px`,
+                          height: `${rc.recibo_imagem_produto_altura}px`
+                        }}
+                      >
                         <img
                           src={(item as any).produtos?.imagem_url || "/placeholder.svg"}
                           alt={item.nome_produto}
@@ -289,6 +296,43 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
                   <span className="font-bold">{fmtR(p.valor)}</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Installments (Parcelas) */}
+          {rc.recibo_exibir_parcelas && parcelas && parcelas.length > 0 && (
+            <div
+              className="p-3 rounded-lg"
+              style={{
+                border: rc.recibo_borda_parcelas ? `1px solid ${rc.recibo_cor_bordas}` : 'none'
+              }}
+            >
+              <p
+                className="uppercase font-bold tracking-wider mb-2 pb-1"
+                style={{
+                  color: rc.recibo_cor_titulos,
+                  borderBottom: `2px solid ${rc.recibo_cor_bordas}`,
+                  fontSize: `${rc.recibo_tamanho_fonte_titulo}px`
+                }}
+              >
+                <span className="inline-block w-[3px] h-[12px] rounded mr-1.5 align-middle" style={{ background: rc.recibo_cor_principal }} />
+                Parcelas do Crediário
+              </p>
+              <div className="space-y-1">
+                {parcelas.map((parc, idx) => (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center py-1.5 border-b last:border-0 border-dashed"
+                    style={{ borderColor: `${rc.recibo_cor_bordas}88`, fontSize: `${rc.recibo_tamanho_fonte_parcelas}px` }}
+                  >
+                    <div className="flex gap-2 items-center">
+                      <span className="font-bold opacity-60">#{parc.numero}</span>
+                      <span className="font-medium">{format(new Date(parc.vencimento + "T12:00:00"), "dd/MM/yyyy")}</span>
+                    </div>
+                    <span className="font-bold">{fmtR(Number(parc.valor_total || parc.valor))}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

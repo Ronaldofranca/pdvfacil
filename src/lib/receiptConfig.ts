@@ -51,6 +51,8 @@ export interface ReceiptConfig {
 
   // Dimensions
   recibo_altura_cabecalho: number; // vertical padding as a base Height
+  recibo_imagem_produto_largura: number;
+  recibo_imagem_produto_altura: number;
 }
 
 export const DEFAULT_RECEIPT_CONFIG: ReceiptConfig = {
@@ -104,6 +106,8 @@ export const DEFAULT_RECEIPT_CONFIG: ReceiptConfig = {
 
   // Default Dimensions
   recibo_altura_cabecalho: 24,
+  recibo_imagem_produto_largura: 40,
+  recibo_imagem_produto_altura: 40,
 };
 
 export function getReceiptConfig(config: any): ReceiptConfig {
