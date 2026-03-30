@@ -35,6 +35,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   useAllNiveisRecompensa, useAddNivelRecompensa, useUpdateNivelRecompensa, useDeleteNivelRecompensa,
   type NivelRecompensa,
 } from "@/hooks/useNiveisRecompensa";
@@ -1059,8 +1067,40 @@ function CidadesMassaManager() {
       
       const marker = L.marker([lat, lng], { 
         icon: createColoredIcon(rep?.cor) 
-      }).bindPopup(`<strong>${c.cidade}</strong><br/>Rep: ${rep?.nome || 'Nenhum'}`);
+      }).bindPopup(`<strong>${c.cidade}</strong><br/>Rep: ${rep?.nome || 'Nenhum'}<br/><span style="font-size:10px; color:#666;">Clique Direito para Atribuir</span>`);
       
+      // Menu de contexto no marcador (clique direito)
+      marker.on('contextmenu', (e) => {
+        const popupContent = document.createElement('div');
+        popupContent.className = 'flex flex-col gap-1 min-w-[150px] p-1';
+        
+        const title = document.createElement('p');
+        title.innerText = `Atribuir ${c.cidade} a:`;
+        title.className = 'text-[11px] font-bold border-b pb-1 mb-1';
+        popupContent.appendChild(title);
+
+        // Opção Desvincular
+        const btnNone = document.createElement('button');
+        btnNone.innerText = "Nenhum (Desvincular)";
+        btnNone.className = 'text-[10px] text-left hover:bg-slate-100 px-2 py-1 rounded';
+        btnNone.onclick = () => { updateCidade.mutate({ id: c.id, representante_id: null }); map.closePopup(); };
+        popupContent.appendChild(btnNone);
+
+        // Lista de reps
+        representantes?.forEach((r: any) => {
+          const btn = document.createElement('button');
+          btn.innerHTML = `<div style="display:flex; align-items:center; gap:6px;"><div style="width:8px; height:8px; border-radius:50%; background-color:${r.cor};"></div> ${r.nome}</div>`;
+          btn.className = 'text-[10px] text-left hover:bg-slate-100 px-2 py-1 rounded transition-colors';
+          btn.onclick = () => { updateCidade.mutate({ id: c.id, representante_id: r.id }); map.closePopup(); };
+          popupContent.appendChild(btn);
+        });
+
+        const popup = L.popup()
+          .setLatLng(e.latlng)
+          .setContent(popupContent)
+          .openOn(map);
+      });
+
       layerGroup.addLayer(marker);
     });
 
@@ -1215,27 +1255,47 @@ function CidadesMassaManager() {
                   const faltaCoordenada = !c.latitude || !c.longitude;
                   
                   return (
-                    <Dialog key={c.id}>
-                      <DialogTrigger asChild>
-                        <button className={cn("inline-flex items-center rounded-md border text-[11px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 gap-1.5 py-1.5 px-2.5 shadow-sm", faltaCoordenada && "border-amber-300 bg-amber-50 text-amber-900 shadow-amber-100")}>
-                          {rep && <div className="w-2 h-2 rounded-full ring-1 ring-black/10" style={{ backgroundColor: rep.cor || "#10b981" }} />}
-                          {!rep && <div className="w-2 h-2 rounded-full bg-muted-foreground ring-1 ring-black/10" />}
-                          <span>
-                            {c.cidade}{c.estado ? ` - ${c.estado}` : ""}
-                          </span>
-                          {faltaCoordenada && <span className="text-[10px] ml-1 text-amber-700" title="Sem GPS">⚠</span>}
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Editar {c.cidade} {c.estado}</DialogTitle>
-                          <DialogDescription>
-                            Vincule a um representante ou informe a coordenada geográfica caso a busca automática não tenha achado.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <EditarCidadeModal cidade={c} representantes={representantes} />
-                      </DialogContent>
-                    </Dialog>
+                    <ContextMenu key={c.id}>
+                      <ContextMenuTrigger>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <button className={cn("inline-flex items-center rounded-md border text-[11px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 gap-1.5 py-1.5 px-2.5 shadow-sm", faltaCoordenada && "border-amber-300 bg-amber-50 text-amber-900 shadow-amber-100")}>
+                              {rep && <div className="w-2 h-2 rounded-full ring-1 ring-black/10" style={{ backgroundColor: rep.cor || "#10b981" }} />}
+                              {!rep && <div className="w-2 h-2 rounded-full bg-muted-foreground ring-1 ring-black/10" />}
+                              <span>
+                                {c.cidade}{c.estado ? ` - ${c.estado}` : ""}
+                              </span>
+                              {faltaCoordenada && <span className="text-[10px] ml-1 text-amber-700" title="Sem GPS">⚠</span>}
+                            </button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Editar {c.cidade} {c.estado}</DialogTitle>
+                              <DialogDescription>
+                                Vincule a um representante ou informe a coordenada geográfica caso a busca automática não tenha achado.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <EditarCidadeModal cidade={c} representantes={representantes} />
+                          </DialogContent>
+                        </Dialog>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-56">
+                        <ContextMenuLabel>Vincular a:</ContextMenuLabel>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={() => updateCidade.mutate({ id: c.id, representante_id: null })}>
+                          Desvincular (Nenhum)
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        {representantes?.map((r) => (
+                          <ContextMenuItem key={r.id} onClick={() => updateCidade.mutate({ id: c.id, representante_id: r.id })}>
+                            <div className="flex items-center gap-2">
+                               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: r.cor }} />
+                               {r.nome}
+                            </div>
+                          </ContextMenuItem>
+                        ))}
+                      </ContextMenuContent>
+                    </ContextMenu>
                   );
                 })}
                 {(!filteredCidades || filteredCidades.length === 0) && (
