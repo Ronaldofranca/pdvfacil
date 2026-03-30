@@ -1,94 +1,91 @@
 /**
- * Módulo de distribuição automática de pagamento entre parcelas.
+ * distribuirPagamento.ts
  *
- * Regra adotada: menor vencimento primeiro (ASC).
- * - Quita completamente uma parcela antes de avançar para a próxima.
- * - Se o saldo restante não quitar a próxima, aplica pagamento parcial.
- * - Nunca aplica valor negativo ou além do saldo da parcela.
+ * Função pura para distribuir um valor recebido entre múltiplas parcelas.
+ *
+ * Regra de ordem: menor vencimento primeiro (mais antiga primeiro).
+ * Uma parcela é quitada completamente antes de passar para a próxima.
+ * Quando o valor restante é insuficiente para quitar a próxima,
+ * aplica-se pagamento parcial nela.
+ *
+ * Não tem dependência de React, Supabase ou qualquer efeito colateral.
+ * Totalmente testável de forma isolada.
  */
 
 export interface ParcelaParaDistribuir {
   id: string;
   vencimento: string; // YYYY-MM-DD
-  saldo: number;      // valor ainda em aberto
+  saldo: number;
   status: string;
 }
 
-export interface EntradaDistribuicao {
-  id: string;
+export interface EntradaDistribuicao extends ParcelaParaDistribuir {
+  /** Alias de `id` — usado no hook para montar o registro em `pagamentos`. */
   parcelaId: string;
-  vencimento: string;
-  saldo: number;
-  statusAtual: string;
-  /** Valor que será aplicado nesta parcela. 0 = não tocada. */
+  /** Valor que será aplicado nesta parcela (0 se não sobrou valor). */
   valorAplicado: number;
-  /** Status após o pagamento. */
-  statusApos: "paga" | "parcial" | string;
+  /** Status previsto da parcela após o pagamento ser registrado. */
+  statusApos: string;
 }
 
 export interface ResultadoDistribuicao {
+  /** Lista de distribuições, uma por parcela passada (inclusive as com valorAplicado = 0). */
   entradas: EntradaDistribuicao[];
+  /** Soma de todos os valorAplicado (≤ valorRecebido). */
   totalAplicado: number;
-  sobra: number;      // valorRecebido - totalAplicado (> 0 = excesso)
+  /** Sobra não alocada: max(0, valorRecebido - totalAplicado). */
+  sobra: number;
 }
 
 /**
- * Distribui `valorRecebido` entre as `parcelas` fornecidas, na ordem
- * de menor vencimento primeiro.
+ * Distribui `valorRecebido` entre `parcelas`, na ordem de vencimento crescente.
  *
- * @param parcelas  Lista de parcelas a considerar (qualquer ordem; serão ordenadas).
- * @param valorRecebido  Valor total recebido pelo pagador.
+ * @param parcelas  Array de parcelas a considerar (qualquer ordem).
+ * @param valorRecebido  Valor total recebido a distribuir.
+ * @returns `ResultadoDistribuicao` com a divisão por parcela, total aplicado e sobra.
  */
 export function distribuirPagamento(
   parcelas: ParcelaParaDistribuir[],
-  valorRecebido: number
+  valorRecebido: number,
 ): ResultadoDistribuicao {
-  // Ordenar por vencimento ASC
+  // Ordena por vencimento ASC (string ISO YYYY-MM-DD — comparação lexicográfica é segura)
   const ordenadas = [...parcelas].sort((a, b) =>
-    a.vencimento.localeCompare(b.vencimento)
+    a.vencimento.localeCompare(b.vencimento),
   );
 
-  let restante = Math.round(valorRecebido * 100) / 100;
-  const entradas: EntradaDistribuicao[] = [];
+  // Trabalha com centavos para evitar erros de ponto flutuante
+  let restanteCents = Math.round(valorRecebido * 100);
 
-  for (const parcela of ordenadas) {
-    const saldo = Math.round(Number(parcela.saldo) * 100) / 100;
+  const entradas: EntradaDistribuicao[] = ordenadas.map((p) => {
+    const saldoCents = Math.round(p.saldo * 100);
+    const aplicarCents = Math.min(restanteCents, saldoCents);
+    restanteCents -= aplicarCents;
 
-    if (restante <= 0 || saldo <= 0) {
-      entradas.push({
-        id: parcela.id,
-        parcelaId: parcela.id,
-        vencimento: parcela.vencimento,
-        saldo,
-        statusAtual: parcela.status,
-        valorAplicado: 0,
-        statusApos: parcela.status,
-      });
-      continue;
+    const valorAplicado = aplicarCents / 100;
+
+    // Determina o status resultante
+    let statusApos = p.status;
+    if (aplicarCents > 0 && aplicarCents >= saldoCents) {
+      statusApos = "paga";
+    } else if (aplicarCents > 0) {
+      statusApos = "parcial";
     }
+    // Se aplicarCents === 0, mantém o status original da parcela
 
-    const aplicado = Math.min(restante, saldo);
-    const novoSaldo = Math.round((saldo - aplicado) * 100) / 100;
-    const statusApos: EntradaDistribuicao["statusApos"] =
-      novoSaldo === 0 ? "paga" : "parcial";
-
-    entradas.push({
-      id: parcela.id,
-      parcelaId: parcela.id,
-      vencimento: parcela.vencimento,
-      saldo,
-      statusAtual: parcela.status,
-      valorAplicado: Math.round(aplicado * 100) / 100,
+    return {
+      ...p,
+      parcelaId: p.id,
+      valorAplicado,
       statusApos,
-    });
+    };
+  });
 
-    restante = Math.round((restante - aplicado) * 100) / 100;
-  }
-
-  const totalAplicado = Math.round(
-    entradas.reduce((s, e) => s + e.valorAplicado, 0) * 100
-  ) / 100;
-  const sobra = Math.max(0, Math.round((valorRecebido - totalAplicado) * 100) / 100);
+  const totalAplicadoCents = entradas.reduce(
+    (s, e) => s + Math.round(e.valorAplicado * 100),
+    0,
+  );
+  const totalAplicado = totalAplicadoCents / 100;
+  const sobra = Math.max(0, Math.round((valorRecebido * 100 - totalAplicadoCents)) / 100);
 
   return { entradas, totalAplicado, sobra };
 }
