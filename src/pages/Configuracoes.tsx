@@ -1110,6 +1110,54 @@ function CidadesMassaManager() {
         map.fitBounds(bounds, { padding: [30, 30] });
       }
     }
+
+    // Clique direito no MAPA (não apenas no marcador) para achar a cidade mais próxima
+    map.on('contextmenu', (e) => {
+      if (!filteredCidades || filteredCidades.length === 0) return;
+
+      let nearestCity = null;
+      let minDistance = 30; // Raio máximo de 30km para o "clique" funcionar
+
+      filteredCidades.forEach(c => {
+        if (!c.latitude || !c.longitude) return;
+        const d = getDistanceInKm(e.latlng.lat, e.latlng.lng, Number(c.latitude), Number(c.longitude));
+        if (d < minDistance) {
+          minDistance = d;
+          nearestCity = c;
+        }
+      });
+
+      if (nearestCity) {
+        const c = nearestCity as any;
+        const popupContent = document.createElement('div');
+        popupContent.className = 'flex flex-col gap-1 min-w-[150px] p-1';
+        
+        const title = document.createElement('p');
+        title.innerHTML = `Vincular <strong>${c.cidade}</strong> a:`; // Mostra qual cidade ele achou perto
+        title.className = 'text-[11px] border-b pb-1 mb-1';
+        popupContent.appendChild(title);
+
+        const btnNone = document.createElement('button');
+        btnNone.innerText = "Nenhum (Desvincular)";
+        btnNone.className = 'text-[10px] text-left hover:bg-slate-100 px-2 py-1 rounded';
+        btnNone.onclick = () => { updateCidade.mutate({ id: c.id, representante_id: null }); map.closePopup(); };
+        popupContent.appendChild(btnNone);
+
+        representantes?.forEach((r: any) => {
+          const btn = document.createElement('button');
+          btn.innerHTML = `<div style="display:flex; align-items:center; gap:6px;"><div style="width:8px; height:8px; border-radius:50%; background-color:${r.cor};"></div> ${r.nome}</div>`;
+          btn.className = 'text-[10px] text-left hover:bg-slate-100 px-2 py-1 rounded transition-colors';
+          btn.onclick = () => { updateCidade.mutate({ id: c.id, representante_id: r.id }); map.closePopup(); };
+          popupContent.appendChild(btn);
+        });
+
+        L.popup()
+          .setLatLng(e.latlng)
+          .setContent(popupContent)
+          .openOn(map);
+      }
+    });
+
   }, [filteredCidades]);
 
   const handleProcessMassa = async () => {
