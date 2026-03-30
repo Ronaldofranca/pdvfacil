@@ -1017,6 +1017,60 @@ function CidadesMassaManager() {
   const [processando, setProcessando] = useState(false);
   const [progresso, setProgresso] = useState({ atual: 0, total: 0 });
   const [filtroRep, setFiltroRep] = useState<string>("todos");
+  
+  const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersLayerRef = useRef<L.LayerGroup | null>(null);
+
+  const filteredCidades = cidades?.filter(c => {
+    if (filtroRep === "todos") return true;
+    if (filtroRep === "nenhum") return !c.representante_id;
+    return c.representante_id === filtroRep;
+  });
+
+  // Mapa de visão geral na administração
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    if (!mapRef.current) {
+      mapRef.current = L.map(mapContainerRef.current).setView([-15.78, -47.92], 4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(mapRef.current);
+      markersLayerRef.current = L.layerGroup().addTo(mapRef.current);
+    }
+
+    const map = mapRef.current;
+    const layerGroup = markersLayerRef.current;
+
+    if (!layerGroup) return;
+    layerGroup.clearLayers();
+
+    const latLngs: L.LatLngTuple[] = [];
+
+    filteredCidades?.forEach(c => {
+      const lat = Number(c.latitude);
+      const lng = Number(c.longitude);
+      
+      if (isNaN(lat) || isNaN(lng)) return;
+      latLngs.push([lat, lng]);
+
+      const rep = c.representantes as any;
+      
+      const marker = L.marker([lat, lng], { 
+        icon: createColoredIcon(rep?.cor) 
+      }).bindPopup(`<strong>${c.cidade}</strong><br/>Rep: ${rep?.nome || 'Nenhum'}`);
+      
+      layerGroup.addLayer(marker);
+    });
+
+    if (latLngs.length > 0) {
+      const bounds = L.latLngBounds(latLngs);
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [30, 30] });
+      }
+    }
+  }, [filteredCidades]);
 
   const handleProcessMassa = async () => {
     if (!textoMassa.trim()) return;
@@ -1129,17 +1183,17 @@ function CidadesMassaManager() {
         </CardContent>
       </Card>
 
-      <div className="space-y-4 pt-4 border-t">
+      <div className="pt-4 border-t space-y-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="text-sm font-medium">Cidades Cadastradas ({cidades?.length || 0})</h3>
-            <p className="text-xs text-muted-foreground">Clique em cidades sem cor/localização para editar manualmente.</p>
+            <p className="text-xs text-muted-foreground font-medium">Use o mapa para conferir se todas as cidades estão na região correta.</p>
           </div>
           
           <div className="w-full sm:w-64 space-y-1">
-            <Label className="text-[10px] uppercase text-muted-foreground font-bold">Filtrar por Representante</Label>
+            <Label className="text-[10px] uppercase text-muted-foreground font-bold">Filtrar Mapa e Lista</Label>
             <Select value={filtroRep} onValueChange={setFiltroRep}>
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="h-8 text-xs bg-muted/30">
                 <SelectValue placeholder="Todos os representantes" />
               </SelectTrigger>
               <SelectContent>
@@ -1153,42 +1207,54 @@ function CidadesMassaManager() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {cidades?.filter(c => {
-            if (filtroRep === "todos") return true;
-            if (filtroRep === "nenhum") return !c.representante_id;
-            return c.representante_id === filtroRep;
-          }).map((c) => {
-            const rep = c.representantes as any;
-            const faltaCoordenada = !c.latitude || !c.longitude;
-            
-            return (
-              <Dialog key={c.id}>
-                <DialogTrigger asChild>
-                  <button className={cn("inline-flex items-center rounded-md border text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 gap-1.5 py-1.5 px-2.5 shadow-sm", faltaCoordenada && "border-amber-300 bg-amber-50 text-amber-900")}>
-                    {rep && <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: rep.cor || "#10b981" }} title={`Rep: ${rep.nome}`} />}
-                    {!rep && <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground" title="Sem representante" />}
-                    <span>
-                      {c.cidade}{c.estado ? ` - ${c.estado}` : ""}
-                    </span>
-                    {faltaCoordenada && <span className="text-xs ml-1 text-amber-700" title="Sem GPS">⚠</span>}
-                  </button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Editar {c.cidade} {c.estado}</DialogTitle>
-                    <DialogDescription>
-                      Vincule a um representante ou informe a coordenada geográfica caso a busca automática não tenha achado.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <EditarCidadeModal cidade={c} representantes={representantes} />
-                </DialogContent>
-              </Dialog>
-            );
-          })}
-          {(!cidades || cidades.length === 0) && (
-            <p className="text-sm text-muted-foreground">Nenhuma cidade cadastrada ainda.</p>
-          )}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-2 space-y-3">
+             <div className="flex flex-wrap gap-2 max-h-[400px] overflow-y-auto p-1 pr-2">
+                {filteredCidades?.map((c) => {
+                  const rep = c.representantes as any;
+                  const faltaCoordenada = !c.latitude || !c.longitude;
+                  
+                  return (
+                    <Dialog key={c.id}>
+                      <DialogTrigger asChild>
+                        <button className={cn("inline-flex items-center rounded-md border text-[11px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 gap-1.5 py-1.5 px-2.5 shadow-sm", faltaCoordenada && "border-amber-300 bg-amber-50 text-amber-900 shadow-amber-100")}>
+                          {rep && <div className="w-2 h-2 rounded-full ring-1 ring-black/10" style={{ backgroundColor: rep.cor || "#10b981" }} />}
+                          {!rep && <div className="w-2 h-2 rounded-full bg-muted-foreground ring-1 ring-black/10" />}
+                          <span>
+                            {c.cidade}{c.estado ? ` - ${c.estado}` : ""}
+                          </span>
+                          {faltaCoordenada && <span className="text-[10px] ml-1 text-amber-700" title="Sem GPS">⚠</span>}
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Editar {c.cidade} {c.estado}</DialogTitle>
+                          <DialogDescription>
+                            Vincule a um representante ou informe a coordenada geográfica caso a busca automática não tenha achado.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <EditarCidadeModal cidade={c} representantes={representantes} />
+                      </DialogContent>
+                    </Dialog>
+                  );
+                })}
+                {(!filteredCidades || filteredCidades.length === 0) && (
+                  <p className="text-sm text-muted-foreground">Nenhuma cidade encontrada para este filtro.</p>
+                )}
+             </div>
+          </div>
+
+          <div className="lg:col-span-3 h-[400px] rounded-xl border border-border shadow-sm overflow-hidden bg-slate-50 relative z-0">
+             <div ref={mapContainerRef} className="h-full w-full" />
+             <div className="absolute top-2 right-2 z-[400] bg-white/90 backdrop-blur-sm p-2 rounded shadow-sm text-[10px] border">
+               <p className="font-bold mb-1">Legenda</p>
+               <div className="space-y-1">
+                 <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-500" /> Sem GPS</div>
+                 <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-slate-400" /> Sem Rep</div>
+                 <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Ativa</div>
+               </div>
+             </div>
+          </div>
         </div>
       </div>
     </div>
