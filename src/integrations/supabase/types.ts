@@ -448,6 +448,9 @@ export type Database = {
           empresa_id: string
           estado: string
           id: string
+          latitude: number | null
+          longitude: number | null
+          representante_id: string | null
         }
         Insert: {
           ativa?: boolean
@@ -456,6 +459,9 @@ export type Database = {
           empresa_id: string
           estado?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
+          representante_id?: string | null
         }
         Update: {
           ativa?: boolean
@@ -464,6 +470,9 @@ export type Database = {
           empresa_id?: string
           estado?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
+          representante_id?: string | null
         }
         Relationships: [
           {
@@ -471,6 +480,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cidades_atendidas_representante_id_fkey"
+            columns: ["representante_id"]
+            isOneToOne: false
+            referencedRelation: "representantes"
             referencedColumns: ["id"]
           },
         ]
@@ -2544,6 +2560,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      representantes: {
+        Row: {
+          ativo: boolean
+          cor: string
+          created_at: string
+          email: string | null
+          empresa_id: string
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          email?: string | null
+          empresa_id: string
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          email?: string | null
+          empresa_id?: string
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "representantes_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
