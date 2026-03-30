@@ -175,12 +175,25 @@ export function useAddCidade() {
   const qc = useQueryClient();
   const { profile } = useAuth();
   return useMutation({
-    mutationFn: async ({ cidade, estado }: { cidade: string; estado: string }) => {
+    mutationFn: async ({ cidade, estado, representante_id, latitude, longitude }: { 
+      cidade: string; 
+      estado: string; 
+      representante_id?: string | null;
+      latitude?: string | number | null;
+      longitude?: string | number | null;
+    }) => {
       if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
 
       const { data: inserted, error } = await (supabase as any)
         .from("cidades_atendidas")
-        .insert({ empresa_id: profile.empresa_id, cidade, estado })
+        .insert({ 
+          empresa_id: profile.empresa_id, 
+          cidade, 
+          estado,
+          representante_id: representante_id === "nenhum" ? null : representante_id,
+          latitude,
+          longitude
+        })
         .select("id")
         .maybeSingle();
 

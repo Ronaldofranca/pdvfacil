@@ -22,7 +22,7 @@ import { useEmpresas, useUpdateEmpresa } from "@/hooks/useEmpresas";
 import {
   useConfiguracoes, useUpsertConfiguracoes,
   useFormasPagamento, useAddFormaPagamento, useToggleFormaPagamento, useDeleteFormaPagamento,
-  useCidadesAtendidas, useAddCidadesMassa, useDeleteCidade, useUpdateCidade,
+  useCidadesAtendidas, useAddCidade, useAddCidadesMassa, useDeleteCidade, useUpdateCidade,
   useRepresentantes, useAddRepresentante, useUpdateRepresentante, useDeleteRepresentante,
 } from "@/hooks/useConfiguracoes";
 import { getDistanceInKm, createColoredIcon } from "@/lib/geocoding";
@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   ContextMenu,
@@ -1026,6 +1027,12 @@ function CidadesMassaManager() {
   const [progresso, setProgresso] = useState({ atual: 0, total: 0 });
   const [filtroRep, setFiltroRep] = useState<string>("todos");
   
+  // Estados para adição manual
+  const [isAddingManual, setIsAddingManual] = useState(false);
+  const [manualLocation, setManualLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  const addCidade = useAddCidade();
+  
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
@@ -1158,7 +1165,30 @@ function CidadesMassaManager() {
       }
     });
 
-  }, [filteredCidades]);
+    // Clique no mapa para adição manual
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      // Usamos uma ref ou checamos o estado atual através de um hack de evento se necessário, 
+      // mas como o useEffect roda quando estados mudam, o listener será Re-adicionado.
+      // No entanto, para evitar problemas de closure, vamos usar a verificação do estado.
+    };
+
+    map.on('click', (e) => {
+      // Verificamos se o modo manual está ativo via classe no container ou similar se preferir,
+      // mas aqui vamos re-acessar o estado via closure (o useEffect rodará novamente quando isAddingManual mudar)
+      if (mapContainerRef.current?.classList.contains('cursor-crosshair')) {
+        setManualLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+        setIsAddingManual(false);
+      }
+    });
+
+    // Atualiza o cursor do mapa
+    if (isAddingManual) {
+      mapContainerRef.current?.classList.add('cursor-crosshair');
+    } else {
+      mapContainerRef.current?.classList.remove('cursor-crosshair');
+    }
+
+  }, [filteredCidades, isAddingManual, representantes]);
 
   const handleProcessMassa = async () => {
     if (!textoMassa.trim()) return;
@@ -1354,6 +1384,28 @@ function CidadesMassaManager() {
 
           <div className="lg:col-span-3 h-[400px] rounded-xl border border-border shadow-sm overflow-hidden bg-slate-50 relative z-0">
              <div ref={mapContainerRef} className="h-full w-full" />
+             
+             {/* Botão de Modo Manual */}
+             <div className="absolute top-2 left-12 z-[400]">
+                <Button 
+                  size="sm" 
+                  variant={isAddingManual ? "destructive" : "secondary"}
+                  className="shadow-md gap-2 h-9"
+                  onClick={() => setIsAddingManual(!isAddingManual)}
+                >
+                  {isAddingManual ? (
+                    <> <span className="animate-pulse">●</span> Cancelar Seleção </>
+                  ) : (
+                    <> 📍 Marcar Ponto Manual </>
+                  )}
+                </Button>
+                {isAddingManual && (
+                  <div className="mt-2 bg-black/80 text-white text-[10px] px-2 py-1 rounded-md animate-bounce shadow-lg">
+                    Clique em qualquer lugar do mapa
+                  </div>
+                )}
+             </div>
+
              <div className="absolute top-2 right-2 z-[400] bg-white/90 backdrop-blur-sm p-2 rounded shadow-sm text-[10px] border">
                <p className="font-bold mb-1">Legenda</p>
                <div className="space-y-1">
@@ -1365,7 +1417,96 @@ function CidadesMassaManager() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Criação Manual */}
+      {manualLocation && (
+        <NovaCidadeManualModal 
+          location={manualLocation} 
+          representantes={representantes} 
+          onClose={() => setManualLocation(null)}
+          onSave={(data) => {
+            addCidade.mutate(data);
+            setManualLocation(null);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// Sub-componente para o Modal de Nova Cidade
+function NovaCidadeManualModal({ 
+  location, 
+  representantes, 
+  onClose, 
+  onSave 
+}: { 
+  location: { lat: number; lng: number }; 
+  representantes: any[]; 
+  onClose: () => void;
+  onSave: (data: any) => void;
+}) {
+  const [nome, setNome] = useState("");
+  const [estado, setEstado] = useState("BA");
+  const [repId, setRepId] = useState("nenhum");
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Nova Cidade no Mapa</DialogTitle>
+          <DialogDescription>
+            Defina o nome e o representante para o ponto selecionado.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label>Nome da Cidade</Label>
+            <Input 
+              placeholder="Ex: Ponto de Apoio BR-116" 
+              value={nome} 
+              onChange={(e) => setNome(e.target.value)} 
+              autoFocus
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label>Estado (UF)</Label>
+              <Input 
+                placeholder="BA" 
+                maxLength={2} 
+                value={estado} 
+                onChange={(e) => setEstado(e.target.value.toUpperCase())} 
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Representante</Label>
+              <Select value={repId} onValueChange={setRepId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nenhum">Sem representante</SelectItem>
+                  {representantes?.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="bg-muted/50 p-2 rounded text-[10px] space-y-1">
+             <p><strong>Latitude:</strong> {location.lat.toFixed(6)}</p>
+             <p><strong>Longitude:</strong> {location.lng.toFixed(6)}</p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => onSave({ cidade: nome, estado, representante_id: repId, latitude: location.lat, longitude: location.lng })} disabled={!nome.trim()}>
+            Salvar Cidade
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
