@@ -1023,6 +1023,7 @@ function CidadesMassaManager() {
   const { data: representantes } = useRepresentantes();
   const deleteCidade = useDeleteCidade();
   const addCidadesMassa = useAddCidadesMassa();
+  const updateCidade = useUpdateCidade();
 
   const [textoMassa, setTextoMassa] = useState("");
   const [representanteSelecionado, setRepresentanteSelecionado] = useState("nenhum");
