@@ -26,6 +26,8 @@ import {
   useRepresentantes, useAddRepresentante, useUpdateRepresentante, useDeleteRepresentante,
 } from "@/hooks/useConfiguracoes";
 import { getDistanceInKm, createColoredIcon } from "@/lib/geocoding";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   Dialog,
   DialogContent,
