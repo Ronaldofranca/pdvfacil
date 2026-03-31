@@ -155,11 +155,18 @@ export function useCidadesAtendidas() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("cidades_atendidas")
-        .select("*")
+        .select(`
+          *,
+          representantes (
+            nome,
+            cor,
+            telefone
+          )
+        `)
         .eq("empresa_id", profile!.empresa_id)
         .order("cidade");
       if (error) throw error;
-      return data as { id: string; cidade: string; estado: string; ativa: boolean; empresa_id: string }[];
+      return data;
     },
   });
 }
@@ -168,12 +175,25 @@ export function useAddCidade() {
   const qc = useQueryClient();
   const { profile } = useAuth();
   return useMutation({
-    mutationFn: async ({ cidade, estado }: { cidade: string; estado: string }) => {
+    mutationFn: async ({ cidade, estado, representante_id, latitude, longitude }: { 
+      cidade: string; 
+      estado: string; 
+      representante_id?: string | null;
+      latitude?: string | number | null;
+      longitude?: string | number | null;
+    }) => {
       if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
 
       const { data: inserted, error } = await (supabase as any)
         .from("cidades_atendidas")
-        .insert({ empresa_id: profile.empresa_id, cidade, estado })
+        .insert({ 
+          empresa_id: profile.empresa_id, 
+          cidade, 
+          estado,
+          representante_id: representante_id === "nenhum" ? null : representante_id,
+          latitude,
+          longitude
+        })
         .select("id")
         .maybeSingle();
 
@@ -205,6 +225,150 @@ export function useDeleteCidade() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cidades_atendidas"] });
       toast.success("Cidade removida!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useAddCidadesMassa() {
+  const qc = useQueryClient();
+  const { profile } = useAuth();
+  return useMutation({
+    mutationFn: async (cidades: any[]) => {
+      if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
+      
+      const cidadesComEmpresa = cidades.map(c => ({
+        ...c,
+        empresa_id: profile.empresa_id
+      }));
+
+      const { data, error } = await (supabase as any)
+        .from("cidades_atendidas")
+        .insert(cidadesComEmpresa)
+        .select("id");
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cidades_atendidas"] });
+      toast.success("Cidades cadastradas com sucesso!");
+    },
+    onError: (e: Error) => toast.error(`Erro ao salvar cidades: ${e.message}`),
+  });
+}
+
+export function useUpdateCidade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...values }: { id: string; [key: string]: any }) => {
+      const { data: updated, error } = await (supabase as any)
+        .from("cidades_atendidas")
+        .update(values)
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!updated) throw new Error("Sem permissão para atualizar cidade.");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cidades_atendidas"] });
+      toast.success("Cidade atualizada!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// ==========================================
+// REPRESENTANTES
+// ==========================================
+
+export function useRepresentantes() {
+  const { profile } = useAuth();
+  return useQuery({
+    queryKey: ["representantes", profile?.empresa_id],
+    enabled: !!profile?.empresa_id,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("representantes")
+        .select("*")
+        .eq("empresa_id", profile!.empresa_id)
+        .order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useAddRepresentante() {
+  const qc = useQueryClient();
+  const { profile } = useAuth();
+  return useMutation({
+    mutationFn: async (representante: { nome: string; telefone?: string; cor?: string; email?: string }) => {
+      if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
+
+      const { data: inserted, error } = await (supabase as any)
+        .from("representantes")
+        .insert({ 
+          empresa_id: profile.empresa_id, 
+          ...representante 
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!inserted) throw new Error("Sem permissão para adicionar representante.");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["representantes"] });
+      toast.success("Representante adicionado!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useUpdateRepresentante() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...values }: { id: string; [key: string]: any }) => {
+      const { data: updated, error } = await (supabase as any)
+        .from("representantes")
+        .update({ ...values, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!updated) throw new Error("Sem permissão para atualizar representante.");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["representantes"] });
+      qc.invalidateQueries({ queryKey: ["cidades_atendidas"] }); // Podem existir cidades ligadas a ele que precisam de atualização de view
+      toast.success("Representante atualizado!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeleteRepresentante() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data: removed, error } = await (supabase as any)
+        .from("representantes")
+        .delete()
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!removed) throw new Error("Sem permissão para remover representante.");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["representantes"] });
+      qc.invalidateQueries({ queryKey: ["cidades_atendidas"] });
+      toast.success("Representante removido!");
     },
     onError: (e: Error) => toast.error(e.message),
   });
