@@ -83,6 +83,7 @@ export default function ConfiguracoesPage() {
   const deleteForma = useDeleteFormaPagamento();
   const { data: cidades } = useCidadesAtendidas();
   const deleteCidade = useDeleteCidade();
+  const updateCidade = useUpdateCidade();
 
   const empresa = empresas?.[0];
 
