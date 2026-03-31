@@ -26,6 +26,8 @@ import {
   useRepresentantes, useAddRepresentante, useUpdateRepresentante, useDeleteRepresentante,
 } from "@/hooks/useConfiguracoes";
 import { getDistanceInKm, createColoredIcon } from "@/lib/geocoding";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   Dialog,
   DialogContent,
@@ -81,6 +83,7 @@ export default function ConfiguracoesPage() {
   const deleteForma = useDeleteFormaPagamento();
   const { data: cidades } = useCidadesAtendidas();
   const deleteCidade = useDeleteCidade();
+  const updateCidade = useUpdateCidade();
 
   const empresa = empresas?.[0];
 
@@ -1020,6 +1023,7 @@ function CidadesMassaManager() {
   const { data: representantes } = useRepresentantes();
   const deleteCidade = useDeleteCidade();
   const addCidadesMassa = useAddCidadesMassa();
+  const updateCidade = useUpdateCidade();
 
   const [textoMassa, setTextoMassa] = useState("");
   const [representanteSelecionado, setRepresentanteSelecionado] = useState("nenhum");
