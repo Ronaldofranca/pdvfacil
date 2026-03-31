@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,8 @@ import { RotateCcw, Eye } from "lucide-react";
 import { DEFAULT_RECEIPT_CONFIG, getReceiptConfig, type ReceiptConfig } from "@/lib/receiptConfig";
 import { ReceiptVendaContent } from "@/components/receipts/ReceiptVendaContent";
 import { fmtR } from "@/lib/reportExport";
+import { Check, X, Save, SaveAll } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   config: any;
@@ -24,6 +26,16 @@ export function ReciboConfig({ config, empresa, onSave }: Props) {
   }, [config]);
 
   const [local, setLocal] = useState<ReceiptConfig>(rc);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync local if external config changes (mount/save success)
+  useEffect(() => {
+    setLocal(rc);
+  }, [rc]);
+
+  const isDirty = useMemo(() => {
+    return JSON.stringify(local) !== JSON.stringify(rc);
+  }, [local, rc]);
 
   const DB_KEYS = new Set([
     "recibo_cor_cabecalho", "recibo_cor_fonte_cabecalho", "recibo_subtitulo",
@@ -32,35 +44,54 @@ export function ReciboConfig({ config, empresa, onSave }: Props) {
     "recibo_exibir_telefone", "recibo_exibir_endereco", "recibo_exibir_cpf_cnpj",
     "recibo_exibir_cliente", "recibo_exibir_vendedor", "recibo_exibir_forma_pagamento",
     "recibo_exibir_parcelas", "recibo_exibir_observacoes", "recibo_exibir_imagem_produto",
-    "recibo_mensagem_final", "recibo_rodape", "recibo_logo_largura"
+    "recibo_mensagem_final", "recibo_rodape"
   ]);
 
   const update = (key: keyof ReceiptConfig, value: any) => {
-    setLocal((prev) => {
-      const next = { ...prev, [key]: value };
-      
+    setLocal((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const id = toast.loading("Salvando configurações...");
+    
+    try {
       // Determine what to send to onSave (database)
       let payload: Record<string, any> = {};
 
-      if (DB_KEYS.has(key)) {
-        payload[key] = value;
-        // If we are updating the message itself, we must PRESERVE the existing extra JSON if it exists in the OLD state
-        if (key === "recibo_mensagem_final") {
-           const extra = extractExtra(next);
-           if (Object.keys(extra).length > 0) {
-              payload[key] = `${value} <!--RECIBO_EXTRA_JSON:${JSON.stringify(extra)}-->`;
-           }
+      // Process ALL keys to ensure consistency in the database
+      // If it exists in DB_KEYS, map it directly.
+      // If it's extra, bundle it into the magic marker in recibo_mensagem_final.
+      
+      const extra = extractExtra(local);
+      const cleanMsg = local.recibo_mensagem_final;
+      
+      // Build standard keys
+      for (const key of Array.from(DB_KEYS)) {
+        if (key in local) {
+          payload[key] = (local as any)[key];
         }
-      } else {
-        // It's an EXTRA key. We must bundle ALL extra keys into recibo_mensagem_final
-        const extra = extractExtra(next);
-        const cleanMsg = next.recibo_mensagem_final;
-        payload["recibo_mensagem_final"] = `${cleanMsg} <!--RECIBO_EXTRA_JSON:${JSON.stringify(extra)}-->`;
       }
 
-      onSave(payload);
-      return next;
-    });
+      // Final message with extras
+      if (Object.keys(extra).length > 0) {
+        payload["recibo_mensagem_final"] = `${cleanMsg} <!--RECIBO_EXTRA_JSON:${JSON.stringify(extra)}-->`;
+      } else {
+        payload["recibo_mensagem_final"] = cleanMsg;
+      }
+
+      await onSave(payload);
+      toast.success("Configurações salvas!", { id });
+    } catch (err) {
+      toast.error("Erro ao salvar.", { id });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDiscard = () => {
+    setLocal(rc);
+    toast.info("Alterações descartadas.");
   };
 
   const extractExtra = (state: ReceiptConfig) => {
@@ -159,12 +190,41 @@ export function ReciboConfig({ config, empresa, onSave }: Props) {
         <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
           <Card className="border-primary/20 bg-primary/5 shadow-none pb-2">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <RotateCcw className="h-4 w-4" /> Ações Rápidas
+              <CardTitle className="text-sm flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                   <RotateCcw className="h-4 w-4" /> Ações do Editor
+                </div>
+                {isDirty && (
+                  <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold animate-pulse">
+                    Não Salvo
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={handleRestoreDefaults}>
+            <CardContent className="space-y-2">
+              <div className="flex gap-2">
+                <Button 
+                  disabled={!isDirty || isSaving} 
+                  className="flex-1 gap-2 text-xs font-bold" 
+                  onClick={handleSave}
+                >
+                  <Save className="h-4 w-4" /> {isSaving ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  disabled={!isDirty || isSaving} 
+                  className="flex-1 gap-2 text-xs" 
+                  onClick={handleDiscard}
+                >
+                  <X className="h-4 w-4" /> Descartar
+                </Button>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full gap-2 text-[10px] opacity-60 h-8" 
+                onClick={handleRestoreDefaults}
+              >
                 Restaurar Configurações Originais
               </Button>
             </CardContent>
@@ -294,6 +354,46 @@ export function ReciboConfig({ config, empresa, onSave }: Props) {
                 </div>
                 <p className="text-[10px] text-muted-foreground italic">Aumenta o preenchimento vertical (padding) da área superior.</p>
               </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">Tamanho da Imagem do Produto</Label>
+                  <div className="flex gap-2">
+                    <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">L: {local.recibo_imagem_produto_largura}px</span>
+                    <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">A: {local.recibo_imagem_produto_altura}px</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-[10px] text-muted-foreground">Largura</Label>
+                    </div>
+                    <Slider
+                      value={[local.recibo_imagem_produto_largura as number]}
+                      min={20}
+                      max={150}
+                      step={2}
+                      onValueChange={([v]) => update("recibo_imagem_produto_largura", v)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-[10px] text-muted-foreground">Altura</Label>
+                    </div>
+                    <Slider
+                      value={[local.recibo_imagem_produto_altura as number]}
+                      min={20}
+                      max={150}
+                      step={2}
+                      onValueChange={([v]) => update("recibo_imagem_produto_altura", v)}
+                    />
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -361,14 +461,17 @@ export function ReciboConfig({ config, empresa, onSave }: Props) {
                   subtotal: 124.3,
                   desconto_total: 4.3,
                   total: 120.0,
-                  pagamentos: [{ forma: "pix", valor: 120.0 }],
+                  pagamentos: [{ forma: "crediario", valor: 120.0 }],
                   observacoes: "Venda de teste para o preview."
                 }}
                 itens={[
                   { id: "1", nome_produto: "Creme Hidratante 200ml", quantidade: 2, preco_vendido: 45.9, subtotal: 91.8, produtos: { imagem_url: "" } },
                   { id: "2", nome_produto: "Shampoo Nutrição 300ml", quantidade: 1, preco_vendido: 32.5, subtotal: 32.5, produtos: { imagem_url: "" } },
                 ]}
-                parcelas={[]}
+                parcelas={[
+                  { numero: 1, valor_total: 60.5, vencimento: "2026-04-20" },
+                  { numero: 2, valor_total: 40.2, vencimento: "2026-05-20" },
+                ]}
               />
             </div>
           </Card>

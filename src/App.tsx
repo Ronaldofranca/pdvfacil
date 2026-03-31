@@ -45,6 +45,7 @@ import ConciliacaoPage from "./pages/Conciliacao";
 import PedidosPage from "./pages/Pedidos";
 import AgendaEntregasPage from "./pages/AgendaEntregas";
 import NotFound from "./pages/NotFound";
+import CidadesAtendidasPublicaPage from "./pages/CidadesAtendidasPublica";
 
 // Portal do Cliente
 import PortalLoginPage from "./pages/portal/PortalLogin";
@@ -73,6 +74,7 @@ const MainRoutes = () => {
       <Route path="/catalogo/testemunhos" element={<CatalogoTestemunhosPage />} />
       <Route path="/catalogo/produtos" element={<CatalogoPublicoPage />} />
       <Route path="/catalogo/:id" element={<CatalogoProdutoPage />} />
+      <Route path="/cidades-atendidas" element={<CidadesAtendidasPublicaPage />} />
 
       {/* Portal do Cliente */}
       <Route path="/portal/login" element={<PortalLoginPage />} />

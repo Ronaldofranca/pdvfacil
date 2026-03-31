@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   DollarSign,
   Search,
@@ -11,11 +11,14 @@ import {
   Receipt,
   CircleDot,
   Eye,
+  ListChecks,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -26,6 +29,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GerarParcelasForm } from "@/components/financeiro/GerarParcelasForm";
 import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
+import { PagamentoLoteForm } from "@/components/financeiro/PagamentoLoteForm";
 import { ReciboParcela } from "@/components/financeiro/ReciboParcela";
 import { DateRangeFilter } from "@/components/vendas/DateRangeFilter";
 import { format, startOfDay, endOfDay } from "date-fns";
@@ -45,34 +49,34 @@ export default function FinanceiroPage() {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  
+
   const [gerarOpen, setGerarOpen] = useState(false);
   const [pagamentoState, setPagamentoState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [reciboState, setReciboState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [mobileParcela, setMobileParcela] = useState<any | null>(null);
   const [detailState, setDetailState] = useState<{ open: boolean; data?: any }>({ open: false });
 
-  const { data: parcelas, isLoading } = useParcelas({ 
+  // Seleção múltipla
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [loteOpen, setLoteOpen] = useState(false);
+
+  const { data: parcelas, isLoading } = useParcelas({
     status: statusFilter,
     startDate: startDate ? startOfDay(startDate) : undefined,
-    endDate: endDate ? endOfDay(endDate) : undefined
+    endDate: endDate ? endOfDay(endDate) : undefined,
   });
-  
-  const { data: todasParcelasNoPeriodo } = useParcelas({ 
+
+  const { data: todasParcelasNoPeriodo } = useParcelas({
     startDate: startDate ? startOfDay(startDate) : undefined,
-    endDate: endDate ? endOfDay(endDate) : undefined
+    endDate: endDate ? endOfDay(endDate) : undefined,
   });
 
   const { data: pagamentosNoPeriodo } = usePagamentos({
     startDate: startDate ? startOfDay(startDate) : undefined,
-    endDate: endDate ? endOfDay(endDate) : undefined
+    endDate: endDate ? endOfDay(endDate) : undefined,
   });
 
-  // Busca todas as parcelas pendentes/parciais globais (sem filtro de data)
-  // para calcular o total vencido corretamente com base na data de vencimento real
-  const { data: todasParcelasPendentesGlobal } = useParcelas({
-    status: "pendente"
-  });
+  const { data: todasParcelasPendentesGlobal } = useParcelas({ status: "pendente" });
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -80,7 +84,6 @@ export default function FinanceiroPage() {
     (p as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) || !search
   );
 
-  // Resumo baseado no período selecionado e no cliente pesquisado
   const isDateInRange = (dateStr: string | null, start: Date | undefined, end: Date | undefined) => {
     if (!dateStr) return false;
     const d = new Date(dateStr + "T12:00:00");
@@ -89,40 +92,62 @@ export default function FinanceiroPage() {
     return (!s || d >= s) && (!e || d <= e);
   };
 
-  const matchesSearch = (nome: string | null | undefined) => 
+  const matchesSearch = (nome: string | null | undefined) =>
     !search || (nome?.toLowerCase().includes(search.toLowerCase()) ?? false);
 
   const totalPendente =
-    todasParcelasNoPeriodo?.filter((p) => 
-      (p.status === "pendente" || p.status === "parcial") && 
+    todasParcelasNoPeriodo?.filter((p) =>
+      (p.status === "pendente" || p.status === "parcial") &&
       isDateInRange(p.vencimento, startDate, endDate) &&
       matchesSearch((p as any).clientes?.nome)
     ).reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
-  
-  // Card Vencido: parcelas com saldo > 0 e vencimento anterior a hoje (calculado no frontend)
-  // Ignora o campo `status` do banco, que não é atualizado automaticamente.
-  // Respeita busca por cliente (mesma lógica do card Pendente).
-  const today = new Date(new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }).split("/").reverse().join("-") + "T00:00:00");
-  const totalVencido = todasParcelasPendentesGlobal?.filter((p) => {
-    if (!matchesSearch((p as any).clientes?.nome)) return false;
-    if (Number(p.saldo) <= 0) return false;
-    const due = new Date(p.vencimento + "T00:00:00");
-    return due < today;
-  }).reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
-  
-  const totalParcial = 
-    todasParcelasNoPeriodo?.filter((p) => 
-      p.status === "parcial" && 
+
+  const today = new Date(
+    new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }).split("/").reverse().join("-") + "T00:00:00"
+  );
+  const totalVencido =
+    todasParcelasPendentesGlobal?.filter((p) => {
+      if (!matchesSearch((p as any).clientes?.nome)) return false;
+      if (Number(p.saldo) <= 0) return false;
+      const due = new Date(p.vencimento + "T00:00:00");
+      return due < today;
+    }).reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
+
+  const totalParcial =
+    todasParcelasNoPeriodo?.filter((p) =>
+      p.status === "parcial" &&
       isDateInRange(p.vencimento, startDate, endDate) &&
       matchesSearch((p as any).clientes?.nome)
     ).reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
-  
-  // O valor "Recebido" agora vem da tabela de pagamentos no período, respeitando a busca
-  const totalRecebido = pagamentosNoPeriodo?.filter((pay) => 
-    matchesSearch((pay as any).parcelas?.clientes?.nome)
-  ).reduce((s, pay) => s + Number(pay.valor_pago), 0) ?? 0;
 
-  const visibleColumnCount = isMobile ? 5 : 8;
+  const totalRecebido =
+    pagamentosNoPeriodo?.filter((pay) =>
+      matchesSearch((pay as any).parcelas?.clientes?.nome)
+    ).reduce((s, pay) => s + Number(pay.valor_pago), 0) ?? 0;
+
+  // Parcelas selecionadas (objetos completos, ordenadas por vencimento)
+  const parcelasSelecionadas = useMemo(() => {
+    if (!filtered || selectedIds.size === 0) return [];
+    return filtered
+      .filter((p) => selectedIds.has(p.id))
+      .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+  }, [filtered, selectedIds]);
+
+  const saldoSelecionado = parcelasSelecionadas.reduce((s, p) => s + Number(p.saldo), 0);
+
+  const toggleSelect = (id: string, status: string) => {
+    if (status === "paga") return; // quitadas não podem ser selecionadas
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const visibleColumnCount = isMobile ? 5 : 9;
 
   const openMobileActions = (parcela: any) => {
     if (!isMobile) return;
@@ -207,6 +232,7 @@ export default function FinanceiroPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              {!isMobile && canRegisterPagamento && <TableHead className="w-10" />}
               <TableHead>Nº</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Vencimento</TableHead>
@@ -214,7 +240,7 @@ export default function FinanceiroPage() {
               {!isMobile && <TableHead className="text-right">Pago</TableHead>}
               <TableHead className="text-right">Saldo</TableHead>
               <TableHead>Status</TableHead>
-              {!isMobile && canRegisterPagamento && <TableHead className="w-20">Ações</TableHead>}
+              {!isMobile && canRegisterPagamento && <TableHead className="w-24">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -234,25 +260,31 @@ export default function FinanceiroPage() {
               filtered.map((p) => {
                 const cfg = STATUS_CFG[p.status] ?? STATUS_CFG.pendente;
                 const Icon = cfg.icon;
+                const isSelected = selectedIds.has(p.id);
+                const isPaga = p.status === "paga";
                 return (
                   <TableRow
                     key={p.id}
-                    className={isMobile ? "cursor-pointer active:bg-muted/80" : undefined}
+                    className={[
+                      isMobile ? "cursor-pointer active:bg-muted/80" : "",
+                      isSelected ? "bg-primary/5 ring-1 ring-inset ring-primary/20" : "",
+                    ].join(" ")}
                     onClick={isMobile ? () => openMobileActions(p) : undefined}
-                    onKeyDown={
-                      isMobile
-                        ? (event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              openMobileActions(p);
-                            }
-                          }
-                        : undefined
-                    }
                     role={isMobile ? "button" : undefined}
                     tabIndex={isMobile ? 0 : undefined}
                     aria-label={isMobile ? `Abrir ações do fiado ${p.numero}` : undefined}
                   >
+                    {!isMobile && canRegisterPagamento && (
+                      <TableCell>
+                        {!isPaga && (
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSelect(p.id, p.status)}
+                            aria-label={`Selecionar parcela ${p.numero}`}
+                          />
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{p.numero}ª</TableCell>
                     <TableCell>
                       <div className="min-w-0">
@@ -306,6 +338,30 @@ export default function FinanceiroPage() {
         </Table>
       </Card>
 
+      {/* ── Painel de seleção múltipla (sticky bottom bar) ── */}
+      {selectedIds.size > 0 && canRegisterPagamento && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(96vw,600px)] animate-in slide-in-from-bottom-4">
+          <div className="rounded-xl border bg-card shadow-2xl p-4 flex flex-col sm:flex-row items-center gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <ListChecks className="w-5 h-5 text-primary shrink-0" />
+              <div className="text-sm">
+                <span className="font-semibold">{selectedIds.size} parcela{selectedIds.size > 1 ? "s" : ""}</span>{" "}
+                selecionada{selectedIds.size > 1 ? "s" : ""} ·{" "}
+                <span className="font-bold text-destructive">{fmt(saldoSelecionado)}</span> em saldo
+              </div>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" onClick={clearSelection} className="gap-1">
+                <X className="w-3 h-3" /> Limpar
+              </Button>
+              <Button size="sm" onClick={() => setLoteOpen(true)} className="gap-1 flex-1 sm:flex-none">
+                <CreditCard className="w-3 h-3" /> Pagar Selecionadas
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Drawer open={isMobile && !!mobileParcela} onOpenChange={(open) => !open && setMobileParcela(null)}>
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader>
@@ -355,38 +411,17 @@ export default function FinanceiroPage() {
               </Card>
 
               <div className="space-y-2">
-                <Button
-                  className="w-full justify-start gap-2"
-                  variant="outline"
-                  onClick={() => {
-                    setMobileParcela(null);
-                    setDetailState({ open: true, data: mobileParcela });
-                  }}
-                >
+                <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileParcela(null); setDetailState({ open: true, data: mobileParcela }); }}>
                   <Eye className="w-4 h-4" /> Ver fiado
                 </Button>
 
                 {canRegisterPagamento && mobileParcela.status !== "paga" && (
-                  <Button
-                    className="w-full justify-start gap-2"
-                    variant="outline"
-                    onClick={() => {
-                      setMobileParcela(null);
-                      setPagamentoState({ open: true, data: mobileParcela });
-                    }}
-                  >
+                  <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileParcela(null); setPagamentoState({ open: true, data: mobileParcela }); }}>
                     <CreditCard className="w-4 h-4" /> Registrar recebimento
                   </Button>
                 )}
 
-                <Button
-                  className="w-full justify-start gap-2"
-                  variant="outline"
-                  onClick={() => {
-                    setMobileParcela(null);
-                    setReciboState({ open: true, data: mobileParcela });
-                  }}
-                >
+                <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileParcela(null); setReciboState({ open: true, data: mobileParcela }); }}>
                   <Receipt className="w-4 h-4" /> Gerar recibo
                 </Button>
               </div>
@@ -403,12 +438,8 @@ export default function FinanceiroPage() {
           {detailState.data && (
             <div className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Cliente:</span> {(detailState.data as any).clientes?.nome ?? "—"}
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Parcela:</span> {detailState.data.numero}ª
-                </div>
+                <div><span className="text-muted-foreground">Cliente:</span> {(detailState.data as any).clientes?.nome ?? "—"}</div>
+                <div><span className="text-muted-foreground">Parcela:</span> {detailState.data.numero}ª</div>
                 <div>
                   <span className="text-muted-foreground">Vencimento:</span>{" "}
                   {format(new Date(detailState.data.vencimento + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
@@ -422,41 +453,17 @@ export default function FinanceiroPage() {
               </div>
               <Separator />
               <div className="grid grid-cols-3 gap-3 text-center">
-                <Card className="p-3">
-                  <p className="text-xs text-muted-foreground">Valor</p>
-                  <p className="text-sm font-semibold text-foreground">{fmt(Number(detailState.data.valor_total))}</p>
-                </Card>
-                <Card className="p-3">
-                  <p className="text-xs text-muted-foreground">Pago</p>
-                  <p className="text-sm font-semibold text-primary">{fmt(Number(detailState.data.valor_pago))}</p>
-                </Card>
-                <Card className="p-3">
-                  <p className="text-xs text-muted-foreground">Saldo</p>
-                  <p className="text-sm font-semibold text-destructive">{fmt(Number(detailState.data.saldo))}</p>
-                </Card>
+                <Card className="p-3"><p className="text-xs text-muted-foreground">Valor</p><p className="text-sm font-semibold text-foreground">{fmt(Number(detailState.data.valor_total))}</p></Card>
+                <Card className="p-3"><p className="text-xs text-muted-foreground">Pago</p><p className="text-sm font-semibold text-primary">{fmt(Number(detailState.data.valor_pago))}</p></Card>
+                <Card className="p-3"><p className="text-xs text-muted-foreground">Saldo</p><p className="text-sm font-semibold text-destructive">{fmt(Number(detailState.data.saldo))}</p></Card>
               </div>
-
               <div className="space-y-2">
                 {canRegisterPagamento && detailState.data.status !== "paga" && (
-                  <Button
-                    className="w-full justify-start gap-2"
-                    variant="outline"
-                    onClick={() => {
-                      setDetailState({ open: false });
-                      setPagamentoState({ open: true, data: detailState.data });
-                    }}
-                  >
+                  <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setDetailState({ open: false }); setPagamentoState({ open: true, data: detailState.data }); }}>
                     <CreditCard className="w-4 h-4" /> Registrar recebimento
                   </Button>
                 )}
-                <Button
-                  className="w-full justify-start gap-2"
-                  variant="outline"
-                  onClick={() => {
-                    setDetailState({ open: false });
-                    setReciboState({ open: true, data: detailState.data });
-                  }}
-                >
+                <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setDetailState({ open: false }); setReciboState({ open: true, data: detailState.data }); }}>
                   <Receipt className="w-4 h-4" /> Gerar recibo
                 </Button>
               </div>
@@ -470,6 +477,12 @@ export default function FinanceiroPage() {
         open={pagamentoState.open}
         onOpenChange={(open) => setPagamentoState((prev) => ({ ...prev, open }))}
         parcela={pagamentoState.data}
+      />
+      <PagamentoLoteForm
+        open={loteOpen}
+        onOpenChange={setLoteOpen}
+        parcelas={parcelasSelecionadas}
+        onSuccess={clearSelection}
       />
       <ReciboParcela
         open={reciboState.open}

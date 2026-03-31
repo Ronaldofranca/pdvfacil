@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { invalidateDashboardQueries } from "@/hooks/useVendas";
+import { distribuirPagamento, type ParcelaParaDistribuir } from "@/lib/distribuirPagamento";
 
 export function useParcelas(
   filters?: { vendaId?: string; clienteId?: string; status?: string; startDate?: Date; endDate?: Date },
@@ -124,6 +125,59 @@ export function useRegistrarPagamento() {
     onSuccess: () => {
       invalidateDashboardQueries(qc);
       toast.success("Pagamento registrado!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export interface PagamentoLoteInput {
+  empresa_id: string;
+  parcelas: ParcelaParaDistribuir[];
+  valor_recebido: number;
+  forma_pagamento: string;
+  usuario_id: string;
+  observacoes?: string;
+}
+
+/**
+ * Registra um pagamento distribuído entre múltiplas parcelas.
+ * A distribuição segue a regra: menor vencimento primeiro.
+ * Insere um registro em `pagamentos` por cada parcela afetada (valor > 0).
+ */
+export function useRegistrarPagamentoLote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: PagamentoLoteInput) => {
+      const resultado = distribuirPagamento(input.parcelas, input.valor_recebido);
+      const afetadas = resultado.entradas.filter((e) => e.valorAplicado > 0);
+
+      if (afetadas.length === 0) throw new Error("Nenhuma parcela será afetada com o valor informado.");
+
+      const registros = afetadas.map((e) => ({
+        empresa_id: input.empresa_id,
+        parcela_id: e.parcelaId,
+        valor_pago: e.valorAplicado,
+        forma_pagamento: input.forma_pagamento,
+        usuario_id: input.usuario_id,
+        observacoes: input.observacoes ?? "",
+      }));
+
+      const { error } = await supabase.from("pagamentos").insert(registros);
+      if (error) throw error;
+
+      return resultado;
+    },
+    onSuccess: (resultado) => {
+      invalidateDashboardQueries(qc);
+      qc.invalidateQueries({ queryKey: ["parcelas"] });
+      const quitadas = resultado.entradas.filter((e) => e.statusApos === "paga").length;
+      const parciais = resultado.entradas.filter(
+        (e) => e.statusApos === "parcial" && e.valorAplicado > 0
+      ).length;
+      const msgs = [];
+      if (quitadas > 0) msgs.push(`${quitadas} quitada${quitadas > 1 ? "s" : ""}`);
+      if (parciais > 0) msgs.push(`${parciais} parcial${parciais > 1 ? "is" : ""}`);
+      toast.success(`Pagamento registrado! ${msgs.join(", ")}.`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
