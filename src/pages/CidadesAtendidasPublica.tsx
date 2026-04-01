@@ -37,21 +37,25 @@ export default function CidadesAtendidasPublica() {
   useEffect(() => {
     async function loadData() {
       try {
-        const { data, error } = await supabase
-          .from("cidades_atendidas")
-          .select(`
-            *,
-            representantes (
-              nome,
-              telefone,
-              cor
-            )
-          `)
-          .eq("ativa", true);
+        const { data, error } = await supabase.rpc("fn_get_cidades_publicas");
+        
         if (error) throw error;
-        setCidades(data || []);
+        
+        // Map the flat result from RPC to the expected nested structure OR adjust the usage below.
+        // The RPC returns: id, cidade, estado, latitude, longitude, representante_nome, representante_telefone, representante_cor
+        const mappedData = (data as any[] || []).map(item => ({
+          ...item,
+          representantes: item.representante_nome ? {
+            nome: item.representante_nome,
+            telefone: item.representante_telefone,
+            cor: item.representante_cor
+          } : null
+        }));
+
+        setCidades(mappedData);
       } catch (err) {
         console.error("Erro ao carregar cidades:", err);
+        toast.error("Erro ao carregar dados de atendimento.");
       } finally {
         setLoading(false);
       }
