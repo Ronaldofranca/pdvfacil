@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
+import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PortalProtectedRoute } from "@/components/portal/PortalProtectedRoute";
 import { PortalLayout } from "@/components/portal/PortalLayout";
@@ -135,9 +136,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <OfflineProvider>
-              <MainRoutes />
-            </OfflineProvider>
+            <UserPreferencesProvider>
+              <OfflineProvider>
+                <MainRoutes />
+              </OfflineProvider>
+            </UserPreferencesProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
