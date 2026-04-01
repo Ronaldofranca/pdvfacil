@@ -58,12 +58,16 @@ export default function PortalParcelasPage() {
     queryKey: ["portal-config-pix", cliente?.empresa_id],
     enabled: !!cliente?.empresa_id,
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data: configData } = await (supabase as any)
         .from("configuracoes")
-        .select("pix_chave, pix_tipo, pix_nome_recebedor, pix_cidade_recebedor, portal_mostrar_pix")
+        .select("portal_mostrar_pix")
         .eq("empresa_id", cliente!.empresa_id)
         .maybeSingle();
-      return data;
+      
+      const { data: pixData } = await (supabase as any)
+        .rpc("get_pix_config", { _empresa_id: cliente!.empresa_id });
+
+      return { ...configData, ...(pixData?.[0] || {}) };
     },
   });
 

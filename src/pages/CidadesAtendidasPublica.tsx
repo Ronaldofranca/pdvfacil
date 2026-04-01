@@ -169,7 +169,7 @@ export default function CidadesAtendidasPublica() {
     if (latLngs.length > 0) {
       const bounds = L.latLngBounds(latLngs);
       if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [50, 50] });
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 11 });
       }
     }
 
@@ -178,8 +178,8 @@ export default function CidadesAtendidasPublica() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header Público Simplificado */}
-      <header className="bg-primary text-primary-foreground py-6 px-4 shadow-md sticky top-0 z-10">
-        <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <header className="bg-primary text-primary-foreground py-3 px-4 shadow-md sticky top-0 z-10">
+        <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Building2 className="h-6 w-6" />
             <h1 className="text-xl font-bold tracking-tight">Onde Estamos</h1>
@@ -201,13 +201,14 @@ export default function CidadesAtendidasPublica() {
         {/* Lado Esquerdo: Ações e Lista */}
         <div className="lg:col-span-1 space-y-6">
           <Card className="border shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Localização Aproximada</CardTitle>
-              <CardDescription>Buscaremos automaticamente a cidade atendida mais próxima de você.</CardDescription>
+            <CardHeader className="px-4 py-3 pb-2">
+              <CardTitle className="text-base">Localização Aproximada</CardTitle>
+              <CardDescription className="text-xs">Buscaremos a cidade atendida mais próxima de você.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-3 pt-0">
               <Button 
                 variant="outline" 
+                size="sm"
                 className="w-full gap-2" 
                 onClick={handleVerificarLocalizacao}
                 disabled={verificandoLocal}
@@ -254,7 +255,7 @@ export default function CidadesAtendidasPublica() {
 
           {/* Lista de Cidades Encontradas */}
           <Card className="border shadow-sm">
-            <CardHeader className="py-4">
+            <CardHeader className="px-4 py-3">
               <CardTitle className="text-base flex items-center justify-between">
                 <span>{busca ? "Resultados da Busca" : "Todas as Cidades"}</span>
                 <Badge variant="secondary" className="font-mono text-xs">{cidadesFiltradas.length}</Badge>
