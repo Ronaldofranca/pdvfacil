@@ -102,15 +102,12 @@ export default function FinanceiroPage() {
       matchesSearch((p as any).clientes?.nome)
     ).reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
 
-  const today = new Date(
-    new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }).split("/").reverse().join("-") + "T00:00:00"
-  );
+  const todayISO = new Date().toISOString().split("T")[0];
   const totalVencido =
     todasParcelasPendentesGlobal?.filter((p) => {
       if (!matchesSearch((p as any).clientes?.nome)) return false;
       if (Number(p.saldo) <= 0) return false;
-      const due = new Date(p.vencimento + "T00:00:00");
-      return due < today;
+      return p.status === "vencida" || (["pendente", "parcial"].includes(p.status) && p.vencimento < todayISO);
     }).reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
 
   const totalParcial =
@@ -258,7 +255,8 @@ export default function FinanceiroPage() {
               </TableRow>
             ) : (
               filtered.map((p) => {
-                const cfg = STATUS_CFG[p.status] ?? STATUS_CFG.pendente;
+                const isOverdue = p.status === "vencida" || (["pendente", "parcial"].includes(p.status) && p.vencimento < todayISO);
+                const cfg = isOverdue ? STATUS_CFG.vencida : (STATUS_CFG[p.status] ?? STATUS_CFG.pendente);
                 const Icon = cfg.icon;
                 const isSelected = selectedIds.has(p.id);
                 const isPaga = p.status === "paga";

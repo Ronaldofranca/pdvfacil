@@ -453,26 +453,32 @@ export function DashboardRenderer({
     ),
 
     "top-indicadores": (
-      isAdmin && (topIndicadores?.length > 0 || isPreview) && (
-        <Card key="top-indicadores" className="h-full">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3 text-sm font-semibold">
-              <h2 className="flex items-center gap-2"><Award className="w-4 h-4 text-primary" /> Top Clientes Indicadores</h2>
-            </div>
-            <div className="space-y-2">
-              {(isPreview ? [
+      <Card key="top-indicadores" className="h-full">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3 text-sm font-semibold text-foreground">
+            <h2 className="flex items-center gap-2"><Award className="w-4 h-4 text-primary" /> Top Clientes Indicadores</h2>
+          </div>
+          <div className="space-y-2">
+            {(!topIndicadores || topIndicadores.length === 0) && !isPreview ? (
+              <div className="flex items-center gap-2 text-muted-foreground py-4 text-xs italic justify-center">
+                <Info className="w-3.5 h-3.5" /> Nenhuma indicação registrada.
+              </div>
+            ) : (
+              (isPreview ? [
                 { nome: "Marcos Oliveira", pontos_indicacao: 450 },
                 { nome: "Ana Paula", pontos_indicacao: 320 },
               ] : topIndicadores.slice(0, 5)).map((c: any, i: number) => (
-                <div key={i} className="flex items-center justify-between py-1 border-b last:border-0">
-                  <span className="text-xs truncate max-w-[150px]">{c.nome}</span>
-                  <Badge variant="secondary" className="text-[9px] gap-1"><Star className="w-2 h-2 fill-yellow-500 text-yellow-500"/> {c.pontos_indicacao} pts</Badge>
+                <div key={i} className="flex items-center justify-between py-1 border-b last:border-0 border-border/50">
+                  <span className="text-xs truncate max-w-[150px] font-medium text-foreground">{c.nome}</span>
+                  <Badge variant="secondary" className="text-[9px] gap-1 bg-primary/10 text-primary hover:bg-primary/20 border-none">
+                    <Star className="w-2 h-2 fill-primary text-primary"/> {c.pontos_indicacao} pts
+                  </Badge>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
     ),
 
     "atalhos": (

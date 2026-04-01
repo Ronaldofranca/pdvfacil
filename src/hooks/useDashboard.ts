@@ -114,11 +114,12 @@ export function useDashboardData() {
       }
       const recebidoHoje = recebidoParcelas + recebidoAVista;
 
-      // Parcelas vencidas
+      // Parcelas vencidas (dinâmico)
+      const todayISO = new Date().toISOString().split("T")[0];
       const { data: vencidas } = await supabase
         .from("parcelas")
-        .select("id, saldo, cliente_id, clientes(nome), vencimento, numero")
-        .eq("status", "vencida" as any)
+        .select("id, saldo, cliente_id, clientes(nome), vencimento, numero, status")
+        .or(`status.eq.vencida,and(status.in.(pendente,parcial),vencimento.lt.${todayISO})`)
         .order("vencimento");
       const totalVencido = vencidas?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
 

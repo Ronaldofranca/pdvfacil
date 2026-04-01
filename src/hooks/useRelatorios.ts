@@ -100,10 +100,11 @@ export function useRelParcelasVencidas() {
   return useQuery({
     queryKey: ["rel_parcelas_vencidas"],
     queryFn: async () => {
+      const todayISO = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("parcelas")
         .select("*, clientes(nome)")
-        .eq("status", "vencida" as any)
+        .or(`status.eq.vencida,and(status.in.(pendente,parcial),vencimento.lt.${todayISO})`)
         .order("vencimento");
       if (error) throw error;
       return data;
@@ -148,14 +149,18 @@ export function useRelParcelasPorCliente() {
         parcelas: typeof data;
       }>();
 
+      const todayISO = new Date().toISOString().split("T")[0];
       for (const p of data ?? []) {
         const cid = p.cliente_id ?? "sem_cliente";
         const nome = (p as any).clientes?.nome ?? "Sem cliente";
         const curr = map.get(cid) ?? { nome, total_comprado: 0, total_pago: 0, total_pendente: 0, total_vencido: 0, parcelas: [] };
         curr.total_comprado += Number(p.valor_total);
         curr.total_pago += Number(p.valor_pago);
-        if (p.status === "vencida") curr.total_vencido += Number(p.saldo ?? 0);
+        
+        const isVencida = p.status === "vencida" || (["pendente", "parcial"].includes(p.status) && p.vencimento < todayISO);
+        if (isVencida) curr.total_vencido += Number(p.saldo ?? 0);
         if (p.status === "pendente" || p.status === "parcial") curr.total_pendente += Number(p.saldo ?? 0);
+        
         curr.parcelas.push(p);
         map.set(cid, curr);
       }

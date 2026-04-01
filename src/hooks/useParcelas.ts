@@ -20,8 +20,13 @@ export function useParcelas(
       if (filters?.vendaId) q = q.eq("venda_id", filters.vendaId);
       if (filters?.clienteId) q = q.eq("cliente_id", filters.clienteId);
       
+      const todayISO = new Date().toISOString().split("T")[0];
+      
       if (filters?.status === "pendente") {
         q = q.in("status", ["pendente", "parcial"] as any[]);
+      } else if (filters?.status === "vencida") {
+        // Encontra tanto o status real 'vencida' quanto as que já venceram mas estão 'pendente/parcial'
+        q = q.or(`status.eq.vencida,and(status.in.(pendente,parcial),vencimento.lt.${todayISO})`);
       } else if (filters?.status && filters.status !== "todas") {
         q = q.eq("status", filters.status as any);
       }
