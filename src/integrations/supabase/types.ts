@@ -2879,6 +2879,44 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          created_at: string
+          dashboard_layout: Json | null
+          empresa_id: string
+          id: string
+          updated_at: string
+          user_id: string
+          visual_config: Json | null
+        }
+        Insert: {
+          created_at?: string
+          dashboard_layout?: Json | null
+          empresa_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          visual_config?: Json | null
+        }
+        Update: {
+          created_at?: string
+          dashboard_layout?: Json | null
+          empresa_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          visual_config?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -3289,6 +3327,19 @@ export type Database = {
           _vendedor_id: string
         }
         Returns: Json
+      }
+      fn_get_cidades_publicas: {
+        Args: never
+        Returns: {
+          cidade: string
+          estado: string
+          id: string
+          latitude: number
+          longitude: number
+          representante_cor: string
+          representante_nome: string
+          representante_telefone: string
+        }[]
       }
       get_my_cliente_id: { Args: never; Returns: string }
       get_my_empresa_id: { Args: never; Returns: string }
