@@ -113,7 +113,7 @@ export interface ReceiptItem {
 }
 
 export interface ReceiptPDFOptions {
-  type: "venda" | "pagamento";
+  type: "venda" | "pagamento" | "pedido";
   id: string;
   empresa: string;
   logoUrl?: string;
@@ -317,6 +317,7 @@ async function preloadClonedReceiptImages(root: HTMLElement, timeoutMs = 10000) 
 
 function buildReceiptFileName(options?: Partial<ReceiptPDFOptions>) {
   if (!options?.id) return "recibo.pdf";
+  if (options.type === "pedido") return `recibo_pedido_${options.id}.pdf`;
   return options.type === "pagamento"
     ? `recibo_pagamento_${options.id}.pdf`
     : `recibo_venda_${options.id}.pdf`;
@@ -562,10 +563,17 @@ export async function exportReceiptFromElement(
 
     console.info("[Receipt] início do compartilhamento", { fileName, size: blob.size });
     const file = new File([blob], fileName, { type: "application/pdf" });
+    const titles: Record<string, string> = {
+      pagamento: `Recibo de Pagamento #${options?.id}`,
+      pedido: `Recibo de Pedido #${options?.id}`,
+      venda: `Recibo de Venda #${options?.id}`,
+    };
+    const title = titles[options?.type || "venda"] || titles.venda;
+
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({
-          title: options?.type === "pagamento" ? `Recibo de Pagamento #${options?.id}` : `Recibo de Venda #${options?.id}`,
+          title,
           files: [file],
         });
         return { blob, fileName, shared: true };
@@ -579,9 +587,16 @@ export async function exportReceiptFromElement(
 
     downloadBlob(blob, fileName);
     const cleanPhone = phone?.replace(/\D/g, "") || "";
-    const fallbackText = options?.type === "pagamento"
-      ? `📄 *Recibo de Pagamento #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome ?? "Cliente"}`
-      : `📄 *Recibo de Venda #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome ?? "Cliente"}\n💰 Total: ${fmtR(options?.resumo?.total ?? 0)}`;
+    
+    let fallbackText = "";
+    if (options?.type === "pagamento") {
+      fallbackText = `📄 *Recibo de Pagamento #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome ?? "Cliente"}`;
+    } else if (options?.type === "pedido") {
+      fallbackText = `📄 *Recibo de Pedido #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome ?? "Cliente"}\n🚚 Total: ${fmtR(options?.resumo?.total ?? 0)}`;
+    } else {
+      fallbackText = `📄 *Recibo de Venda #${options?.id}*\n👤 Cliente: ${options?.cliente?.nome ?? "Cliente"}\n💰 Total: ${fmtR(options?.resumo?.total ?? 0)}`;
+    }
+    
     const encoded = encodeURIComponent(fallbackText);
     const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");

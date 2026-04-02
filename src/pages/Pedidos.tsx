@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardList, Search, Plus, Eye, Truck, ShoppingCart, CheckCircle, XCircle, CalendarClock, Filter, Globe } from "lucide-react";
+import { ClipboardList, Search, Plus, Eye, Truck, ShoppingCart, CheckCircle, XCircle, CalendarClock, Filter, Globe, Pencil, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { usePedidos, usePedidoItens, useAtualizarStatusPedido, type StatusPedido } from "@/hooks/usePedidos";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { PedidoForm } from "@/components/pedidos/PedidoForm";
+import { ReciboPedido } from "@/components/pedidos/ReciboPedido";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileRowActions, mobileRowProps } from "@/components/layout/MobileRowActions";
 import { useFinalizarVenda, type CartItem } from "@/hooks/useVendas";
@@ -38,9 +39,11 @@ export default function PedidosPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [formOpen, setFormOpen] = useState(false);
+  const [editPedidoId, setEditPedidoId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [pdvState, setPdvState] = useState<{ open: boolean; cart?: CartItem[]; clienteId?: string; pedidoId?: string }>({ open: false });
   const [mobileItem, setMobileItem] = useState<any | null>(null);
+  const [receiptPedido, setReceiptPedido] = useState<any | null>(null);
 
   const filtros = statusFilter !== "todos" ? { status: statusFilter as StatusPedido } : undefined;
   const { data: pedidos, isLoading } = usePedidos(filtros);
@@ -52,6 +55,18 @@ export default function PedidosPage() {
   const filtered = pedidos?.filter((p) =>
     p.clientes?.nome?.toLowerCase().includes(search.toLowerCase()) || p.id.includes(search)
   );
+
+  const handleEdit = (pedido: any) => {
+    setEditPedidoId(pedido.id);
+    setFormOpen(true);
+    setMobileItem(null);
+    setDetailId(null);
+  };
+
+  const handleNewOrder = () => {
+    setEditPedidoId(null);
+    setFormOpen(true);
+  };
 
   const getStatusBadge = (status: string) => {
     const st = STATUS_MAP[status] ?? STATUS_MAP.rascunho;
@@ -106,7 +121,7 @@ export default function PedidosPage() {
           <Button size="sm" variant="outline" onClick={() => navigate("/agenda-entregas")} className="gap-1.5">
             <CalendarClock className="w-4 h-4" /> Agenda
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setFormOpen(true)}>
+          <Button size="sm" className="gap-1.5" onClick={handleNewOrder}>
             <Plus className="w-4 h-4" /> Novo Pedido
           </Button>
         </div>
@@ -202,6 +217,14 @@ export default function PedidosPage() {
                         <Button variant="ghost" size="icon" onClick={() => setDetailId(p.id)} title="Ver detalhes">
                           <Eye className="w-4 h-4" />
                         </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setReceiptPedido(p)} title="Imprimir Recibo">
+                          <Printer className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                        {["rascunho", "aguardando_entrega"].includes(p.status) && (
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(p)} title="Editar Pedido">
+                            <Pencil className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                        )}
                         {p.status === "rascunho" && (
                           <Button variant="ghost" size="icon" onClick={() => atualizarStatus.mutate({ id: p.id, status: "aguardando_entrega" })} title="Confirmar">
                             <CheckCircle className="w-4 h-4 text-primary" />
@@ -255,6 +278,14 @@ export default function PedidosPage() {
         <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileItem(null); setDetailId(mobileItem.id); }}>
           <Eye className="w-4 h-4" /> Ver detalhes
         </Button>
+        <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setReceiptPedido(mobileItem); setMobileItem(null); }}>
+          <Printer className="w-4 h-4" /> Imprimir Recibo
+        </Button>
+        {["rascunho", "aguardando_entrega"].includes(mobileItem?.status) && (
+          <Button className="w-full justify-start gap-2" variant="outline" onClick={() => handleEdit(mobileItem)}>
+            <Pencil className="w-4 h-4" /> Editar Pedido
+          </Button>
+        )}
         {mobileItem?.status === "rascunho" && (
           <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileItem(null); atualizarStatus.mutate({ id: mobileItem.id, status: "aguardando_entrega" }); }}>
             <CheckCircle className="w-4 h-4 text-primary" /> Confirmar pedido
@@ -283,7 +314,12 @@ export default function PedidosPage() {
       </MobileRowActions>
 
       {/* Form */}
-      <PedidoForm open={formOpen} onOpenChange={setFormOpen} />
+      <PedidoForm 
+        open={formOpen} 
+        onOpenChange={setFormOpen} 
+        pedidoId={editPedidoId}
+        initialData={editPedidoId ? (pedidos?.find(p => p.id === editPedidoId)) : null}
+      />
 
       {/* PDV for conversion */}
       <PDVModal
@@ -291,6 +327,13 @@ export default function PedidosPage() {
         onOpenChange={handlePdvClose}
         initialCart={pdvState.cart}
         initialClienteId={pdvState.clienteId}
+      />
+
+      {/* Recibo modal */}
+      <ReciboPedido 
+        open={!!receiptPedido}
+        onOpenChange={(o) => !o && setReceiptPedido(null)}
+        pedido={receiptPedido}
       />
 
       {/* Detail Sheet */}
@@ -367,6 +410,14 @@ export default function PedidosPage() {
               {/* Action buttons */}
               <Separator />
               <div className="space-y-2">
+                <Button className="w-full gap-2" variant="outline" onClick={() => setReceiptPedido(pedidoDetail)}>
+                  <Printer className="w-4 h-4" /> Imprimir Recibo
+                </Button>
+                {["rascunho", "aguardando_entrega"].includes(pedidoDetail.status) && (
+                  <Button className="w-full gap-2" variant="outline" onClick={() => handleEdit(pedidoDetail)}>
+                    <Pencil className="w-4 h-4" /> Editar Pedido
+                  </Button>
+                )}
                 {pedidoDetail.status === "rascunho" && (
                   <Button className="w-full gap-2" onClick={() => { atualizarStatus.mutate({ id: pedidoDetail.id, status: "aguardando_entrega" }); setDetailId(null); }}>
                     <CheckCircle className="w-4 h-4" /> Confirmar Pedido
