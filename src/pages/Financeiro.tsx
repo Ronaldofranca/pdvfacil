@@ -71,12 +71,18 @@ export default function FinanceiroPage() {
     endDate: endDate ? endOfDay(endDate) : undefined,
   });
 
+  // Parcelas vencidas no período selecionado (para o card "Vencido")
+  const { data: parcelasVencidasNoPeriodo } = useParcelas({
+    status: "vencida",
+    startDate: startDate ? startOfDay(startDate) : undefined,
+    endDate: endDate ? endOfDay(endDate) : undefined,
+  });
+
   const { data: pagamentosNoPeriodo } = usePagamentos({
     startDate: startDate ? startOfDay(startDate) : undefined,
     endDate: endDate ? endOfDay(endDate) : undefined,
   });
 
-  const { data: todasParcelasPendentesGlobal } = useParcelas({ status: "pendente" });
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -103,11 +109,12 @@ export default function FinanceiroPage() {
     ).reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
 
   const todayISO = new Date().toISOString().split("T")[0];
+  // Card "Vencido" respeita o mesmo período e busca dos outros filtros
   const totalVencido =
-    todasParcelasPendentesGlobal?.filter((p) => {
+    parcelasVencidasNoPeriodo?.filter((p) => {
       if (!matchesSearch((p as any).clientes?.nome)) return false;
       if (Number(p.saldo) <= 0) return false;
-      return p.status === "vencida" || (["pendente", "parcial"].includes(p.status) && p.vencimento < todayISO);
+      return true;
     }).reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
 
   const totalParcial =
@@ -144,7 +151,7 @@ export default function FinanceiroPage() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  const visibleColumnCount = isMobile ? 5 : 9;
+  const visibleColumnCount = isMobile ? 5 : 10;
 
   const openMobileActions = (parcela: any) => {
     if (!isMobile) return;
@@ -233,6 +240,7 @@ export default function FinanceiroPage() {
               <TableHead>Nº</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Vencimento</TableHead>
+              {!isMobile && <TableHead>Pago em</TableHead>}
               {!isMobile && <TableHead className="text-right">Valor</TableHead>}
               {!isMobile && <TableHead className="text-right">Pago</TableHead>}
               <TableHead className="text-right">Saldo</TableHead>
@@ -256,10 +264,22 @@ export default function FinanceiroPage() {
             ) : (
               filtered.map((p) => {
                 const isOverdue = p.status === "vencida" || (["pendente", "parcial"].includes(p.status) && p.vencimento < todayISO);
+                const isPaga = p.status === "paga";
+                const isParcial = p.status === "parcial";
+
+                let latestPaymentDateStr = p.data_pagamento;
+                if ((p as any).pagamentos && (p as any).pagamentos.length > 0) {
+                  const arr = (p as any).pagamentos as { data_pagamento: string }[];
+                  latestPaymentDateStr = arr.reduce((acc, curr) => curr.data_pagamento > acc ? curr.data_pagamento : acc, arr[0].data_pagamento);
+                }
+
+                const paymentDateDisplay = latestPaymentDateStr && (isPaga || isParcial)
+                  ? format(new Date(latestPaymentDateStr), "dd/MM/yyyy", { locale: ptBR })
+                  : "—";
+
                 const cfg = isOverdue ? STATUS_CFG.vencida : (STATUS_CFG[p.status] ?? STATUS_CFG.pendente);
                 const Icon = cfg.icon;
                 const isSelected = selectedIds.has(p.id);
-                const isPaga = p.status === "paga";
                 return (
                   <TableRow
                     key={p.id}
@@ -288,13 +308,23 @@ export default function FinanceiroPage() {
                       <div className="min-w-0">
                         <p className="truncate">{(p as any).clientes?.nome ?? "—"}</p>
                         {isMobile && (
-                          <p className="text-xs text-muted-foreground">Total {fmt(Number(p.valor_total))}</p>
+                          <div className="text-xs text-muted-foreground">
+                            <span>Total {fmt(Number(p.valor_total))}</span>
+                            {(isPaga || isParcial) && latestPaymentDateStr && (
+                              <span className="ml-2">• Pago em {paymentDateDisplay}</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">
                       {format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
                     </TableCell>
+                    {!isMobile && (
+                      <TableCell className="text-sm text-muted-foreground">
+                        {paymentDateDisplay}
+                      </TableCell>
+                    )}
                     {!isMobile && <TableCell className="text-right">{fmt(Number(p.valor_total))}</TableCell>}
                     {!isMobile && <TableCell className="text-right">{fmt(Number(p.valor_pago))}</TableCell>}
                     <TableCell className="text-right font-semibold">{fmt(Number(p.saldo))}</TableCell>
@@ -392,6 +422,23 @@ export default function FinanceiroPage() {
                         {format(new Date(mobileParcela.vencimento + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
                       </p>
                     </div>
+                    {(() => {
+                      const isMobilePaga = mobileParcela.status === "paga" || mobileParcela.status === "parcial";
+                      let mLatest = mobileParcela.data_pagamento;
+                      if (mobileParcela.pagamentos && mobileParcela.pagamentos.length > 0) {
+                        const mArr = mobileParcela.pagamentos as { data_pagamento: string }[];
+                        mLatest = mArr.reduce((acc, curr) => curr.data_pagamento > acc ? curr.data_pagamento : acc, mArr[0].data_pagamento);
+                      }
+                      if (!isMobilePaga || !mLatest) return null;
+                      return (
+                        <div>
+                          <p>Pago em</p>
+                          <p className="font-medium text-foreground">
+                            {format(new Date(mLatest), "dd/MM/yyyy", { locale: ptBR })}
+                          </p>
+                        </div>
+                      );
+                    })()}
                     <div>
                       <p>Saldo</p>
                       <p className="font-semibold text-foreground">{fmt(Number(mobileParcela.saldo))}</p>
@@ -442,6 +489,22 @@ export default function FinanceiroPage() {
                   <span className="text-muted-foreground">Vencimento:</span>{" "}
                   {format(new Date(detailState.data.vencimento + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
                 </div>
+                {(() => {
+                  const mData = detailState.data as any;
+                  const isMobilePaga = mData.status === "paga" || mData.status === "parcial";
+                  let mLatest = mData.data_pagamento;
+                  if (mData.pagamentos && mData.pagamentos.length > 0) {
+                    const mArr = mData.pagamentos as { data_pagamento: string }[];
+                    mLatest = mArr.reduce((acc, curr) => curr.data_pagamento > acc ? curr.data_pagamento : acc, mArr[0].data_pagamento);
+                  }
+                  if (!isMobilePaga || !mLatest) return null;
+                  return (
+                    <div>
+                      <span className="text-muted-foreground">Pago em:</span>{" "}
+                      {format(new Date(mLatest), "dd/MM/yyyy", { locale: ptBR })}
+                    </div>
+                  );
+                })()}
                 <div>
                   <span className="text-muted-foreground">Status:</span>{" "}
                   <Badge variant={STATUS_CFG[detailState.data.status]?.variant ?? "outline"}>

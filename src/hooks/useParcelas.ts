@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { invalidateDashboardQueries } from "@/hooks/useVendas";
 import { distribuirPagamento, type ParcelaParaDistribuir } from "@/lib/distribuirPagamento";
 
@@ -14,34 +15,40 @@ export function useParcelas(
     queryFn: async () => {
       let q = supabase
         .from("parcelas")
-        .select("*, clientes(nome), vendas(id)")
+        .select("*, clientes(nome), vendas(id), pagamentos(data_pagamento)")
         .order("vencimento");
-      
+
       if (filters?.vendaId) q = q.eq("venda_id", filters.vendaId);
       if (filters?.clienteId) q = q.eq("cliente_id", filters.clienteId);
-      
-      const todayISO = new Date().toISOString().split("T")[0];
-      
+
+      // todayISO em fuso local (não UTC) para evitar deslocamento de data no Brasil (UTC-3)
+      const todayISO = format(new Date(), "yyyy-MM-dd");
+
+      // ── Status filter ──────────────────────────────────────────────────────
       if (filters?.status === "pendente") {
+        // "pendente" mostra pendentes/parciais não vencidas
         q = q.in("status", ["pendente", "parcial"] as any[]);
       } else if (filters?.status === "vencida") {
-        // Encontra tanto o status real 'vencida' quanto as que já venceram mas estão 'pendente/parcial'
+        // Inclui tanto status=vencida quanto pendente/parcial com vencimento < hoje
         q = q.or(`status.eq.vencida,and(status.in.(pendente,parcial),vencimento.lt.${todayISO})`);
       } else if (filters?.status && filters.status !== "todas") {
         q = q.eq("status", filters.status as any);
       }
 
+      // ── Date range filter ──────────────────────────────────────────────────
+      // Usamos format(date, "yyyy-MM-dd") em vez de toISOString().split("T")[0]
+      // porque toISOString() converte para UTC — no fuso UTC-3 do Brasil,
+      // endOfDay(14/03) às 23:59 local vira 15/03T02:59 UTC, fazendo endISO = "2026-03-15".
+      // format() usa o fuso local e produz a data correta sempre.
       if (filters?.startDate || filters?.endDate) {
-        const start = filters?.startDate?.toISOString();
-        const end = filters?.endDate?.toISOString();
-        
-        if (start && end) {
-          q = q.or(`vencimento.gte.${start},vencimento.lte.${end},data_pagamento.gte.${start},data_pagamento.lte.${end}`);
-        } else if (start) {
-          q = q.or(`vencimento.gte.${start},data_pagamento.gte.${start}`);
-        } else if (end) {
-          q = q.or(`vencimento.lte.${end},data_pagamento.lte.${end}`);
-        }
+        const startISO = filters?.startDate ? format(filters.startDate, "yyyy-MM-dd") : undefined;
+        const endISO   = filters?.endDate   ? format(filters.endDate,   "yyyy-MM-dd") : undefined;
+
+        const isPaga = filters?.status === "paga";
+        const dateField = isPaga ? "data_pagamento" : "vencimento";
+
+        if (startISO) q = q.gte(dateField, startISO);
+        if (endISO)   q = q.lte(dateField, endISO);
       }
 
       const { data, error } = await q;
