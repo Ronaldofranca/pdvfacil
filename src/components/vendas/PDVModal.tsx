@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import { useClienteScoreById } from "@/hooks/useClienteScore";
+import { useCreditoCliente } from "@/hooks/useDevolucoes";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { PDVMobile } from "./PDVMobile";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ const FORMAS_PAGAMENTO = [
   { value: "crediario", label: "Crediário" },
   { value: "boleto", label: "Boleto" },
   { value: "transferencia", label: "Transferência" },
+  { value: "credito_casa", label: "Crédito Casa" },
 ];
 
 interface Props {
@@ -130,6 +132,9 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const [searchProd, setSearchProd] = useState("");
   const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>(defaultCrediario);
 
+  const { data: topIndicadores } = { data: [] }; // placeholder
+  const { data: saldoCredito } = useCreditoCliente(clienteId || null);
+  
   const hasCrediario = pagamentos.some((p) => p.forma === "crediario");
 
   // Navigation guard for unsaved PDV state
@@ -325,6 +330,19 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
       if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
     } else {
       if (totalPago < total) return toast.error("Valor pago insuficiente");
+      
+      // Validate House Credit balance
+      const creditoUsado = pagamentos
+        .filter((p) => p.forma === "credito_casa")
+        .reduce((s, p) => s + p.valor, 0);
+      
+      if (creditoUsado > 0) {
+        if (!clienteId) return toast.error("Selecione um cliente para usar Crédito Casa");
+        const disponivel = Number(saldoCredito ?? 0);
+        if (creditoUsado > disponivel) {
+          return toast.error(`Saldo de Crédito Casa insuficiente (Disponível: ${fmt(disponivel)})`);
+        }
+      }
     }
 
     // Lock finalization
@@ -597,10 +615,15 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
                     </SelectTrigger>
                     <SelectContent>
                       {FORMAS_PAGAMENTO.map((f) => (
-                        <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                        <SelectItem key={f.value} value={f.value}>
+                          {f.label} {f.value === "credito_casa" && clienteId && `(${fmt(Number(saldoCredito ?? 0))})`}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {pag.forma === "credito_casa" && !clienteId && (
+                    <span className="text-[10px] text-destructive absolute mt-8">Selecione um cliente</span>
+                  )}
                   <Input
                     type="number"
                     step="0.01"

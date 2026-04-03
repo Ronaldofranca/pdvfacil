@@ -59,9 +59,9 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
             color: isFinalizada ? "#ffffff" : isCancelada ? "#ffffff" : "#64748b",
             borderColor: "transparent"
           }}
-          className="h-5 px-2.5 text-[10px] inline-flex items-center justify-center whitespace-nowrap overflow-visible font-bold uppercase tracking-wider"
+          className="pt-[2px] pb-[4px] px-2.5 text-[10px] inline-flex items-center justify-center whitespace-nowrap overflow-visible font-bold uppercase tracking-wider"
         >
-          {label}
+          <span>{label}</span>
         </Badge>
       );
     };
@@ -235,8 +235,11 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
                         )}
                       </div>
                       <p className="text-muted-foreground" style={{ fontSize: `${rc.recibo_tamanho_fonte_item_subtitulo}px` }}>
-                        {Number(item.quantidade)}x {fmtR(Number(item.preco_vendido))}
+                        {Number(item.quantidade)}x {fmtR(item.bonus ? Number(item.preco_original) : Number(item.preco_vendido))}
                         {item.bonus && <span className="font-bold" style={{ color: rc.recibo_cor_principal }}> (Bônus)</span>}
+                        {!item.bonus && Number(item.desconto) > 0 && (
+                          <span className="text-destructive"> — Desc: {fmtR(Number(item.desconto) * Number(item.quantidade))}</span>
+                        )}
                       </p>
                     </div>
                     <div className="text-right">
@@ -269,6 +272,15 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
                 <span className="font-semibold">-{fmtR(Number(venda.desconto_total))}</span>
               </div>
             )}
+            {(() => {
+              const totalBonus = itens?.filter(i => i.bonus).reduce((s, i) => s + Number(i.preco_original) * Number(i.quantidade), 0) ?? 0;
+              return totalBonus > 0 ? (
+                <div className="flex justify-between font-medium" style={{ fontSize: `${rc.recibo_tamanho_fonte_subtotal}px`, color: '#d97706' }}>
+                  <span>🎁 Bônus concedidos</span>
+                  <span className="font-semibold">-{fmtR(totalBonus)}</span>
+                </div>
+              ) : null;
+            })()}
             <Separator style={{ background: `${rc.recibo_cor_principal}44` }} />
             <div className="flex justify-between font-bold" style={{ color: rc.recibo_cor_total, fontSize: `${rc.recibo_tamanho_fonte_total}px` }}>
               <span>TOTAL</span>

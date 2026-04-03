@@ -15,6 +15,13 @@ export function useConfiguracoes() {
         .eq("empresa_id", profile!.empresa_id)
         .maybeSingle();
       if (error) throw error;
+      
+      const { data: pixData } = await (supabase as any)
+        .rpc("get_pix_config", { _empresa_id: profile!.empresa_id });
+        
+      if (data && pixData && pixData.length > 0) {
+        return { ...data, ...pixData[0] };
+      }
       return data;
     },
   });
@@ -28,6 +35,26 @@ export function useUpsertConfiguracoes() {
       if (!profile?.empresa_id) throw new Error("Sessão sem empresa vinculada.");
 
       const empresa_id = profile.empresa_id;
+      
+      // Separate PIX fields
+      const pixKeys = ['pix_chave', 'pix_tipo', 'pix_nome_recebedor', 'pix_cidade_recebedor'];
+      const hasPixKeys = Object.keys(values).some(k => pixKeys.includes(k));
+      if (hasPixKeys) {
+        await (supabase as any).rpc("upsert_pix_config", {
+          _empresa_id: empresa_id,
+          _pix_chave: values.pix_chave,
+          _pix_tipo: values.pix_tipo,
+          _pix_nome_recebedor: values.pix_nome_recebedor,
+          _pix_cidade_recebedor: values.pix_cidade_recebedor
+        });
+        
+        // Remove pix fields before updating main configuracoes table
+        pixKeys.forEach(k => delete values[k]);
+      }
+      
+      // If no other fields to update, return early
+      if (Object.keys(values).length === 0) return;
+
       const { data: existing, error: existingError } = await (supabase as any)
         .from("configuracoes")
         .select("id")

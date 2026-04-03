@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useProdutos, useUpsertProduto } from "@/hooks/useProdutos";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageUpload } from "@/components/produtos/ImageUpload";
+import { Separator as UISeparator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createRef } from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";

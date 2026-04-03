@@ -47,6 +47,22 @@ export function useUpsertCategoria() {
   });
 }
 
+export function useDeleteCategoria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("categorias").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["categorias"] });
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+      toast.success("Categoria excluída!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 // ─── Produtos ───
 export interface ProdutoInput {
   id?: string;
