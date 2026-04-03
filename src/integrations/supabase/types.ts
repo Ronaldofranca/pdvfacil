@@ -963,6 +963,64 @@ export type Database = {
           },
         ]
       }
+      credito_clientes: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          created_by: string | null
+          descricao: string
+          devolucao_id: string | null
+          empresa_id: string
+          id: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          created_by?: string | null
+          descricao: string
+          devolucao_id?: string | null
+          empresa_id: string
+          id?: string
+          tipo?: string
+          valor: number
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string
+          devolucao_id?: string | null
+          empresa_id?: string
+          id?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credito_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_clientes_devolucao_id_fkey"
+            columns: ["devolucao_id"]
+            isOneToOne: false
+            referencedRelation: "devolucoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credito_clientes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devices: {
         Row: {
           created_at: string
@@ -997,6 +1055,76 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devolucoes: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          created_by: string | null
+          data_devolucao: string
+          empresa_id: string
+          id: string
+          impacto_estoque_aplicado: boolean | null
+          impacto_financeiro_aplicado: boolean | null
+          motivo: string | null
+          observacoes: string | null
+          status: string
+          valor_total_devolvido: number
+          venda_id: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_devolucao?: string
+          empresa_id: string
+          id?: string
+          impacto_estoque_aplicado?: boolean | null
+          impacto_financeiro_aplicado?: boolean | null
+          motivo?: string | null
+          observacoes?: string | null
+          status?: string
+          valor_total_devolvido?: number
+          venda_id: string
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_devolucao?: string
+          empresa_id?: string
+          id?: string
+          impacto_estoque_aplicado?: boolean | null
+          impacto_financeiro_aplicado?: boolean | null
+          motivo?: string | null
+          observacoes?: string | null
+          status?: string
+          valor_total_devolvido?: number
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devolucoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devolucoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devolucoes_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
             referencedColumns: ["id"]
           },
         ]
@@ -1516,6 +1644,68 @@ export type Database = {
             columns: ["venda_id"]
             isOneToOne: false
             referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itens_devolucao: {
+        Row: {
+          created_at: string
+          devolucao_id: string
+          id: string
+          item_venda_id: string
+          produto_id: string
+          quantidade: number
+          valor_total: number
+          valor_unitario: number
+        }
+        Insert: {
+          created_at?: string
+          devolucao_id: string
+          id?: string
+          item_venda_id: string
+          produto_id: string
+          quantidade: number
+          valor_total: number
+          valor_unitario: number
+        }
+        Update: {
+          created_at?: string
+          devolucao_id?: string
+          id?: string
+          item_venda_id?: string
+          produto_id?: string
+          quantidade?: number
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_devolucao_devolucao_id_fkey"
+            columns: ["devolucao_id"]
+            isOneToOne: false
+            referencedRelation: "devolucoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_devolucao_item_venda_id_fkey"
+            columns: ["item_venda_id"]
+            isOneToOne: false
+            referencedRelation: "itens_venda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_devolucao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_devolucao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_catalogo"
             referencedColumns: ["id"]
           },
         ]
@@ -3340,6 +3530,17 @@ export type Database = {
           representante_nome: string
           representante_telefone: string
         }[]
+      }
+      fn_registrar_devolucao: {
+        Args: {
+          _cliente_id: string
+          _empresa_id: string
+          _itens: Json
+          _motivo: string
+          _observacoes: string
+          _venda_id: string
+        }
+        Returns: Json
       }
       get_my_cliente_id: { Args: never; Returns: string }
       get_my_empresa_id: { Args: never; Returns: string }
