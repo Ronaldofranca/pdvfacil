@@ -360,7 +360,7 @@ export default function ConfiguracoesPage() {
                       </div>
                     ))}
                   </div>
-                  <Button variant="outline" size="xs" className="w-full text-[10px] mt-2 h-7" onClick={resetToDefault}>
+                  <Button variant="outline" size="sm" className="w-full text-[10px] mt-2 h-7" onClick={resetToDefault}>
                     <RefreshCw className="h-3 w-3 mr-2" /> Restaurar Padrão
                   </Button>
                 </CardContent>
@@ -481,7 +481,7 @@ export default function ConfiguracoesPage() {
                       </div>
                     </div>
 
-                    <Button variant="ghost" size="xs" className="w-full text-[10px] text-muted-foreground hover:text-primary transition-colors" onClick={() => updateVisualConfig({})}>
+                    <Button variant="ghost" size="sm" className="w-full text-[10px] text-muted-foreground hover:text-primary transition-colors" onClick={() => updateVisualConfig({})}>
                        <RefreshCw className="h-3 w-3 mr-2" /> Limpar Customização
                     </Button>
                   </div>
