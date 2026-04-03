@@ -1072,6 +1072,8 @@ export type Database = {
           motivo: string | null
           observacoes: string | null
           status: string
+          valor_abatido_parcelas: number | null
+          valor_credito_gerado: number | null
           valor_total_devolvido: number
           venda_id: string
         }
@@ -1087,6 +1089,8 @@ export type Database = {
           motivo?: string | null
           observacoes?: string | null
           status?: string
+          valor_abatido_parcelas?: number | null
+          valor_credito_gerado?: number | null
           valor_total_devolvido?: number
           venda_id: string
         }
@@ -1102,6 +1106,8 @@ export type Database = {
           motivo?: string | null
           observacoes?: string | null
           status?: string
+          valor_abatido_parcelas?: number | null
+          valor_credito_gerado?: number | null
           valor_total_devolvido?: number
           venda_id?: string
         }
@@ -3501,6 +3507,16 @@ export type Database = {
         Args: { _itens: Json; _pedido_id: string; _vendedor_id: string }
         Returns: Json
       }
+      fn_corrigir_pagamento: {
+        Args: {
+          _motivo: string
+          _novo_valor: number
+          _pagamento_id: string
+          _usuario_id: string
+          _usuario_nome: string
+        }
+        Returns: Json
+      }
       fn_finalizar_venda_atomica: {
         Args: {
           _cliente_id: string
@@ -3538,9 +3554,10 @@ export type Database = {
           _itens: Json
           _motivo: string
           _observacoes: string
+          _tipo_impacto?: string
           _venda_id: string
         }
-        Returns: Json
+        Returns: string
       }
       get_my_cliente_id: { Args: never; Returns: string }
       get_my_empresa_id: { Args: never; Returns: string }
