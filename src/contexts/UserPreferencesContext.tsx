@@ -84,7 +84,7 @@ export function UserPreferencesProvider({ children }: { children: React.ReactNod
           if (data.dashboard_layout && Array.isArray(data.dashboard_layout) && data.dashboard_layout.length > 0) {
             // Merge with DEFAULT_LAYOUT to handle new items added in future updates
             const merged = DEFAULT_LAYOUT.map(defItem => {
-              const saved = (data.dashboard_layout as DashboardItem[]).find(s => s.id === defItem.id);
+              const saved = (data.dashboard_layout as unknown as DashboardItem[]).find(s => s.id === defItem.id);
               return saved ? { ...defItem, ...saved, columns: saved.columns || 1 } : defItem;
             }).sort((a, b) => a.order - b.order);
             setLayout(merged);
