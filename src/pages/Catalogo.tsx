@@ -75,7 +75,7 @@ export default function CatalogoAdminPage() {
   useEffect(() => {
     if (config) {
       if (Array.isArray(config.secoes) && config.secoes.length > 0) {
-        setSections(config.secoes as CatalogSection[]);
+        setSections(config.secoes as unknown as CatalogSection[]);
       }
       if (Array.isArray((config as any).secoes_produto) && (config as any).secoes_produto.length > 0) {
         setProductSections((config as any).secoes_produto as CatalogSection[]);
