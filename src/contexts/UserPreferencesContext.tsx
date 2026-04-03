@@ -141,8 +141,8 @@ export function UserPreferencesProvider({ children }: { children: React.ReactNod
       .upsert({ 
         user_id: user.id, 
         empresa_id: profile.empresa_id,
-        dashboard_layout: newLayout
-      }, { onConflict: 'user_id' });
+        dashboard_layout: newLayout as any
+      } as any, { onConflict: 'user_id' });
 
     if (error) {
       console.error("Erro ao salvar layout:", error);
