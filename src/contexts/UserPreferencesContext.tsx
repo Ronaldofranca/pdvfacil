@@ -159,8 +159,8 @@ export function UserPreferencesProvider({ children }: { children: React.ReactNod
       .upsert({ 
         user_id: user.id, 
         empresa_id: profile.empresa_id,
-        visual_config: newConfig
-      }, { onConflict: 'user_id' });
+        visual_config: newConfig as any
+      } as any, { onConflict: 'user_id' });
 
     if (error) {
       console.error("Erro ao salvar cores:", error);

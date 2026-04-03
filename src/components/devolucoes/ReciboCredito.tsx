@@ -39,6 +39,8 @@ export function ReciboCredito({ open, onOpenChange, devolucao, cliente, valorCre
         id: devId,
         cliente: { nome: clienteNome, id: cliente?.id?.slice(0, 8) ?? "—" },
         resumo: {
+          subtotal: Number(valorCredito ?? 0),
+          descontos: 0,
           total: Number(valorCredito ?? 0),
         },
       });

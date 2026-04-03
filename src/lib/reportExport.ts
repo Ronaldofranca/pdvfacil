@@ -113,7 +113,7 @@ export interface ReceiptItem {
 }
 
 export interface ReceiptPDFOptions {
-  type: "venda" | "pagamento" | "pedido";
+  type: "venda" | "pagamento" | "pedido" | "credito";
   id: string;
   empresa: string;
   logoUrl?: string;

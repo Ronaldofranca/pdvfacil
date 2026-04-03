@@ -8,6 +8,7 @@ import { useVendas, useVendaItens, useVendaParcelas } from "@/hooks/useVendas";
 import { useRegistrarDevolucao, useItensDevolvidosTotal } from "@/hooks/useDevolucoes";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
