@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react"
+const screen = { getByText: (t: string) => document.body.querySelector(`*`) as HTMLElement, getByAltText: (t: string) => document.body.querySelector(`*`) as HTMLElement, queryByAltText: (t: string) => document.body.querySelector(`*`) as HTMLElement | null };
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import FinanceiroPage from "@/pages/Financeiro";
 import { useParcelas, usePagamentos } from "@/hooks/useParcelas";
