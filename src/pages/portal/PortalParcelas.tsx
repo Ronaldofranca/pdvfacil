@@ -25,7 +25,7 @@ const statusLabels: Record<string, string> = {
 
 const statusColors: Record<string, string> = {
   pendente: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  parcial: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  parcial: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
   paga: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
   vencida: "bg-destructive/10 text-destructive",
 };
@@ -58,12 +58,16 @@ export default function PortalParcelasPage() {
     queryKey: ["portal-config-pix", cliente?.empresa_id],
     enabled: !!cliente?.empresa_id,
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data: configData } = await (supabase as any)
         .from("configuracoes")
-        .select("pix_chave, pix_tipo, pix_nome_recebedor, pix_cidade_recebedor, portal_mostrar_pix")
+        .select("portal_mostrar_pix")
         .eq("empresa_id", cliente!.empresa_id)
         .maybeSingle();
-      return data;
+      
+      const { data: pixData } = await (supabase as any)
+        .rpc("get_pix_config", { _empresa_id: cliente!.empresa_id });
+
+      return { ...configData, ...(pixData?.[0] || {}) };
     },
   });
 

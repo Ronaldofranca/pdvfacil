@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { ShoppingCart, Search, Plus, Eye, XCircle, Receipt, CreditCard } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { ShoppingCart, Search, Plus, Eye, XCircle, Receipt, CreditCard, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useVendas, useVendaItens, useCancelarVenda, useVendaParcelas } from "@/hooks/useVendas";
+import { useVendas, useVendaItens, useCancelarVenda, useVendaParcelas, useVenda } from "@/hooks/useVendas";
 import { useParcelas } from "@/hooks/useParcelas";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,8 +21,11 @@ import { PDVModal } from "@/components/vendas/PDVModal";
 import { ReciboVenda } from "@/components/vendas/ReciboVenda";
 import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
 import { DateRangeFilter } from "@/components/vendas/DateRangeFilter";
-import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { NovaDevolucaoDialog } from "@/components/devolucoes/NovaDevolucaoDialog";
+import { DetalheDevolucaoDialog } from "@/components/devolucoes/DetalheDevolucaoDialog";
+import { useVendaDevolucoes } from "@/hooks/useDevolucoes";
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   rascunho: { label: "Rascunho", variant: "outline" },
@@ -41,25 +45,55 @@ export default function VendasPage() {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [detailId, setDetailId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [detailId, setDetailId] = useState<string | null>(searchParams.get("viewVenda"));
   const [reciboVenda, setReciboVenda] = useState<any>(null);
   const [mobileActionVendaId, setMobileActionVendaId] = useState<string | null>(null);
+
+  // Monitor deep link on URL changes
+  useEffect(() => {
+    const viewVendaId = searchParams.get("viewVenda");
+    if (viewVendaId && viewVendaId !== detailId) {
+      setDetailId(viewVendaId);
+    }
+  }, [searchParams]);
+
+  const handleCloseDetail = (open: boolean) => {
+    if (!open) {
+      setDetailId(null);
+      // Clean query string quietly
+      if (searchParams.get("viewVenda")) {
+        setSearchParams({}, { replace: true });
+      }
+    }
+  };
+
+  const { data: fetchVendaUnica } = useVenda(detailId);
   const [pagamentoState, setPagamentoState] = useState<{ open: boolean; data?: any }>({ open: false });
   const { data: itensDetail } = useVendaItens(detailId);
+  const { data: devolucoesVinculadas } = useVendaDevolucoes(detailId);
   const { data: mobileVendaParcelas } = useParcelas(
     { vendaId: mobileActionVendaId ?? undefined },
     { enabled: !!mobileActionVendaId },
   );
+
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [returnVendaId, setReturnVendaId] = useState<string | null>(null);
+  
+  const [viewDevolucaoId, setViewDevolucaoId] = useState<string | null>(null);
+  const [isDevolucaoDetailOpen, setIsDevolucaoDetailOpen] = useState(false);
 
   // Cancellation dialog
   const [cancelDialogVendaId, setCancelDialogVendaId] = useState<string | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState("");
   const { data: cancelParcelas } = useVendaParcelas(cancelDialogVendaId);
 
+  const vendaDetailOrig = vendas?.find((v) => v.id === detailId);
+  const vendaDetail = vendaDetailOrig ?? fetchVendaUnica ?? null;
+
   const parcelasComPagamento = cancelParcelas?.filter((p) => Number(p.valor_pago) > 0) ?? [];
   const valorJaPago = parcelasComPagamento.reduce((s, p) => s + Number(p.valor_pago), 0);
 
-  const vendaDetail = vendas?.find((v) => v.id === detailId) ?? null;
   const vendaAcoes = vendas?.find((v) => v.id === mobileActionVendaId) ?? null;
   const parcelaAbertaVenda =
     mobileVendaParcelas?.find((p) => ["pendente", "parcial", "vencida"].includes(String((p as any).status))) ?? null;
@@ -232,15 +266,29 @@ export default function VendasPage() {
                             <Receipt className="w-4 h-4" />
                           </Button>
                           {isAdmin && v.status === "finalizada" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Retornar venda ${saleIdLabel}`}
-                              onClick={() => setCancelDialogVendaId(v.id)}
-                              title="Cancelar venda"
-                            >
-                              <XCircle className="w-4 h-4 text-destructive" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Devolver itens da venda ${saleIdLabel}`}
+                                onClick={() => {
+                                  setReturnVendaId(v.id);
+                                  setReturnDialogOpen(true);
+                                }}
+                                title="Devolver itens"
+                              >
+                                <RefreshCw className="w-4 h-4 text-amber-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Cancelar venda ${saleIdLabel}`}
+                                onClick={() => setCancelDialogVendaId(v.id)}
+                                title="Cancelar venda"
+                              >
+                                <XCircle className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -327,16 +375,29 @@ export default function VendasPage() {
                 </Button>
 
                 {isAdmin && vendaAcoes.status === "finalizada" && (
-                  <Button
-                    className="w-full justify-start gap-2"
-                    variant="destructive"
-                    onClick={() => {
-                      setMobileActionVendaId(null);
-                      setCancelDialogVendaId(vendaAcoes.id);
-                    }}
-                  >
-                    <XCircle className="w-4 h-4" /> Retornar venda
-                  </Button>
+                  <>
+                    <Button
+                      className="w-full justify-start gap-2"
+                      variant="outline"
+                      onClick={() => {
+                        setMobileActionVendaId(null);
+                        setReturnVendaId(vendaAcoes.id);
+                        setReturnDialogOpen(true);
+                      }}
+                    >
+                      <RefreshCw className="w-4 h-4 text-amber-500" /> Devolver itens
+                    </Button>
+                    <Button
+                      className="w-full justify-start gap-2"
+                      variant="destructive"
+                      onClick={() => {
+                        setMobileActionVendaId(null);
+                        setCancelDialogVendaId(vendaAcoes.id);
+                      }}
+                    >
+                      <XCircle className="w-4 h-4" /> Cancelar venda
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -417,7 +478,7 @@ export default function VendasPage() {
       </Dialog>
 
       {/* Detalhes da venda */}
-      <Sheet open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
+      <Sheet open={!!detailId} onOpenChange={handleCloseDetail}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>Detalhes da Venda</SheetTitle>
@@ -464,6 +525,15 @@ export default function VendasPage() {
                 {Number(vendaDetail.desconto_total) > 0 && (
                   <div className="flex justify-between text-destructive"><span>Descontos</span><span>-{fmt(Number(vendaDetail.desconto_total))}</span></div>
                 )}
+                {(() => {
+                  const totalBonus = itensDetail?.filter(i => i.bonus).reduce((s, i) => s + Number(i.preco_original) * Number(i.quantidade), 0) ?? 0;
+                  return totalBonus > 0 ? (
+                    <div className="flex justify-between text-amber-600 font-medium">
+                      <span>🎁 Bônus concedidos</span>
+                      <span>-{fmt(totalBonus)}</span>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex justify-between text-lg font-bold"><span>Total</span><span className="text-primary">{fmt(Number(vendaDetail.total))}</span></div>
               </div>
               {vendaDetail.pagamentos && Array.isArray(vendaDetail.pagamentos) && (vendaDetail.pagamentos as any[]).length > 0 && (
@@ -487,6 +557,35 @@ export default function VendasPage() {
                 </>
               )}
 
+              {devolucoesVinculadas && devolucoesVinculadas.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <p className="text-sm font-bold flex items-center gap-2 text-amber-600 uppercase tracking-tighter">
+                      <RefreshCw className="w-4 h-4" /> Devoluções Vinculadas
+                    </p>
+                    <div className="space-y-2">
+                       {devolucoesVinculadas.map((d: any) => (
+                         <button
+                           key={d.id}
+                           onClick={() => { setViewDevolucaoId(d.id); setIsDevolucaoDetailOpen(true); }}
+                           className="w-full flex items-center justify-between p-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors text-left"
+                         >
+                           <div className="space-y-0.5">
+                             <p className="text-[10px] font-mono text-muted-foreground uppercase">#{d.id.slice(0, 8)}</p>
+                             <p className="text-xs font-bold">{format(new Date(d.data_devolucao), "dd/MM/yy HH:mm")}</p>
+                           </div>
+                           <div className="text-right">
+                             <p className="text-sm font-bold text-amber-600">{fmt(Number(d.valor_total_devolvido))}</p>
+                             <p className="text-[9px] uppercase font-bold text-muted-foreground">Ver Detalhes</p>
+                           </div>
+                         </button>
+                       ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Separator />
               <Button
                 variant="outline"
@@ -502,6 +601,18 @@ export default function VendasPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      <NovaDevolucaoDialog 
+        open={returnDialogOpen} 
+        onOpenChange={setReturnDialogOpen}
+        initialVendaId={returnVendaId}
+      />
+
+      <DetalheDevolucaoDialog 
+        id={viewDevolucaoId}
+        open={isDevolucaoDetailOpen}
+        onOpenChange={setIsDevolucaoDetailOpen}
+      />
     </div>
   );
 }

@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Edit3, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useRegistrarPagamento, usePagamentosDaParcela, type PagamentoInput } from "@/hooks/useParcelas";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CorrigirPagamentoDialog } from "./CorrigirPagamentoDialog";
 
 const FORMAS = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -29,8 +32,11 @@ interface Props {
 
 export function PagamentoForm({ open, onOpenChange, parcela }: Props) {
   const { profile, user } = useAuth();
+  const { isAdmin } = usePermissions();
   const registrar = useRegistrarPagamento();
   const { data: historico } = usePagamentosDaParcela(parcela?.id ?? null);
+  
+  const [pagamentoCorrigir, setPagamentoCorrigir] = useState<any>(null);
 
   const saldo = Number(parcela?.saldo ?? 0);
   const [valor, setValor] = useState(String(saldo));
@@ -125,19 +131,51 @@ export function PagamentoForm({ open, onOpenChange, parcela }: Props) {
             <div className="space-y-2">
               <p className="text-sm font-semibold">Pagamentos anteriores</p>
               {historico.map((pg) => (
-                <div key={pg.id} className="flex items-center justify-between p-2 rounded border text-sm">
-                  <div>
-                    <p className="font-medium">{fmt(Number(pg.valor_pago))}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(pg.data_pagamento), "dd/MM/yy HH:mm", { locale: ptBR })}
-                    </p>
+                <div key={pg.id} className="flex flex-col gap-1 p-2 rounded border text-sm relative">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium flex items-center gap-2">
+                        {fmt(Number(pg.valor_pago))}
+                        {pg.observacoes && pg.observacoes.includes("== CORREÇÃO ==") && (
+                          <Badge variant="secondary" className="text-[10px] ml-1 bg-yellow-500/15 text-yellow-600 border-none px-1 h-4">Ajustado</Badge>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(pg.data_pagamento), "dd/MM/yy HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="capitalize text-xs">
+                        {pg.forma_pagamento.replace("_", " ")}
+                      </Badge>
+                      {isAdmin && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 text-muted-foreground hover:text-primary"
+                          onClick={() => setPagamentoCorrigir(pg)}
+                          title="Corrigir este valor (Auditorado)"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <Badge variant="outline" className="capitalize text-xs">
-                    {pg.forma_pagamento.replace("_", " ")}
-                  </Badge>
+                  {pg.observacoes && (
+                    <div className="mt-1 pt-1 border-t text-[11px] text-muted-foreground whitespace-pre-wrap">
+                      {pg.observacoes}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
+            
+            <CorrigirPagamentoDialog 
+              open={!!pagamentoCorrigir} 
+              onOpenChange={(v) => !v && setPagamentoCorrigir(null)}
+              pagamento={pagamentoCorrigir}
+              parcela={parcela}
+            />
           </>
         )}
       </DialogContent>

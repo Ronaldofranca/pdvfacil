@@ -44,6 +44,7 @@ export interface ItemPedido {
   updated_at: string;
   produtos?: {
     custo: number | null;
+    imagem_url: string | null;
   } | null;
 }
 
@@ -86,7 +87,7 @@ export function usePedidoItens(pedidoId: string | null) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("itens_pedido")
-        .select("*, produtos(custo)")
+        .select("*, produtos(custo, imagem_url)")
         .eq("pedido_id", pedidoId!)
         .order("created_at");
       if (error) throw error;
@@ -230,6 +231,65 @@ export function useDeletePedido() {
       qc.invalidateQueries({ queryKey: ["pedidos"] });
       qc.invalidateQueries({ queryKey: ["pedidos_dashboard"] });
       toast.success("Pedido excluído.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useAtualizarPedido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: PedidoInput }) => {
+      const subtotalBruto = input.itens.reduce((s, i) => s + i.quantidade * i.preco_original, 0);
+      const total = input.itens.reduce((s, i) => s + i.subtotal, 0);
+
+      // 1. Atualiza mestre do pedido
+      const { error: pedidoErr } = await (supabase as any)
+        .from("pedidos")
+        .update({
+          cliente_id: input.cliente_id,
+          vendedor_id: input.vendedor_id,
+          data_prevista_entrega: input.data_prevista_entrega,
+          horario_entrega: input.horario_entrega ?? "",
+          subtotal: subtotalBruto,
+          desconto_total: input.desconto,
+          valor_total: total,
+          observacoes: input.observacoes ?? "",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+      if (pedidoErr) throw pedidoErr;
+
+      // 2. Remove itens antigos
+      const { error: delErr } = await (supabase as any)
+        .from("itens_pedido")
+        .delete()
+        .eq("pedido_id", id);
+      if (delErr) throw delErr;
+
+      // 3. Insere itens novos
+      const itensPayload = input.itens.map((i) => ({
+        pedido_id: id,
+        empresa_id: input.empresa_id,
+        produto_id: i.produto_id,
+        nome_produto: i.nome,
+        quantidade: i.quantidade,
+        preco_original: i.preco_original,
+        preco_pedido: i.preco_vendido,
+        desconto: i.desconto,
+        bonus: i.bonus,
+        subtotal: i.subtotal,
+      }));
+      const { error: itensErr } = await (supabase as any).from("itens_pedido").insert(itensPayload);
+      if (itensErr) throw itensErr;
+
+      return { id };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["pedidos_dashboard"] });
+      qc.invalidateQueries({ queryKey: ["itens_pedido"] });
+      toast.success("Pedido atualizado com sucesso!");
     },
     onError: (e: Error) => toast.error(e.message),
   });

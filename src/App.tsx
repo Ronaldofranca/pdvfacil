@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
+import { UserPreferencesProvider } from "@/contexts/UserPreferencesContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PortalProtectedRoute } from "@/components/portal/PortalProtectedRoute";
 import { PortalLayout } from "@/components/portal/PortalLayout";
@@ -43,6 +44,7 @@ import CaixaPage from "./pages/Caixa";
 import ImportacaoPage from "./pages/ImportacaoMassa";
 import ConciliacaoPage from "./pages/Conciliacao";
 import PedidosPage from "./pages/Pedidos";
+import DevolucoesPage from "./pages/Devolucoes";
 import AgendaEntregasPage from "./pages/AgendaEntregas";
 import NotFound from "./pages/NotFound";
 import CidadesAtendidasPublicaPage from "./pages/CidadesAtendidasPublica";
@@ -97,6 +99,7 @@ const MainRoutes = () => {
           <Route path="/pedidos" element={<PedidosPage />} />
           <Route path="/agenda-entregas" element={<AgendaEntregasPage />} />
           <Route path="/vendas" element={<VendasPage />} />
+          <Route path="/devolucoes" element={<DevolucoesPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/produtos" element={<ProdutosPage />} />
           <Route path="/estoque" element={<EstoquePage />} />
@@ -135,9 +138,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <OfflineProvider>
-              <MainRoutes />
-            </OfflineProvider>
+            <UserPreferencesProvider>
+              <OfflineProvider>
+                <MainRoutes />
+              </OfflineProvider>
+            </UserPreferencesProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

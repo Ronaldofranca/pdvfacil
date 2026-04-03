@@ -22,12 +22,16 @@ export default function PortalHomePage() {
     queryKey: ["portal-config", cliente?.empresa_id],
     enabled: !!cliente?.empresa_id,
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data: configData } = await (supabase as any)
         .from("configuracoes")
-        .select("portal_titulo, portal_mensagem_boas_vindas, portal_rodape, portal_mostrar_pedidos, portal_mostrar_parcelas, portal_mostrar_compras, portal_mostrar_pix, portal_mostrar_home, portal_mostrar_pagamentos, pix_chave, pix_tipo, pix_nome_recebedor, pix_cidade_recebedor")
+        .select("portal_titulo, portal_mensagem_boas_vindas, portal_rodape, portal_mostrar_pedidos, portal_mostrar_parcelas, portal_mostrar_compras, portal_mostrar_pix, portal_mostrar_home, portal_mostrar_pagamentos")
         .eq("empresa_id", cliente!.empresa_id)
         .maybeSingle();
-      return data;
+      
+      const { data: pixData } = await (supabase as any)
+        .rpc("get_pix_config", { _empresa_id: cliente!.empresa_id });
+
+      return { ...configData, ...(pixData?.[0] || {}) };
     },
   });
 

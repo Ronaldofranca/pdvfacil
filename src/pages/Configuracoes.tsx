@@ -14,9 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   User, Building2, Palette, ShoppingCart, CreditCard, CalendarDays,
-  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award, Sun, Moon, Monitor, Globe, FileDown
+  MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award, Sun, Moon, Monitor, Globe, FileDown,
+  ArrowUp, ArrowDown, LayoutDashboard, RefreshCw,
+  Eye, EyeOff, Columns, Square
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useUserPreferences } from "@/contexts/UserPreferencesContext";
+import { DashboardRenderer } from "@/components/dashboard/DashboardRenderer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEmpresas, useUpdateEmpresa } from "@/hooks/useEmpresas";
 import {
@@ -26,8 +30,6 @@ import {
   useRepresentantes, useAddRepresentante, useUpdateRepresentante, useDeleteRepresentante,
 } from "@/hooks/useConfiguracoes";
 import { getDistanceInKm, createColoredIcon } from "@/lib/geocoding";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +70,90 @@ const TABS = [
   { id: "notificacoes", label: "Notificações", icon: Bell },
   { id: "backup", label: "Backup", icon: HardDrive },
   { id: "seguranca", label: "Segurança", icon: Shield },
+  { id: "interface", label: "Minha Interface", icon: LayoutDashboard },
+];
+
+const PRESET_THEMES = [
+  { 
+    id: "default", 
+    label: "Esmeralda", 
+    primary: "#10b981",
+    background: undefined, 
+    card: undefined, 
+    border: undefined, 
+    foreground: undefined,
+    charts: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"]
+  },
+  { 
+    id: "ocean", 
+    label: "Oceano", 
+    primary: "#0ea5e9",
+    background: "#0f172a", 
+    card: "#1e293b", 
+    border: "#334155", 
+    foreground: "#f8fafc",
+    charts: ["#0ea5e9", "#6366f1", "#10b981", "#f43f5e", "#f59e0b"]
+  },
+  { 
+    id: "midnight", 
+    label: "Obsidiana", 
+    primary: "#8b5cf6",
+    background: "#09090b", 
+    card: "#18181b", 
+    border: "#27272a", 
+    foreground: "#fafafa",
+    charts: ["#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b"]
+  },
+  { 
+    id: "sunset", 
+    label: "Crepúsculo", 
+    primary: "#f43f5e",
+    background: "#180c10", 
+    card: "#2a141a", 
+    border: "#3f1e27", 
+    foreground: "#fff1f2",
+    charts: ["#f43f5e", "#fb923c", "#8b5cf6", "#0ea5e9", "#10b981"]
+  },
+  { 
+    id: "amber", 
+    label: "Âmbar", 
+    primary: "#f59e0b",
+    background: "#0c0a09", 
+    card: "#1c1917", 
+    border: "#292524", 
+    foreground: "#fafaf9",
+    charts: ["#f59e0b", "#d97706", "#b45309", "#78350f", "#451a03"]
+  },
+  { 
+    id: "forest", 
+    label: "Floresta", 
+    primary: "#22c55e",
+    background: "#052e16", 
+    card: "#064e3b", 
+    border: "#065f46", 
+    foreground: "#f0fdf4",
+    charts: ["#22c55e", "#10b981", "#84cc16", "#eab308", "#3b82f6"]
+  },
+  { 
+    id: "coffee", 
+    label: "Arábica", 
+    primary: "#92400e",
+    background: "#1a1310", 
+    card: "#261c17", 
+    border: "#3a2b24", 
+    foreground: "#fdf8f6",
+    charts: ["#92400e", "#b45309", "#d97706", "#f59e0b", "#451a03"]
+  },
+  { 
+    id: "slate", 
+    label: "Ardósia", 
+    primary: "#64748b",
+    background: "#020617", 
+    card: "#0f172a", 
+    border: "#1e293b", 
+    foreground: "#f1f5f9",
+    charts: ["#64748b", "#94a3b8", "#334155", "#475569", "#cbd5e1"]
+  },
 ];
 
 export default function ConfiguracoesPage() {
@@ -83,7 +169,28 @@ export default function ConfiguracoesPage() {
   const deleteForma = useDeleteFormaPagamento();
   const { data: cidades } = useCidadesAtendidas();
   const deleteCidade = useDeleteCidade();
-  const updateCidade = useUpdateCidade();
+
+  const { layout, visualConfig, updateLayout, updateVisualConfig, resetToDefault } = useUserPreferences();
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  const [previewScale, setPreviewScale] = useState(1);
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // Efeito para ajustar escala do preview dinamicamente
+  useEffect(() => {
+    if (!previewRef.current) return;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        const containerWidth = entry.contentRect.width;
+        const targetWidth = previewMode === "desktop" ? 1200 : 360;
+        setPreviewScale(containerWidth / targetWidth);
+      }
+    });
+
+    resizeObserver.observe(previewRef.current);
+    return () => resizeObserver.disconnect();
+  }, [previewMode]);
 
   const empresa = empresas?.[0];
 
@@ -152,7 +259,8 @@ export default function ConfiguracoesPage() {
       <Tabs defaultValue="perfil" className="w-full">
         <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
           {TABS.map((t) => {
-            const adminOnly = !["perfil"].includes(t.id);
+            const publicTabs = ["perfil", "interface"];
+            const adminOnly = !publicTabs.includes(t.id);
             if (adminOnly && !isAdmin) return null;
             return (
               <TabsTrigger key={t.id} value={t.id} className="gap-1.5 text-xs">
@@ -162,6 +270,291 @@ export default function ConfiguracoesPage() {
             );
           })}
         </TabsList>
+
+        {/* 0. MINHA INTERFACE (PERSONALIZAÇÃO INDIVIDUAL) */}
+        <TabsContent value="interface">
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            
+            {/* COLUNA DA ESQUERDA: EDITORES */}
+            <div className="w-full lg:w-[450px] space-y-6 shrink-0">
+              {/* EDITOR DE LAYOUT */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <LayoutDashboard className="h-4 w-4 text-primary" /> 
+                    Organizar Dashboard
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    {layout.map((item, index) => (
+                      <div 
+                        key={item.id} 
+                        className={cn(
+                          "flex items-center justify-between p-2.5 rounded-lg border bg-card/50 transition-all",
+                          !item.visible && "opacity-40 grayscale"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-0.5">
+                            <Button 
+                              variant="ghost" size="icon" className="h-5 w-5" disabled={index === 0}
+                              onClick={() => {
+                                const newLayout = [...layout];
+                                [newLayout[index - 1], newLayout[index]] = [newLayout[index], newLayout[index - 1]];
+                                updateLayout(newLayout.map((it, i) => ({ ...it, order: i })));
+                              }}
+                            >
+                              <ArrowUp className="h-3 w-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" size="icon" className="h-5 w-5" disabled={index === layout.length - 1}
+                              onClick={() => {
+                                const newLayout = [...layout];
+                                [newLayout[index], newLayout[index + 1]] = [newLayout[index + 1], newLayout[index]];
+                                updateLayout(newLayout.map((it, i) => ({ ...it, order: i })));
+                              }}
+                            >
+                              <ArrowDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="leading-tight">
+                            <p className="text-[13px] font-medium">{item.label}</p>
+                            <span className="text-[9px] text-muted-foreground uppercase">{item.type}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          {/* Botões de Coluna (Apenas para tipos que não sejam KPI do topo) */}
+                          {item.id !== "resumo-dia" && item.id !== "periodo-kpis" && (
+                            <div className="flex items-center gap-1 bg-muted/30 rounded-md p-1 mr-2 border border-border/50">
+                               <span className="text-[9px] font-bold text-muted-foreground mr-1 uppercase">Largura:</span>
+                               <Button 
+                                variant="ghost" size="icon" 
+                                className={cn("h-7 w-7 rounded-sm transition-all", (item.columns || 1) === 1 ? "bg-background shadow-sm text-primary border border-primary/20 scale-110" : "text-muted-foreground opacity-30 hover:opacity-100")}
+                                onClick={() => updateLayout(layout.map(it => it.id === item.id ? { ...it, columns: 1 } : it))}
+                                title="Largura Total (1 Coluna)"
+                              >
+                                <Square className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" size="icon" 
+                                className={cn("h-7 w-7 rounded-sm transition-all", item.columns === 2 ? "bg-background shadow-sm text-primary border border-primary/20 scale-110" : "text-muted-foreground opacity-30 hover:opacity-100")}
+                                onClick={() => updateLayout(layout.map(it => it.id === item.id ? { ...it, columns: 2 } : it))}
+                                title="Meia Largura (2 Colunas)"
+                              >
+                                <Columns className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+
+                          <Button 
+                            variant="ghost" size="icon"
+                            className={cn("h-8 w-8", item.visible ? "text-primary bg-primary/5" : "text-muted-foreground bg-muted/20 opacity-40")}
+                            onClick={() => updateLayout(layout.map(it => it.id === item.id ? { ...it, visible: !it.visible } : it))}
+                          >
+                            {item.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Button variant="outline" size="xs" className="w-full text-[10px] mt-2 h-7" onClick={resetToDefault}>
+                    <RefreshCw className="h-3 w-3 mr-2" /> Restaurar Padrão
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* EDITOR VISUAL */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Palette className="h-4 w-4 text-primary" />
+                    Cores Pessoais
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Galeria de Temas</Label>
+                      <Badge variant="outline" className="text-[9px] font-normal">Sincronizado</Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                       {PRESET_THEMES.map((t) => {
+                         const isSelected = (
+                           (t.id === "default" && !visualConfig.background && visualConfig.primary === t.primary) || 
+                           (visualConfig.background === t.background && visualConfig.primary === t.primary)
+                         );
+                         
+                         return (
+                           <Button 
+                             key={t.id} variant="outline" 
+                             className={cn(
+                               "h-auto flex-col items-start gap-2 p-2 relative overflow-hidden transition-all hover:border-primary/50",
+                               isSelected ? "border-primary ring-1 ring-primary/20 bg-primary/5 shadow-sm" : "bg-card/30"
+                             )}
+                             onClick={() => updateVisualConfig({
+                               primary: t.primary,
+                               background: t.background,
+                               card: t.card,
+                               border: t.border,
+                               foreground: t.foreground,
+                               charts: t.charts
+                             })}
+                           >
+                             <div className="flex items-center justify-between w-full mb-1">
+                               <span className="text-[11px] font-bold">{t.label}</span>
+                               {isSelected && <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />}
+                             </div>
+                             
+                             {/* Preview da Paleta */}
+                             <div className="flex items-center gap-1 w-full">
+                                <div className="h-6 w-full rounded-md flex overflow-hidden border border-border/50">
+                                   <div className="h-full w-1/3" style={{ background: t.primary }} />
+                                   <div className="h-full w-2/3" style={{ background: t.background || "#ffffff" }} />
+                                </div>
+                             </div>
+                             
+                             <div className="flex gap-1">
+                                {t.charts.slice(0, 4).map((c, i) => (
+                                  <div key={i} className="h-1.5 w-1.5 rounded-full" style={{ background: c }} />
+                                ))}
+                             </div>
+
+                             {isSelected && (
+                               <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
+                             )}
+                           </Button>
+                         );
+                       })}
+                    </div>
+                  </div>
+
+                  <Separator className="my-4" />
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Ajuste Manual</Label>
+                      <div className="h-[1px] w-full bg-border" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] text-muted-foreground">Cores do Sistema</Label>
+                        <div className="space-y-3 p-3 rounded-xl border bg-muted/20">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px]">Primária</span>
+                            <Input 
+                              type="color" className="w-8 h-8 p-0.5 cursor-pointer rounded-full border-none" 
+                              value={visualConfig.primary || "#10b981"} 
+                              onChange={(e) => updateVisualConfig({ ...visualConfig, primary: e.target.value })}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px]">Fundo</span>
+                            <Input 
+                              type="color" className="w-8 h-8 p-0.5 cursor-pointer rounded-full border-none" 
+                              value={visualConfig.background || "#ffffff"} 
+                              onChange={(e) => updateVisualConfig({ ...visualConfig, background: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-[10px] text-muted-foreground">Cores de Gráficos</Label>
+                        <div className="flex flex-wrap gap-2 p-3 rounded-xl border bg-muted/20 content-center h-full max-h-[82px] overflow-y-auto">
+                          {(visualConfig.charts || ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"]).map((color, i) => (
+                            <Input 
+                              key={i} type="color" className="w-6 h-6 p-0.5 cursor-pointer rounded-full border-none shadow-sm" 
+                              value={color} 
+                              onChange={(e) => {
+                                const newCharts = [...(visualConfig.charts || ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"])];
+                                newCharts[i] = e.target.value;
+                                updateVisualConfig({ ...visualConfig, charts: newCharts });
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button variant="ghost" size="xs" className="w-full text-[10px] text-muted-foreground hover:text-primary transition-colors" onClick={() => updateVisualConfig({})}>
+                       <RefreshCw className="h-3 w-3 mr-2" /> Limpar Customização
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* COLUNA DA DIREITA: PREVIEW (STICKY) */}
+            <div className="flex-1 w-full lg:sticky lg:top-24 space-y-4">
+               <div className="flex items-center justify-between px-1">
+                 <h3 className="text-sm font-bold flex items-center gap-2">
+                   <Monitor className="h-4 w-4 text-muted-foreground" /> Visualização em Tempo Real
+                 </h3>
+                 <div className="flex bg-muted p-1 rounded-lg">
+                    <Button 
+                      variant={previewMode === "desktop" ? "secondary" : "ghost"} 
+                      size="sm" className="h-7 px-3 text-[10px]"
+                      onClick={() => setPreviewMode("desktop")}
+                    >Desktop</Button>
+                    <Button 
+                      variant={previewMode === "mobile" ? "secondary" : "ghost"} 
+                      size="sm" className="h-7 px-3 text-[10px]"
+                      onClick={() => setPreviewMode("mobile")}
+                    >Mobile</Button>
+                 </div>
+               </div>
+
+               <div 
+                 className={cn(
+                   "relative border rounded-2xl bg-background shadow-2xl transition-all duration-500 mx-auto overflow-hidden",
+                   previewMode === "desktop" ? "w-full h-[600px]" : "w-[320px] h-[600px]"
+                 )}
+               >
+                  <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar bg-background">
+                    <div 
+                      ref={previewRef}
+                      className="origin-top-left pb-40"
+                      style={{ 
+                        width: previewMode === "desktop" ? "1200px" : "360px",
+                        transform: `scale(${previewScale})`,
+                        transformOrigin: "top left",
+                        height: "auto",
+                        minHeight: "100%",
+                        padding: previewMode === "desktop" ? "24px" : "12px",
+                      }}
+                    >
+                      <DashboardRenderer 
+                        layout={layout}
+                        visualConfig={visualConfig}
+                        data={null}
+                        periodoData={null}
+                        isPreview={true}
+                        showValues={true}
+                        isAdmin={true}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Overlay Indicativo */}
+                  <div className="absolute top-2 right-2 flex gap-1 pointer-events-none">
+                     <Badge variant="outline" className="bg-background/80 backdrop-blur-sm text-[9px] border-primary/20">LIVE PREVIEW</Badge>
+                  </div>
+               </div>
+
+               <div className="bg-muted/50 p-3 rounded-lg border border-dashed text-center">
+                  <p className="text-[11px] text-muted-foreground">
+                    O que você vê acima é exatamente como seu Dashboard ficará. <br/>
+                    As alterações são sincronizadas com sua conta em nuvem.
+                  </p>
+               </div>
+            </div>
+
+          </div>
+        </TabsContent>
 
         {/* 1. PERFIL */}
         <TabsContent value="perfil">
@@ -1023,7 +1416,6 @@ function CidadesMassaManager() {
   const { data: representantes } = useRepresentantes();
   const deleteCidade = useDeleteCidade();
   const addCidadesMassa = useAddCidadesMassa();
-  const updateCidade = useUpdateCidade();
 
   const [textoMassa, setTextoMassa] = useState("");
   const [representanteSelecionado, setRepresentanteSelecionado] = useState("nenhum");
