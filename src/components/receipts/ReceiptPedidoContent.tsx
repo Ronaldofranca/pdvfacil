@@ -40,9 +40,9 @@ export const ReceiptPedidoContent = forwardRef<HTMLDivElement, ReceiptPedidoCont
             color: isFinalizada ? "#ffffff" : isCancelada ? "#ffffff" : "#64748b",
             borderColor: "transparent"
           }}
-          className="h-5 px-2.5 text-[10px] inline-flex items-center justify-center whitespace-nowrap overflow-visible font-bold uppercase tracking-wider"
+          className="pt-[2px] pb-[4px] px-2.5 text-[10px] inline-flex items-center justify-center whitespace-nowrap overflow-visible font-bold uppercase tracking-wider"
         >
-          {label}
+          <span>{label}</span>
         </Badge>
       );
     };

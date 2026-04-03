@@ -142,6 +142,43 @@ export function useRegistrarPagamento() {
   });
 }
 
+export interface CorrigirPagamentoInput {
+  pagamento_id: string;
+  novo_valor: number;
+  motivo: string;
+  usuario_id: string;
+  usuario_nome: string;
+}
+
+export function useCorrigirPagamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CorrigirPagamentoInput) => {
+      // @ts-ignore (Função não gerada pelo CLI ainda)
+      const { data, error } = await supabase.rpc("fn_corrigir_pagamento", {
+        _pagamento_id: input.pagamento_id,
+        _novo_valor: input.novo_valor,
+        _motivo: input.motivo,
+        _usuario_id: input.usuario_id,
+        _usuario_nome: input.usuario_nome,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      if (data && data.success === false) {
+        toast.warning(data.message || "Nenhuma alteração de valor.");
+        return;
+      }
+      invalidateDashboardQueries(qc);
+      qc.invalidateQueries({ queryKey: ["parcelas"] });
+      qc.invalidateQueries({ queryKey: ["pagamentos"] });
+      toast.success("Recebimento corrigido com sucesso e auditoria registrada!");
+    },
+    onError: (e: Error) => toast.error(`Erro ao corrigir: ${e.message}`),
+  });
+}
+
 export interface PagamentoLoteInput {
   empresa_id: string;
   parcelas: ParcelaParaDistribuir[];

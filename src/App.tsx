@@ -44,6 +44,7 @@ import CaixaPage from "./pages/Caixa";
 import ImportacaoPage from "./pages/ImportacaoMassa";
 import ConciliacaoPage from "./pages/Conciliacao";
 import PedidosPage from "./pages/Pedidos";
+import DevolucoesPage from "./pages/Devolucoes";
 import AgendaEntregasPage from "./pages/AgendaEntregas";
 import NotFound from "./pages/NotFound";
 import CidadesAtendidasPublicaPage from "./pages/CidadesAtendidasPublica";
@@ -98,6 +99,7 @@ const MainRoutes = () => {
           <Route path="/pedidos" element={<PedidosPage />} />
           <Route path="/agenda-entregas" element={<AgendaEntregasPage />} />
           <Route path="/vendas" element={<VendasPage />} />
+          <Route path="/devolucoes" element={<DevolucoesPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
           <Route path="/produtos" element={<ProdutosPage />} />
           <Route path="/estoque" element={<EstoquePage />} />

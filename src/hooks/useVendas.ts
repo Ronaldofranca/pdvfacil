@@ -120,6 +120,22 @@ export function useVendas() {
   });
 }
 
+export function useVenda(id: string | null) {
+  return useQuery({
+    queryKey: ["venda", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vendas")
+        .select("*, clientes(nome)")
+        .eq("id", id!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useVendaItens(vendaId: string | null) {
   return useQuery({
     queryKey: ["itens_venda", vendaId],

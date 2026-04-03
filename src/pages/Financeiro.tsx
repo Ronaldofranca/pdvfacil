@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   DollarSign,
   Search,
@@ -13,6 +14,7 @@ import {
   Eye,
   ListChecks,
   X,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,15 +37,16 @@ import { DateRangeFilter } from "@/components/vendas/DateRangeFilter";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const STATUS_CFG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
+const STATUS_CFG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "warning" | "outline"; icon: any }> = {
   pendente: { label: "Pendente", variant: "secondary", icon: Clock },
-  parcial: { label: "Parcial", variant: "outline", icon: CircleDot },
+  parcial: { label: "Parcial", variant: "warning", icon: CircleDot },
   paga: { label: "Paga", variant: "default", icon: CheckCircle },
   vencida: { label: "Vencida", variant: "destructive", icon: AlertTriangle },
 };
 
 export default function FinanceiroPage() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const { canRegisterPagamento } = usePermissions();
   const [statusFilter, setStatusFilter] = useState("todas");
   const [search, setSearch] = useState("");
@@ -356,6 +359,17 @@ export default function FinanceiroPage() {
                         >
                           <Receipt className="w-3 h-3" /> Recibo
                         </Button>
+                        {(p.venda_id || (p as any).vendas?.id) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-xs text-primary"
+                            title="Ver Venda de Origem"
+                            onClick={() => navigate(`/vendas?viewVenda=${p.venda_id || (p as any).vendas?.id}`)}
+                          >
+                            <ShoppingBag className="w-3 h-3" /> Venda
+                          </Button>
+                        )}
                       </TableCell>
                     )}
                   </TableRow>
@@ -469,6 +483,16 @@ export default function FinanceiroPage() {
                 <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileParcela(null); setReciboState({ open: true, data: mobileParcela }); }}>
                   <Receipt className="w-4 h-4" /> Gerar recibo
                 </Button>
+
+                { (mobileParcela.venda_id || (mobileParcela as any).vendas?.id) && (
+                  <Button 
+                    className="w-full justify-start gap-2" 
+                    variant="outline" 
+                    onClick={() => navigate(`/vendas?viewVenda=${mobileParcela.venda_id || (mobileParcela as any).vendas?.id}`)}
+                  >
+                    <ShoppingBag className="w-4 h-4" /> Ver venda de origem
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -527,6 +551,15 @@ export default function FinanceiroPage() {
                 <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setDetailState({ open: false }); setReciboState({ open: true, data: detailState.data }); }}>
                   <Receipt className="w-4 h-4" /> Gerar recibo
                 </Button>
+                {(detailState.data.venda_id || (detailState.data as any).vendas?.id) && (
+                  <Button 
+                    className="w-full justify-start gap-2" 
+                    variant="outline" 
+                    onClick={() => navigate(`/vendas?viewVenda=${detailState.data.venda_id || (detailState.data as any).vendas?.id}`)}
+                  >
+                    <ShoppingBag className="w-4 h-4" /> Ver venda de origem
+                  </Button>
+                )}
               </div>
             </div>
           )}

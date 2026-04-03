@@ -80,8 +80,17 @@ export function useDashboardData() {
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
 
-      const totalVendasDia = vendasHoje?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
+      const totalVendasDiaBruto = vendasHoje?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
       const qtdVendasDia = vendasHoje?.length ?? 0;
+
+      // Devoluções do dia
+      const { data: devHoje } = await supabase
+        .from("devolucoes")
+        .select("valor_total_devolvido")
+        .gte("data_devolucao", hjStart)
+        .lt("data_devolucao", hjEnd);
+      const totalDevolvidoHoje = devHoje?.reduce((s, d) => s + Number(d.valor_total_devolvido), 0) ?? 0;
+      const totalVendasDia = totalVendasDiaBruto - totalDevolvidoHoje;
 
       // Lucro do dia — use pre-computed total_profit (immutable historical snapshot)
       const lucroDia = vendasHoje?.reduce((s, v) => s + Number((v as any).total_profit ?? 0), 0) ?? 0;
@@ -151,6 +160,7 @@ export function useDashboardData() {
         vendasRecentes: vendasHoje?.slice(0, 8) ?? [],
         parcelasVencidas: vencidas?.slice(0, 10) ?? [],
         qtdCanceladasHoje, totalCanceladoHoje,
+        totalDevolvidoHoje,
       };
     },
     refetchInterval: 60000,
@@ -175,7 +185,16 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
 
-      const totalVendas = vendas?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
+      const totalVendasBruto = vendas?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
+
+      // Devoluções do período
+      const { data: devPeriodo } = await supabase
+        .from("devolucoes")
+        .select("valor_total_devolvido")
+        .gte("data_devolucao", inicio)
+        .lt("data_devolucao", fim);
+      const totalDevolvidoPeriodo = devPeriodo?.reduce((s, d) => s + Number(d.valor_total_devolvido), 0) ?? 0;
+      const totalVendas = totalVendasBruto - totalDevolvidoPeriodo;
 
       // Vendas canceladas no período
       const { data: canceladasPeriodo } = await supabase
@@ -299,6 +318,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         topProdutos, vendasPorDia, rankingVendedores: vendedoresComMeta,
         topClientes, recebimentosPorForma, vendedorNames,
         qtdCanceladas, totalCancelado,
+        totalDevolvidoPeriodo,
       };
     },
     refetchInterval: 120000,

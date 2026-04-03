@@ -52,9 +52,9 @@ export const ReceiptParcelaContent = forwardRef<HTMLDivElement, ReceiptParcelaCo
             color: isPaga ? "#ffffff" : isVencida ? "#ffffff" : isParcial ? "#854d0e" : "#64748b",
             borderColor: isParcial ? "#eab308" : "transparent"
           }}
-          className="py-1 px-3 text-[10px] items-center justify-center whitespace-nowrap overflow-visible font-bold uppercase tracking-wider"
+          className="pt-[2px] pb-[4px] px-3 text-[10px] items-center justify-center whitespace-nowrap overflow-visible font-bold uppercase tracking-wider"
         >
-          {label}
+          <span>{label}</span>
         </Badge>
       );
     };
