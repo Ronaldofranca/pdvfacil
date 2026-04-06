@@ -3669,6 +3669,7 @@ export type Database = {
           latitude: number
           longitude: number
           representante_cor: string
+          representante_email: string
           representante_nome: string
           representante_telefone: string
         }[]
