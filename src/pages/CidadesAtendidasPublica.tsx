@@ -48,6 +48,7 @@ export default function CidadesAtendidasPublica() {
           representantes: item.representante_nome ? {
             nome: item.representante_nome,
             telefone: item.representante_telefone,
+            email: item.representante_email,
             cor: item.representante_cor
           } : null
         }));
