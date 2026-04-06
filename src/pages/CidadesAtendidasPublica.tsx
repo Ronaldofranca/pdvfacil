@@ -290,6 +290,7 @@ export default function CidadesAtendidasPublica() {
                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: rep.cor || "#10b981" }} />
                                <span>Rep: {rep.nome}</span>
+                               {rep.email && <span className="text-blue-600">· {rep.email}</span>}
                              </div>
                              {rep.telefone && (
                                <a 
