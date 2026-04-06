@@ -243,6 +243,9 @@ export default function CidadesAtendidasPublica() {
                       <div className="flex-1">
                         <p className="font-semibold text-sm">{proximaDetectada.representantes.nome}</p>
                         <p className="text-xs text-muted-foreground">{proximaDetectada.representantes.telefone || "Telefone não informado"}</p>
+                        {proximaDetectada.representantes.email && (
+                          <a href={`mailto:${proximaDetectada.representantes.email}`} className="text-xs text-blue-600 hover:underline">{proximaDetectada.representantes.email}</a>
+                        )}
                       </div>
                       {proximaDetectada.representantes.telefone && (
                         <Button size="sm" className="gap-2" onClick={() => window.open(`https://wa.me/55${String(proximaDetectada.representantes.telefone).replace(/\D/g, '')}`, '_blank')}>
