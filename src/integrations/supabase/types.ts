@@ -491,6 +491,74 @@ export type Database = {
           },
         ]
       }
+      cliente_merges: {
+        Row: {
+          created_at: string
+          details: Json | null
+          empresa_id: string
+          id: string
+          merged_at: string
+          merged_by: string
+          reason: string | null
+          source_cliente_id: string | null
+          source_cliente_name: string
+          target_cliente_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          empresa_id: string
+          id?: string
+          merged_at?: string
+          merged_by: string
+          reason?: string | null
+          source_cliente_id?: string | null
+          source_cliente_name: string
+          target_cliente_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          empresa_id?: string
+          id?: string
+          merged_at?: string
+          merged_by?: string
+          reason?: string | null
+          source_cliente_id?: string | null
+          source_cliente_name?: string
+          target_cliente_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_merges_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_merges_merged_by_fkey"
+            columns: ["merged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_merges_source_cliente_id_fkey"
+            columns: ["source_cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_merges_target_cliente_id_fkey"
+            columns: ["target_cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_telefones: {
         Row: {
           cliente_id: string
@@ -555,8 +623,12 @@ export type Database = {
           empresa_id: string
           estado: string
           id: string
+          is_merged: boolean | null
           latitude: number | null
           longitude: number | null
+          merged_at: string | null
+          merged_by: string | null
+          merged_into_id: string | null
           nome: string
           observacoes: string
           permitir_fiado: boolean
@@ -583,8 +655,12 @@ export type Database = {
           empresa_id: string
           estado?: string
           id?: string
+          is_merged?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_id?: string | null
           nome: string
           observacoes?: string
           permitir_fiado?: boolean
@@ -611,8 +687,12 @@ export type Database = {
           empresa_id?: string
           estado?: string
           id?: string
+          is_merged?: boolean | null
           latitude?: number | null
           longitude?: number | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_into_id?: string | null
           nome?: string
           observacoes?: string
           permitir_fiado?: boolean
@@ -640,6 +720,20 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_merged_by_fkey"
+            columns: ["merged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
         ]
@@ -1658,6 +1752,7 @@ export type Database = {
         Row: {
           created_at: string
           devolucao_id: string
+          empresa_id: string
           id: string
           item_venda_id: string
           produto_id: string
@@ -1668,6 +1763,7 @@ export type Database = {
         Insert: {
           created_at?: string
           devolucao_id: string
+          empresa_id: string
           id?: string
           item_venda_id: string
           produto_id: string
@@ -1678,6 +1774,7 @@ export type Database = {
         Update: {
           created_at?: string
           devolucao_id?: string
+          empresa_id?: string
           id?: string
           item_venda_id?: string
           produto_id?: string
@@ -1691,6 +1788,13 @@ export type Database = {
             columns: ["devolucao_id"]
             isOneToOne: false
             referencedRelation: "devolucoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_devolucao_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
           {
@@ -3211,6 +3315,7 @@ export type Database = {
           empresa_id: string
           id: string
           idempotency_key: string | null
+          is_retroativa: boolean | null
           motivo_cancelamento: string | null
           observacoes: string
           pagamentos: Json
@@ -3232,6 +3337,7 @@ export type Database = {
           empresa_id: string
           id?: string
           idempotency_key?: string | null
+          is_retroativa?: boolean | null
           motivo_cancelamento?: string | null
           observacoes?: string
           pagamentos?: Json
@@ -3253,6 +3359,7 @@ export type Database = {
           empresa_id?: string
           id?: string
           idempotency_key?: string | null
+          is_retroativa?: boolean | null
           motivo_cancelamento?: string | null
           observacoes?: string
           pagamentos?: Json
@@ -3517,23 +3624,42 @@ export type Database = {
         }
         Returns: Json
       }
-      fn_finalizar_venda_atomica: {
-        Args: {
-          _cliente_id: string
-          _crediario?: Json
-          _data_venda: string
-          _desconto_total: number
-          _empresa_id: string
-          _idempotency_key: string
-          _itens: Json
-          _observacoes: string
-          _pagamentos: Json
-          _subtotal: number
-          _total: number
-          _vendedor_id: string
-        }
-        Returns: Json
-      }
+      fn_finalizar_venda_atomica:
+        | {
+            Args: {
+              _cliente_id: string
+              _crediario?: Json
+              _data_venda: string
+              _desconto_total: number
+              _empresa_id: string
+              _idempotency_key: string
+              _itens: Json
+              _observacoes: string
+              _pagamentos: Json
+              _subtotal: number
+              _total: number
+              _vendedor_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _cliente_id: string
+              _crediario?: Json
+              _data_venda: string
+              _desconto_total: number
+              _empresa_id: string
+              _idempotency_key: string
+              _is_retroativa?: boolean
+              _itens: Json
+              _observacoes: string
+              _pagamentos: Json
+              _subtotal: number
+              _total: number
+              _vendedor_id: string
+            }
+            Returns: Json
+          }
       fn_get_cidades_publicas: {
         Args: never
         Returns: {
@@ -3547,6 +3673,17 @@ export type Database = {
           representante_telefone: string
         }[]
       }
+      fn_get_merge_preview: { Args: { _cliente_id: string }; Returns: Json }
+      fn_merge_clientes: {
+        Args: {
+          _empresa_id: string
+          _merged_by: string
+          _reason: string
+          _source_id: string
+          _target_id: string
+        }
+        Returns: Json
+      }
       fn_registrar_devolucao: {
         Args: {
           _cliente_id: string
@@ -3557,7 +3694,7 @@ export type Database = {
           _tipo_impacto?: string
           _venda_id: string
         }
-        Returns: string
+        Returns: Json
       }
       get_my_cliente_id: { Args: never; Returns: string }
       get_my_empresa_id: { Args: never; Returns: string }
