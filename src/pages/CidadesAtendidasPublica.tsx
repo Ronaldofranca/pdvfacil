@@ -151,6 +151,7 @@ export default function CidadesAtendidasPublica() {
 
       const rep = c.representantes;
       const whatsappBtn = rep?.telefone ? `<a href="https://wa.me/55${String(rep.telefone).replace(/\D/g, '')}" target="_blank" style="display:block; background:#25D366; color:white; padding:4px 8px; font-size:12px; border-radius:4px; text-decoration:none; margin-top:4px;">WhatsApp</a>` : '';
+      const emailLink = rep?.email ? `<a href="mailto:${rep.email}" style="display:block; font-size:11px; color:#3b82f6; margin-top:2px;">${rep.email}</a>` : '';
       
       const popupHtml = `
         <div style="text-align:center; min-width:140px;">
@@ -158,6 +159,8 @@ export default function CidadesAtendidasPublica() {
           ${rep ? `
             <div style="margin-bottom:8px;">
               <p style="font-size:12px; font-weight:600; margin:0;">${rep.nome}</p>
+              ${rep.telefone ? `<p style="font-size:11px; color:#666; margin:2px 0 0;">${rep.telefone}</p>` : ''}
+              ${emailLink}
               ${whatsappBtn}
             </div>
           ` : `
