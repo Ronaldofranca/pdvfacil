@@ -239,7 +239,7 @@ export default function FinanceiroPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              {!isMobile && canRegisterPagamento && <TableHead className="w-10" />}
+              {canRegisterPagamento && <TableHead className="w-10" />}
               <TableHead>Nº</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Vencimento</TableHead>
@@ -295,8 +295,8 @@ export default function FinanceiroPage() {
                     tabIndex={isMobile ? 0 : undefined}
                     aria-label={isMobile ? `Abrir ações do fiado ${p.numero}` : undefined}
                   >
-                    {!isMobile && canRegisterPagamento && (
-                      <TableCell>
+                    {canRegisterPagamento && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         {!isPaga && (
                           <Checkbox
                             checked={isSelected}
@@ -475,9 +475,23 @@ export default function FinanceiroPage() {
                 </Button>
 
                 {canRegisterPagamento && mobileParcela.status !== "paga" && (
-                  <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileParcela(null); setPagamentoState({ open: true, data: mobileParcela }); }}>
-                    <CreditCard className="w-4 h-4" /> Registrar recebimento
-                  </Button>
+                  <>
+                    <Button 
+                      className="w-full justify-start gap-2" 
+                      variant={selectedIds.has(mobileParcela.id) ? "secondary" : "outline"} 
+                      onClick={() => { 
+                        toggleSelect(mobileParcela.id, mobileParcela.status);
+                        setMobileParcela(null);
+                      }}
+                    >
+                      <ListChecks className="w-4 h-4 text-primary" /> 
+                      {selectedIds.has(mobileParcela.id) ? "Remover da seleção" : "Selecionar para pagamento em lote"}
+                    </Button>
+
+                    <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileParcela(null); setPagamentoState({ open: true, data: mobileParcela }); }}>
+                      <CreditCard className="w-4 h-4" /> Registrar recebimento único
+                    </Button>
+                  </>
                 )}
 
                 <Button className="w-full justify-start gap-2" variant="outline" onClick={() => { setMobileParcela(null); setReciboState({ open: true, data: mobileParcela }); }}>

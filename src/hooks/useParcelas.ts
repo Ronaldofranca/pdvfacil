@@ -31,24 +31,37 @@ export function useParcelas(
       } else if (filters?.status === "vencida") {
         // Inclui tanto status=vencida quanto pendente/parcial com vencimento < hoje
         q = q.or(`status.eq.vencida,and(status.in.(pendente,parcial),vencimento.lt.${todayISO})`);
+      } else if (filters?.status === "paga") {
+        // Se pedir "paga", incluímos também as "parcialmente pagas" para ver recebimentos
+        q = q.in("status", ["paga", "parcial"] as any[]);
       } else if (filters?.status && filters.status !== "todas") {
         q = q.eq("status", filters.status as any);
       }
 
       // ── Date range filter ──────────────────────────────────────────────────
-      // Usamos format(date, "yyyy-MM-dd") em vez de toISOString().split("T")[0]
-      // porque toISOString() converte para UTC — no fuso UTC-3 do Brasil,
-      // endOfDay(14/03) às 23:59 local vira 15/03T02:59 UTC, fazendo endISO = "2026-03-15".
-      // format() usa o fuso local e produz a data correta sempre.
       if (filters?.startDate || filters?.endDate) {
         const startISO = filters?.startDate ? format(filters.startDate, "yyyy-MM-dd") : undefined;
         const endISO   = filters?.endDate   ? format(filters.endDate,   "yyyy-MM-dd") : undefined;
 
-        const isPaga = filters?.status === "paga";
-        const dateField = isPaga ? "data_pagamento" : "vencimento";
+        // Versão completa com fuso horário local para campos TIMESTAMPTZ (data_pagamento)
+        const startFullISO = filters?.startDate ? format(filters.startDate, "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined;
+        const endFullISO   = filters?.endDate   ? format(filters.endDate,   "yyyy-MM-dd'T'HH:mm:ssXXX") : undefined;
 
-        if (startISO) q = q.gte(dateField, startISO);
-        if (endISO)   q = q.lte(dateField, endISO);
+        if (filters?.status === "todas" || !filters?.status) {
+          // Se "todas" estiver selecionado, mostramos o que vence no período OU o que foi pago no período.
+          // Isso garante que p usuário veja a origem do valor "Recebido" no card.
+          const vPart = `and(vencimento.gte.${startISO ?? '1900-01-01'},vencimento.lte.${endISO ?? '2100-01-01'})`;
+          const pPart = `and(data_pagamento.gte.${startFullISO ?? '1900-01-01'},data_pagamento.lte.${endFullISO ?? '2100-01-01'})`;
+          q = q.or(`${vPart},${pPart}`);
+        } else {
+          const isPagaOuParcialFiltrada = filters?.status === "paga"; // Agora o status "paga" inclui parcial
+          const dateField = isPagaOuParcialFiltrada ? "data_pagamento" : "vencimento";
+          const s = isPagaOuParcialFiltrada ? startFullISO : startISO;
+          const e = isPagaOuParcialFiltrada ? endFullISO : endISO;
+
+          if (s) q = q.gte(dateField, s);
+          if (e) q = q.lte(dateField, e);
+        }
       }
 
       const { data, error } = await q;
@@ -255,10 +268,10 @@ export function usePagamentos(filters?: { startDate?: Date; endDate?: Date }) {
       let q = supabase.from("pagamentos").select("*, parcelas(*, clientes(nome))");
 
       if (filters?.startDate) {
-        q = q.gte("data_pagamento", filters.startDate.toISOString());
+        q = q.gte("data_pagamento", format(filters.startDate, "yyyy-MM-dd'T'HH:mm:ssXXX"));
       }
       if (filters?.endDate) {
-        q = q.lte("data_pagamento", filters.endDate.toISOString());
+        q = q.lte("data_pagamento", format(filters.endDate, "yyyy-MM-dd'T'HH:mm:ssXXX"));
       }
 
       const { data, error } = await q.order("data_pagamento", { ascending: false });

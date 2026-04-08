@@ -327,6 +327,11 @@ export default function PedidosPage() {
         onOpenChange={handlePdvClose}
         initialCart={pdvState.cart}
         initialClienteId={pdvState.clienteId}
+        onFinalize={() => {
+          if (pdvState.pedidoId) {
+            atualizarStatus.mutate({ id: pdvState.pedidoId, status: "convertido_em_venda" });
+          }
+        }}
       />
 
       {/* Recibo modal */}

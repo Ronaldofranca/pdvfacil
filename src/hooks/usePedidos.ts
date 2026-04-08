@@ -68,7 +68,13 @@ export function usePedidos(filtros?: { status?: StatusPedido; cliente_id?: strin
         .from("pedidos")
         .select("*, clientes(nome, telefone, cidade, bairro, estado, latitude, longitude, rua, cep)")
         .order("data_prevista_entrega", { ascending: true });
-      if (filtros?.status) q = q.eq("status", filtros.status);
+      
+      if (filtros?.status) {
+        q = q.eq("status", filtros.status);
+      } else {
+        // Por padrão, não exibe pedidos que já foram convertidos em venda na lista geral
+        q = q.neq("status", "convertido_em_venda");
+      }
       if (filtros?.cliente_id) q = q.eq("cliente_id", filtros.cliente_id);
       if (filtros?.data_inicio) q = q.gte("data_prevista_entrega", filtros.data_inicio);
       if (filtros?.data_fim) q = q.lte("data_prevista_entrega", filtros.data_fim);

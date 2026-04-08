@@ -1,5 +1,5 @@
-import { render } from "@testing-library/react"
-import { screen } from "@testing-library/dom"
+import { render } from "@testing-library/react";
+import { screen } from "@testing-library/dom";
 import { describe, expect, it, vi } from "vitest";
 import { ReceiptVendaContent } from "@/components/receipts/ReceiptVendaContent";
 import { DEFAULT_RECEIPT_CONFIG } from "@/lib/receiptConfig";

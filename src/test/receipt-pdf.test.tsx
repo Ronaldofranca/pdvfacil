@@ -1,5 +1,5 @@
 import { createRef } from "react";
-import { render } from "@testing-library/react"
+import { render } from "@testing-library/react";
 import { screen } from "@testing-library/dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReceiptDialogShell } from "@/components/receipts/ReceiptDialogShell";

@@ -65,10 +65,25 @@ export function DashboardRenderer({
       <div key="resumo-dia">
         <h2 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Resumo de Hoje</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KPICard icon={ShoppingCart} label="Vendas" value={data ? v(fmtR(data.totalVendasDia)) : "—"} sub={data ? `${data.qtdVendasDia} venda(s)` : ""} color="text-primary" loading={isLoading} />
+          <KPICard 
+            icon={ShoppingCart} 
+            label="Vendas" 
+            value={data ? v(fmtR(data.totalVendasDia)) : "—"} 
+            sub={data ? `${data.qtdVendasDia} venda(s) líq.` : ""} 
+            color="text-primary" 
+            loading={isLoading} 
+            title="Total de vendas feitas hoje, subtraindo devoluções de vendas de hoje"
+          />
           <KPICard icon={TrendingUp} label="Lucro Estimado" value={data ? v(fmtR(data.lucroDia)) : "—"} color="text-primary" loading={isLoading} />
           <KPICard icon={CreditCard} label="A Receber Hoje" value={data ? v(fmtR(data.totalAReceber)) : "—"} sub={data ? `${data.qtdPendentes} parcela(s)` : ""} loading={isLoading} />
-          <KPICard icon={DollarSign} label="Recebido Hoje" value={data ? v(fmtR(data.recebidoHoje)) : "—"} color="text-primary" loading={isLoading} />
+          <KPICard 
+            icon={DollarSign} 
+            label="Recebido Hoje" 
+            value={data ? v(fmtR(data.recebidoHoje)) : "—"} 
+            sub={data ? `Vendas: ${fmtR(data.recebidoAVista)} | Fiados: ${fmtR(data.recebidoParcelas)}` : ""}
+            color="text-primary" 
+            loading={isLoading} 
+          />
           <KPICard icon={AlertTriangle} label="Parcelas Vencidas" value={data ? v(fmtR(data.totalVencido)) : "—"} sub={data ? `${data.qtdVencidas} parcela(s)` : ""} color="text-destructive" loading={isLoading} />
         </div>
       </div>
@@ -196,9 +211,16 @@ export function DashboardRenderer({
           )}
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KPICard icon={ShoppingCart} label="Vendas Período" value={periodoData ? v(fmtR(periodoData.totalVendas)) : "—"} sub={periodoData ? `${periodoData.qtdVendas} venda(s)` : ""} color="text-primary" loading={isPeriodoLoading} />
-          <KPICard icon={TrendingUp} label="Lucro Período" value={periodoData ? v(fmtR(periodoData.lucroPeriodo)) : "—"} color="text-primary" loading={isPeriodoLoading} />
-          <KPICard icon={DollarSign} label="Recebido Total" value={periodoData ? v(fmtR(periodoData.totalRecebido)) : "—"} color="text-primary" loading={isPeriodoLoading} />
+          <KPICard icon={ShoppingCart} label="Vendas Período" value={periodoData ? v(fmtR(periodoData.totalVendas)) : "—"} sub={periodoData ? `${periodoData.qtdVendas} venda(s) líq.` : ""} color="text-primary" loading={isPeriodoLoading} title="Total de vendas no período, subtraindo apenas devoluções de vendas deste período" />
+          <KPICard 
+            icon={TrendingUp} 
+            label="Lucro Período" 
+            value={periodoData ? v(fmtR(periodoData.lucroPeriodo)) : "—"} 
+            sub={periodoData?.lucroPeriodo === 0 && periodoData?.totalVendas > 0 ? "Sem dados de custo" : ""}
+            color="text-primary" 
+            loading={isPeriodoLoading} 
+          />
+          <KPICard icon={DollarSign} label="Recebido Total" value={periodoData ? v(fmtR(periodoData.totalRecebido)) : "—"} color="text-primary" loading={isPeriodoLoading} title="Total de entradas financeiras no período (Vendas à vista + recebimento de fiados)" />
           <KPICard icon={PackageX} label="Alerta Estoque" value={data ? `${data.estoqueBaixo.length}` : "—"} sub={`${data?.estoqueSemEstoque ?? 0} sem estoque`} color="text-destructive" loading={isLoading} />
           <KPICard icon={XCircle} label="Vendas Canc." value={periodoData ? v(fmtR(periodoData.totalCancelado ?? 0)) : "—"} sub={periodoData ? `${periodoData.qtdCanceladas ?? 0} cancelada(s)` : ""} color="text-destructive" loading={isPeriodoLoading} />
         </div>

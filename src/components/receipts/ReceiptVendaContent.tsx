@@ -137,6 +137,12 @@ export const ReceiptVendaContent = forwardRef<HTMLDivElement, ReceiptVendaConten
             <p className="opacity-75" style={{ fontSize: `${rc.recibo_tamanho_fonte_data}px` }}>
               {format(dataVenda, "dd/MM/yyyy HH:mm", { locale: ptBR })}
             </p>
+            {venda.is_retroativa && (
+              <div className="mt-1 flex flex-col items-end gap-0.5">
+                <Badge variant="outline" className="text-[8px] px-1 py-0 h-4 border-orange-500 text-orange-600 font-bold bg-orange-50">RETROATIVA</Badge>
+                <p className="text-[8px] opacity-40">Lançada em: {venda.created_at ? format(new Date(venda.created_at), "dd/MM/yy HH:mm", { locale: ptBR }) : "Desconhecido"}</p>
+              </div>
+            )}
             <p className="text-[8px] opacity-30 mt-1">V2.1</p>
           </div>
         </div>

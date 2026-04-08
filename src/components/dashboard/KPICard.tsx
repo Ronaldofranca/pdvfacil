@@ -9,11 +9,12 @@ interface KPICardProps {
   sub?: string;
   color?: string;
   loading?: boolean;
+  title?: string;
 }
 
-export function KPICard({ icon: Icon, label, value, sub, color, loading }: KPICardProps) {
+export function KPICard({ icon: Icon, label, value, sub, color, loading, title }: KPICardProps) {
   return (
-    <Card className="overflow-hidden transition-all hover:shadow-md">
+    <Card className="overflow-hidden transition-all hover:shadow-md" title={title}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-1">
           <Icon className={cn("w-4 h-4", color ?? "text-muted-foreground")} />

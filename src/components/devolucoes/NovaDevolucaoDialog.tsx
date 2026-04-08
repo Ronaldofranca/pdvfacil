@@ -2,13 +2,13 @@ import { useState, useMemo, useEffect } from "react";
 import { Package, Search, Calendar, ChevronRight, User, Package2, RefreshCw, ArrowRight, CreditCard, AlertTriangle, Trash2, ShoppingCart, Printer } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useVendas, useVendaItens, useVendaParcelas } from "@/hooks/useVendas";
 import { useRegistrarDevolucao, useItensDevolvidosTotal } from "@/hooks/useDevolucoes";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
@@ -32,6 +32,7 @@ export function NovaDevolucaoDialog({ open, onOpenChange, initialVendaId }: Nova
   const [searchVenda, setSearchVenda] = useState("");
   const [selectedVendaId, setSelectedVendaId] = useState<string | null>(null);
   const [successResult, setSuccessResult] = useState<any>(null);
+  const [successItens, setSuccessItens] = useState<any[]>([]);
   const [reciboCreditoOpen, setReciboCreditoOpen] = useState(false);
 
   useEffect(() => {
@@ -111,18 +112,18 @@ export function NovaDevolucaoDialog({ open, onOpenChange, initialVendaId }: Nova
   const handleConfirm = async () => {
     if (!selectedVenda || !profile?.empresa_id) return;
     
-    const { data: devolucoes, error: devError } = await supabase
-      .from("devolucoes")
+    const { data: devolucoes, error: devError } = await (supabase
+      .from("devolucoes" as any)
       .select("id")
-      .eq("venda_id", selectedVenda.id);
+      .eq("venda_id", selectedVenda.id) as any);
     
     if (devError) throw devError;
     const devIds = devolucoes?.map(d => d.id) || [];
 
-    const { data: itens, error: itemError } = await supabase
-      .from("itens_devolucao")
+    const { data: itens, error: itemError } = await (supabase
+      .from("itens_devolucao" as any)
       .select("item_venda_id, produto_id, quantidade")
-      .in("devolucao_id", devIds);
+      .in("devolucao_id", devIds) as any);
     
     if (itemError) throw itemError;
 
@@ -175,6 +176,14 @@ export function NovaDevolucaoDialog({ open, onOpenChange, initialVendaId }: Nova
         tipo_impacto: tipoImpacto,
         itens: itensParaDevolver
       });
+      
+      // Mapear itens para o formato do recibo (incluindo nome do produto)
+      const itensComNome = itensParaDevolver.map(i => ({
+        ...i,
+        produtos: { nome: itensVenda?.find(iv => iv.id === i.item_venda_id)?.nome_produto || "Produto" }
+      }));
+      
+      setSuccessItens(itensComNome);
       setSuccessResult(result);
     } catch (error) {
       toast.error("Erro inesperado ao processar devolução");
@@ -194,7 +203,7 @@ export function NovaDevolucaoDialog({ open, onOpenChange, initialVendaId }: Nova
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if(!o) resetForm(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2">
+        <DialogHeader className="p-6 pb-2 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <RefreshCw className="w-5 h-5 text-primary" />
             Registrar Devolução
@@ -236,63 +245,69 @@ export function NovaDevolucaoDialog({ open, onOpenChange, initialVendaId }: Nova
             <ReciboCredito 
               open={reciboCreditoOpen}
               onOpenChange={setReciboCreditoOpen}
-              devolucao={{ id: successResult?.devolucao_id }}
+              devolucao={{ 
+                id: successResult?.devolucao_id,
+                itens_devolucao: successItens,
+                valor_total_devolvido: successResult?.valor_devolvido
+              }}
               cliente={(selectedVenda as any)?.clientes}
               valorCredito={successResult?.valor_credito_gerado ?? 0}
             />
           </div>
         ) : step === 1 ? (
-          <div className="p-6 space-y-4">
-            <div className="space-y-2">
-              <Label>Buscar Venda</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  placeholder="ID da venda ou nome do cliente..."
-                  className="pl-9"
-                  value={searchVenda}
-                  onChange={(e) => setSearchVenda(e.target.value)}
-                  autoFocus
-                />
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <Label>Buscar Venda</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="ID da venda ou nome do cliente..."
+                    className="pl-9"
+                    value={searchVenda}
+                    onChange={(e) => setSearchVenda(e.target.value)}
+                    autoFocus
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              {filteredVendas.length > 0 ? (
-                <div className="rounded-md border divide-y">
-                  {filteredVendas.map(v => (
-                    <button
-                      key={v.id}
-                      className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors text-left"
-                      onClick={() => handleSelectVenda(v.id)}
-                    >
-                      <div>
-                        <p className="font-semibold text-sm">{(v as any).clientes?.nome ?? "Venda sem cliente"}</p>
-                        <p className="text-xs text-muted-foreground font-mono">#{v.id.slice(0, 8)} • {format(new Date(v.data_venda), "dd/MM/yy HH:mm")}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-sm">{fmt(Number(v.total))}</p>
-                        <Badge variant={v.status === 'finalizada' ? 'default' : 'outline'} className="text-[10px] h-4">
-                          {v.status}
-                        </Badge>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : searchVenda.length > 2 ? (
-                <p className="text-center text-sm text-muted-foreground py-4">Nenhuma venda encontrada.</p>
-              ) : (
-                <div className="py-8 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                  <ShoppingCart className="w-8 h-8 opacity-20" />
-                  <p className="text-sm">Digite acima para localizar a venda original.</p>
-                </div>
-              )}
+              <div className="space-y-2">
+                {filteredVendas.length > 0 ? (
+                  <div className="rounded-md border divide-y">
+                    {filteredVendas.map(v => (
+                      <button
+                        key={v.id}
+                        className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors text-left"
+                        onClick={() => handleSelectVenda(v.id)}
+                      >
+                        <div>
+                          <p className="font-semibold text-sm">{(v as any).clientes?.nome ?? "Venda sem cliente"}</p>
+                          <p className="text-xs text-muted-foreground font-mono">#{v.id.slice(0, 8)} • {format(new Date(v.data_venda), "dd/MM/yy HH:mm")}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-sm">{fmt(Number(v.total))}</p>
+                          <Badge variant={v.status === 'finalizada' ? 'default' : 'outline'} className="text-[10px] h-4">
+                            {v.status}
+                          </Badge>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : searchVenda.length > 2 ? (
+                  <p className="text-center text-sm text-muted-foreground py-4">Nenhuma venda encontrada.</p>
+                ) : (
+                  <div className="py-8 flex flex-col items-center justify-center text-muted-foreground gap-2">
+                    <ShoppingCart className="w-8 h-8 opacity-20" />
+                    <p className="text-sm">Digite acima para localizar a venda original.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <ScrollArea className="flex-1 px-6">
-              <div className="space-y-6 pb-6">
+          <>
+            <div className="flex-1 min-h-0 overflow-y-auto px-6">
+              <div className="space-y-6 pt-6 pb-40">
                 <Card className="p-3 bg-muted/30 border-dashed">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -494,9 +509,9 @@ export function NovaDevolucaoDialog({ open, onOpenChange, initialVendaId }: Nova
                   </p>
                 </div>
               </div>
-            </ScrollArea>
+            </div>
 
-            <DialogFooter className="p-6 pt-2 border-t bg-muted/10">
+            <DialogFooter className="p-6 pt-2 border-t bg-muted/10 shrink-0">
               <Button variant="ghost" onClick={() => setStep(1)}>Voltar</Button>
               <Button 
                 disabled={totalDevolucao <= 0 || !motivo.trim() || registrar.isPending}
@@ -511,7 +526,7 @@ export function NovaDevolucaoDialog({ open, onOpenChange, initialVendaId }: Nova
                 Confirmar Devolução
               </Button>
             </DialogFooter>
-          </div>
+          </>
         )}
       </DialogContent>
     </Dialog>

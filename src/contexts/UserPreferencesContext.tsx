@@ -141,7 +141,7 @@ export function UserPreferencesProvider({ children }: { children: React.ReactNod
       .upsert({ 
         user_id: user.id, 
         empresa_id: profile.empresa_id,
-        dashboard_layout: newLayout as any
+        dashboard_layout: newLayout
       } as any, { onConflict: 'user_id' });
 
     if (error) {
@@ -159,7 +159,7 @@ export function UserPreferencesProvider({ children }: { children: React.ReactNod
       .upsert({ 
         user_id: user.id, 
         empresa_id: profile.empresa_id,
-        visual_config: newConfig as any
+        visual_config: newConfig
       } as any, { onConflict: 'user_id' });
 
     if (error) {

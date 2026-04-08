@@ -78,7 +78,7 @@ export default function CatalogoAdminPage() {
         setSections(config.secoes as unknown as CatalogSection[]);
       }
       if (Array.isArray((config as any).secoes_produto) && (config as any).secoes_produto.length > 0) {
-        setProductSections((config as any).secoes_produto as CatalogSection[]);
+        setProductSections((config as any).secoes_produto as unknown as CatalogSection[]);
       }
       setImagemInstitucionalUrl(config.imagem_institucional_url || "");
       if (config.tema_config && typeof config.tema_config === 'object') {
@@ -145,7 +145,7 @@ export default function CatalogoAdminPage() {
             {showPreview ? <PanelLeftClose className="w-4 h-4 mr-2" /> : <PanelLeftOpen className="w-4 h-4 mr-2" />}
             Preview
           </Button>
-          <Separator orientation="vertical" className="h-4 mx-2" />
+          <UISeparator orientation="vertical" className="h-4 mx-2" />
           <Button variant="outline" size="sm" onClick={() => window.open("/catalogo", "_blank")}>
             <Eye className="w-4 h-4 mr-2" /> Visualizar
           </Button>
@@ -177,7 +177,7 @@ export default function CatalogoAdminPage() {
                   </div>
                   <CatalogSectionBuilder sections={sections} onSectionsChange={setSections} />
                   
-                  <Separator className="my-6" />
+                  <UISeparator className="my-6" />
                   
                   <div className="space-y-4">
                     <div className="space-y-1">

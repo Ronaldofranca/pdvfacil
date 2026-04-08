@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { RefreshCw, Package, ArrowRight, CreditCard } from "lucide-react";
 import { format } from "date-fns";
-import { useDevolucao } from "@/hooks/useDevolucoes";
+import { useDevolucao, useDevolucaoItens } from "@/hooks/useDevolucoes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DetalheDevolucaoDialogProps {
@@ -14,14 +14,16 @@ interface DetalheDevolucaoDialogProps {
 }
 
 export function DetalheDevolucaoDialog({ id, open, onOpenChange }: DetalheDevolucaoDialogProps) {
-  const { data: devolucao, isLoading } = useDevolucao(id);
+  const { data: devolucao, isLoading: loadingDev } = useDevolucao(id);
+  const { data: itens, isLoading: loadingItens } = useDevolucaoItens(id);
+  const isLoading = loadingDev || loadingItens;
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2">
+        <DialogHeader className="p-6 pb-2 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <RefreshCw className="w-5 h-5 text-amber-500" />
             Detalhes da Devolução
@@ -38,8 +40,8 @@ export function DetalheDevolucaoDialog({ id, open, onOpenChange }: DetalheDevolu
             <p>Devolução não encontrada.</p>
           </div>
         ) : (
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-6">
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="p-6 space-y-6 pb-10">
               {/* Header Info */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
@@ -78,7 +80,7 @@ export function DetalheDevolucaoDialog({ id, open, onOpenChange }: DetalheDevolu
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {devolucao.itens_devolucao?.map((item: any) => (
+                      {itens?.map((item: any) => (
                         <TableRow key={item.id}>
                           <TableCell className="text-xs font-medium">
                             {item.produtos?.nome || item.produto?.nome || "Produto"}
@@ -144,7 +146,7 @@ export function DetalheDevolucaoDialog({ id, open, onOpenChange }: DetalheDevolu
                 </Badge>
               </div>
             </div>
-          </ScrollArea>
+          </div>
         )}
       </DialogContent>
     </Dialog>

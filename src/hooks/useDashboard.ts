@@ -80,19 +80,19 @@ export function useDashboardData() {
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
 
-      const totalVendasDiaBruto = vendasHoje?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
+      const totalVendasDia = vendasHoje?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
       const qtdVendasDia = vendasHoje?.length ?? 0;
 
-      // Devoluções do dia
-      const { data: devHoje } = await supabase
+      // Devoluções: Mantemos apenas para informação, não subtraímos mais das "Vendas"
+      const { data: devTotal } = await supabase
         .from("devolucoes")
-        .select("valor_total_devolvido")
-        .gte("data_devolucao", hjStart)
-        .lt("data_devolucao", hjEnd);
-      const totalDevolvidoHoje = devHoje?.reduce((s, d) => s + Number(d.valor_total_devolvido), 0) ?? 0;
-      const totalVendasDia = totalVendasDiaBruto - totalDevolvidoHoje;
+        .select("valor_total_devolvido, vendas!inner(data_venda)")
+        .gte("vendas.data_venda", hjStart)
+        .lt("vendas.data_venda", hjEnd);
+      
+      const totalDevolvidoDeVendasHoje = devTotal?.reduce((s, d) => s + Number(d.valor_total_devolvido), 0) ?? 0;
 
-      // Lucro do dia — use pre-computed total_profit (immutable historical snapshot)
+      // Lucro do dia — baseado nas vendas brutas do dia
       const lucroDia = vendasHoje?.reduce((s, v) => s + Number((v as any).total_profit ?? 0), 0) ?? 0;
 
       // Vendas canceladas do dia
@@ -153,6 +153,7 @@ export function useDashboardData() {
 
       return {
         totalVendasDia, qtdVendasDia, lucroDia, recebidoHoje,
+        recebidoAVista, recebidoParcelas, // Detalhamento para o card
         totalVencido, qtdVencidas: vencidas?.length ?? 0,
         totalAReceber, qtdPendentes: pendentesHoje?.length ?? 0,
         estoqueBaixo: estoqueBaixo ?? [],
@@ -160,7 +161,7 @@ export function useDashboardData() {
         vendasRecentes: vendasHoje?.slice(0, 8) ?? [],
         parcelasVencidas: vencidas?.slice(0, 10) ?? [],
         qtdCanceladasHoje, totalCanceladoHoje,
-        totalDevolvidoHoje,
+        totalDevolvidoHoje: totalDevolvidoDeVendasHoje,
       };
     },
     refetchInterval: 60000,
@@ -185,16 +186,16 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
 
-      const totalVendasBruto = vendas?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
+      const totalVendas = vendas?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
 
-      // Devoluções do período
+      // Devoluções do período: Apenas para informação, não subtraímos mais do total de vendas
       const { data: devPeriodo } = await supabase
         .from("devolucoes")
-        .select("valor_total_devolvido")
-        .gte("data_devolucao", inicio)
-        .lt("data_devolucao", fim);
-      const totalDevolvidoPeriodo = devPeriodo?.reduce((s, d) => s + Number(d.valor_total_devolvido), 0) ?? 0;
-      const totalVendas = totalVendasBruto - totalDevolvidoPeriodo;
+        .select("valor_total_devolvido, vendas!inner(data_venda)")
+        .gte("vendas.data_venda", inicio)
+        .lt("vendas.data_venda", fim);
+      
+      const totalDevolvidoDeVendasPeriodo = devPeriodo?.reduce((s, d) => s + Number(d.valor_total_devolvido), 0) ?? 0;
 
       // Vendas canceladas no período
       const { data: canceladasPeriodo } = await supabase
@@ -318,7 +319,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         topProdutos, vendasPorDia, rankingVendedores: vendedoresComMeta,
         topClientes, recebimentosPorForma, vendedorNames,
         qtdCanceladas, totalCancelado,
-        totalDevolvidoPeriodo,
+        totalDevolvidoPeriodo: totalDevolvidoDeVendasPeriodo,
       };
     },
     refetchInterval: 120000,
