@@ -255,24 +255,46 @@ export function DashboardRenderer({
         <Card key="recebimentos-forma" className="h-full">
           <CardContent className="p-4">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /> Recebimentos por Forma</h3>
-            <div className="h-[180px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie 
-                    data={isPreview ? [
-                      { forma: "Dinheiro", valor: 5000 }, { forma: "Cartão", valor: 8000 }, { forma: "Pix", valor: 4500 }
-                    ] : periodoData.recebimentosPorForma} 
-                    dataKey="valor" nameKey="forma" cx="50%" cy="50%" outerRadius={isPreview ? 50 : 80} 
-                    label={isPreview ? false : ({ forma, valor }) => showValues ? `${forma}: ${fmtR(valor)}` : `${forma}: •••`}
-                  >
-                    {(isPreview ? [0,1,2] : periodoData.recebimentosPorForma).map((_: any, i: number) => (
-                      <Cell key={i} fill={chartColors[i % chartColors.length]} />
-                    ))}
-                  </Pie>
-                  {!isPreview && <Legend />}
-                  <Tooltip formatter={(val: number) => showValues ? fmtR(val) : MASKED} />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="flex flex-row items-center justify-between h-[180px] gap-4">
+              <div className="w-fit max-w-[150px] flex flex-col justify-center gap-2 pl-2">
+                {(isPreview ? [
+                  { forma: "dinheiro", valor: 5000 }, { forma: "cartao_credito", valor: 8000 }, { forma: "pix", valor: 4500 }
+                ] : periodoData.recebimentosPorForma).map((item: any, i: number) => (
+                  <div key={i} className="flex items-center gap-2 leading-none">
+                    <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: chartColors[i % chartColors.length] }} />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] text-muted-foreground truncate font-medium">
+                        {item.forma ? item.forma.charAt(0).toUpperCase() + item.forma.slice(1).replace(/_/g, ' ') : ''}
+                      </span>
+                      <span className="text-[11px] font-bold text-foreground whitespace-nowrap">
+                        {showValues ? fmtR(item.valor) : "R$ •••"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex-1 h-full min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                      data={isPreview ? [
+                        { forma: "Dinheiro", valor: 5000 }, { forma: "Cartão", valor: 8000 }, { forma: "Pix", valor: 4500 }
+                      ] : periodoData.recebimentosPorForma} 
+                      dataKey="valor" nameKey="forma" cx="50%" cy="50%" 
+                      outerRadius={isPreview ? 60 : 75} 
+                      paddingAngle={2}
+                      stroke="none"
+                      label={false}
+                      labelLine={false}
+                    >
+                      {(isPreview ? [0,1,2] : periodoData.recebimentosPorForma).map((_: any, i: number) => (
+                        <Cell key={i} fill={chartColors[i % chartColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(val: number) => showValues ? fmtR(val) : MASKED} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </CardContent>
         </Card>
