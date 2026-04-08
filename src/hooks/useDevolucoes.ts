@@ -39,11 +39,42 @@ export function useDevolucao(id: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("devolucoes")
-        .select("*, clientes(nome), itens_devolucao(*, produtos(nome))")
+        .select("*, clientes(nome)")
         .eq("id", id!)
         .single();
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+export function useDevolucaoItens(devolucaoId: string | null) {
+  return useQuery({
+    queryKey: ["itens_devolucao", devolucaoId],
+    enabled: !!devolucaoId,
+    queryFn: async () => {
+      // Tenta a busca com join primeiro
+      const { data, error } = await supabase
+        .from("itens_devolucao")
+        .select("*, produtos(nome)")
+        .eq("devolucao_id", devolucaoId!);
+      
+      if (error) throw error;
+
+      // Se por algum motivo o produtos(nome) vier nulo por falha de relacionamento, mas temos produto_id
+      const itensComProdutos = await Promise.all((data || []).map(async (item: any) => {
+        if (!item.produtos && item.produto_id) {
+          const { data: p } = await supabase
+            .from("produtos")
+            .select("nome")
+            .eq("id", item.produto_id)
+            .single();
+          if (p) return { ...item, produtos: p };
+        }
+        return item;
+      }));
+
+      return itensComProdutos;
     },
   });
 }

@@ -101,8 +101,8 @@ export function ProdutoForm({ open, onOpenChange, produto }: Props) {
               <ImageUpload
                 currentImageUrl={form.imagem_url}
                 onImageUploaded={(urls) => {
-                  // Store medium as main URL (good balance)
-                  setForm({ ...form, imagem_url: typeof urls === 'string' ? urls : (urls as any).medium });
+                  const finalUrl = typeof urls === "string" ? urls : urls.medium;
+                  setForm({ ...form, imagem_url: finalUrl });
                 }}
                 onImageRemoved={() => setForm({ ...form, imagem_url: null })}
               />

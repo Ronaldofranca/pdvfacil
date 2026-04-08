@@ -35,6 +35,7 @@ import LoginPage from "./pages/Login";
 import AceitarConvitePage from "./pages/AceitarConvite";
 import MapaClientesPage from "./pages/MapaClientes";
 import MetasComissoesPage from "./pages/MetasComissoes";
+import CidadesAdminPage from "./pages/CidadesAdmin";
 import PrevisaoEstoquePage from "./pages/PrevisaoEstoque";
 import AlertasPage from "./pages/Alertas";
 import ConfiguracoesPage from "./pages/Configuracoes";
@@ -120,6 +121,7 @@ const MainRoutes = () => {
           <Route path="/metas" element={<MetasComissoesPage />} />
           <Route path="/previsao-estoque" element={<PrevisaoEstoquePage />} />
           <Route path="/alertas" element={<AlertasPage />} />
+          <Route path="/cidades-admin" element={<ProtectedRoute requiredRole="admin"><CidadesAdminPage /></ProtectedRoute>} />
           <Route path="/configuracoes" element={<ProtectedRoute requiredRole="admin"><ConfiguracoesPage /></ProtectedRoute>} />
           <Route path="/conciliacao" element={<ConciliacaoPage />} />
           <Route path="/mais" element={<MaisPage />} />

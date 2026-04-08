@@ -51,6 +51,7 @@ export const modules: ModuleConfig[] = [
   { key: "romaneio", label: "Romaneio", icon: Truck, path: "/romaneio", group: "operacional", description: "Controle de carregamento" },
   // Inteligência de Vendas
   { key: "mapa", label: "Mapa", icon: MapPin, path: "/mapa-clientes", group: "inteligencia", description: "Mapa inteligente de clientes" },
+  { key: "cidades-admin" as any, label: "Cidades", icon: MapPin, path: "/cidades-admin", group: "inteligencia", description: "Cidades e Regiões" },
   { key: "metas", label: "Metas", icon: Target, path: "/metas", group: "inteligencia", description: "Metas e comissões" },
   { key: "previsao", label: "Previsão", icon: PackageSearch, path: "/previsao-estoque", group: "inteligencia", description: "Previsão inteligente de estoque" },
   { key: "alertas", label: "Alertas", icon: BellRing, path: "/alertas", group: "inteligencia", description: "Alertas automáticos" },

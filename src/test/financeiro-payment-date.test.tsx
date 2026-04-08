@@ -1,5 +1,5 @@
-import { render } from "@testing-library/react"
-import { screen } from "@testing-library/dom"
+import { render } from "@testing-library/react";
+import { screen } from "@testing-library/dom";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import FinanceiroPage from "@/pages/Financeiro";
 import { useParcelas, usePagamentos } from "@/hooks/useParcelas";

@@ -45,9 +45,10 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   initialCart?: CartItem[];
   initialClienteId?: string;
+  onFinalize?: () => void;
 }
 
-export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }: Props) {
+export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, onFinalize }: Props) {
   const { profile, user, isAdmin } = useAuth();
   const { data: onlineProdutos } = useProdutos();
   const { data: onlineKits } = useKits();
@@ -342,6 +343,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
           onSuccess: () => {
             cleanup();
             resetForm();
+            onFinalize?.();
             onOpenChange(false);
           },
           onError: () => cleanup(),
@@ -358,6 +360,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId }:
       cleanup();
       if (success) {
         resetForm();
+        onFinalize?.();
         onOpenChange(false);
       }
     }

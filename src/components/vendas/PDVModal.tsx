@@ -42,6 +42,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   initialCart?: CartItem[];
   initialClienteId?: string;
+  onFinalize?: () => void;
 }
 
 function DesktopProductButton({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
@@ -102,7 +103,7 @@ function DesktopQuickSection({ title, items, allProducts, onAdd, fmt }: {
   );
 }
 
-export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: Props) {
+export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, onFinalize }: Props) {
   const isMobile = useIsMobile();
   const { profile, user, isAdmin } = useAuth();
   const { data: produtosRaw } = useProdutos();
@@ -131,6 +132,10 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
   const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>(defaultCrediario);
+  
+  // Venda Retroativa
+  const [isRetroativa, setIsRetroativa] = useState(false);
+  const [dataRetroativa, setDataRetroativa] = useState("");
 
   const { data: topIndicadores } = { data: [] }; // placeholder
   const { data: saldoCredito } = useCreditoCliente(clienteId || null);
@@ -367,6 +372,8 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
         observacoes,
         crediario: hasCrediario ? crediarioConfig : undefined,
         idempotency_key: idempotencyKey,
+        is_retroativa: isRetroativa,
+        data_venda: isRetroativa && dataRetroativa ? new Date(dataRetroativa + 'T12:00:00-03:00').toISOString() : undefined,
       },
       {
         onSuccess: () => {
@@ -376,7 +383,10 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
           setClienteId("");
           setObservacoes("");
           setPagamentos([{ forma: "dinheiro", valor: 0 }]);
+          setIsRetroativa(false);
+          setDataRetroativa("");
           pdvPersistence.clear();
+          onFinalize?.();
           onOpenChange(false);
         },
         onError: () => {
@@ -393,7 +403,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
 
   // Mobile: use full-screen PDV
   if (isMobile) {
-    return <PDVMobile open={open} onOpenChange={onOpenChange} initialCart={initialCart} initialClienteId={initialClienteId} />;
+    return <PDVMobile open={open} onOpenChange={onOpenChange} initialCart={initialCart} initialClienteId={initialClienteId} onFinalize={onFinalize} />;
   }
 
   return (
@@ -659,6 +669,43 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId }: 
 
             {/* Obs */}
             <Textarea placeholder="Observações..." value={observacoes} onChange={(e) => setObservacoes(e.target.value)} className="text-xs" rows={2} />
+
+            {/* Venda Retroativa (Apenas Admin) */}
+            {isAdmin && (
+              <div className="pt-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    id="retroativa"
+                    checked={isRetroativa}
+                    onChange={(e) => setIsRetroativa(e.target.checked)}
+                    className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <Label htmlFor="retroativa" className="font-semibold cursor-pointer">Lançar como Venda Retroativa</Label>
+                </div>
+                {isRetroativa && (
+                  <div className="bg-orange-500/10 border border-orange-500/20 p-3 rounded-md space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs text-orange-700 dark:text-orange-400">
+                        Selecione a data em que a venda ocorreu:
+                      </Label>
+                      <Input
+                        type="date"
+                        max={new Date().toISOString().split("T")[0]}
+                        value={dataRetroativa}
+                        onChange={(e) => setDataRetroativa(e.target.value)}
+                        className="h-8 w-[140px] text-xs border-orange-500/30"
+                      />
+                    </div>
+                    {hasCrediario && (
+                      <p className="text-[10px] text-orange-700/80 dark:text-orange-400/80 leading-tight">
+                        Atenção: Os vencimentos do crediário serão calculados normalmente a partir de hoje, a menos que você ajuste a data do primeiro vencimento acima.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
