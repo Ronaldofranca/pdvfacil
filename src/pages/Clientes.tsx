@@ -14,6 +14,7 @@ import { HistoricoCompras } from "@/components/clientes/HistoricoCompras";
 import { HabilitarPortalDialog } from "@/components/clientes/HabilitarPortalDialog";
 import { ImportarContatos } from "@/components/clientes/ImportarContatos";
 import { IndicacoesCliente } from "@/components/clientes/IndicacoesCliente";
+import { MergeClientesDialog } from "@/components/clientes/MergeClientesDialog";
 import { PDVModal } from "@/components/vendas/PDVModal";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import { useClienteScores } from "@/hooks/useClienteScore";
@@ -46,12 +47,15 @@ export default function ClientesPage() {
   const [pdvState, setPdvState] = useState<{ open: boolean; clienteId?: string; cart?: CartItem[] }>({ open: false });
   const [indicacoesState, setIndicacoesState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [portalState, setPortalState] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [mobileItem, setMobileItem] = useState<any | null>(null);
 
-  const filtered = clientes?.filter((c) =>
-    c.nome.toLowerCase().includes(search.toLowerCase()) ||
-    c.telefone?.includes(search) ||
-    c.cidade?.toLowerCase().includes(search.toLowerCase())
+  const filtered = clientes?.filter((c: any) =>
+    !c.is_merged && (
+      c.nome.toLowerCase().includes(search.toLowerCase()) ||
+      c.telefone?.includes(search) ||
+      c.cidade?.toLowerCase().includes(search.toLowerCase())
+    )
   );
 
   return (
@@ -67,6 +71,11 @@ export default function ClientesPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {isAdmin && (
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setMergeOpen(true)}>
+              <Users className="w-4 h-4" /> Mesclar Duplicados
+            </Button>
+          )}
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setImportOpen(true)}>
             <Smartphone className="w-4 h-4" /> Importar Contatos
           </Button>
@@ -91,6 +100,7 @@ export default function ClientesPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              {!isMobile && <TableHead className="w-20">ID</TableHead>}
               <TableHead>Nome</TableHead>
               {!isMobile && <TableHead>Telefone</TableHead>}
               {!isMobile && <TableHead>Cidade</TableHead>}
@@ -112,6 +122,11 @@ export default function ClientesPage() {
                   key={c.id}
                   {...mobileRowProps(isMobile, () => setMobileItem(c), `Abrir ações do cliente ${c.nome}`)}
                 >
+                  {!isMobile && (
+                    <TableCell className="font-mono text-[10px] text-muted-foreground">
+                      #{c.id.split("-")[0]}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{c.nome}</p>
@@ -248,6 +263,7 @@ export default function ClientesPage() {
         )}
       </MobileRowActions>
 
+      <MergeClientesDialog open={mergeOpen} onOpenChange={setMergeOpen} />
       <ClienteForm open={formState.open} onOpenChange={(v) => setFormState({ open: v })} cliente={formState.data} />
       <HistoricoCompras open={historicoState.open} onOpenChange={(v) => setHistoricoState({ open: v })} cliente={historicoState.data} />
       <ImportarContatos open={importOpen} onOpenChange={setImportOpen} />

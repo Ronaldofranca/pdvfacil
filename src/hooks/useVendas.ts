@@ -38,6 +38,8 @@ const vendaInputSchema = z.object({
   observacoes: z.string().max(1000).optional(),
   crediario: crediarioSchema,
   idempotency_key: z.string().min(1).optional(),
+  is_retroativa: z.boolean().optional().default(false),
+  data_venda: z.string().optional(),
 });
 
 // ─── Types ───
@@ -82,6 +84,8 @@ export interface VendaInput {
   observacoes?: string;
   crediario?: CrediarioConfig;
   idempotency_key?: string;
+  is_retroativa?: boolean;
+  data_venda?: string;
 }
 
 // ─── Idempotency key generator ───
@@ -210,16 +214,19 @@ export function useFinalizarVenda() {
         };
       });
 
-      const hasCrediario = v.pagamentos.some((p) => p.forma === "crediario");
+      // Normaliza o forma: aceita 'crediário' (com acento, legado) e 'crediario' (sem acento, padrão)
+      const hasCrediario = v.pagamentos.some((p) =>
+        p.forma === "crediario" || p.forma === "crediário"
+      );
 
       // Build pagamentos payload — pass as object, NOT JSON.stringify
       const pagamentosPayload = hasCrediario
         ? [{ forma: "crediario", valor: total }]
         : v.pagamentos.filter((p) => p.valor > 0);
 
-      // Use local ISO for data_venda to ensure correct day attribution
+      // Use local ISO for data_venda to ensure correct day attribution, unless backdated
       const now = new Date();
-      const localISO = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).toISOString();
+      let saleDateIso = v.data_venda || new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).toISOString();
 
       // Call atomic RPC - everything in a single transaction
       const rpcParams = {
@@ -232,12 +239,13 @@ export function useFinalizarVenda() {
         _total: total,
         _pagamentos: pagamentosPayload,
         _observacoes: v.observacoes ?? "",
-        _data_venda: localISO,
+        _data_venda: saleDateIso,
         _itens: itensPayload,
         _crediario: hasCrediario && v.crediario ? v.crediario : null,
+        _is_retroativa: v.is_retroativa ?? false,
       };
 
-      console.log("[PDV] RPC params:", JSON.stringify({ itens_type: typeof rpcParams._itens, itens_isArray: Array.isArray(rpcParams._itens), itens_length: rpcParams._itens?.length, pagamentos_type: typeof rpcParams._pagamentos, first_item: rpcParams._itens?.[0] }));
+      console.log("[PDV] RPC params:", JSON.stringify({ itens_type: typeof rpcParams._itens, itens_isArray: Array.isArray(rpcParams._itens), itens_length: rpcParams._itens?.length, pagamentos_type: typeof rpcParams._pagamentos, first_item: rpcParams._itens?.[0], is_retroativa: rpcParams._is_retroativa }));
 
       const { data, error } = await supabase.rpc("fn_finalizar_venda_atomica" as any, rpcParams);
 

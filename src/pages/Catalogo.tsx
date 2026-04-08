@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useProdutos, useUpsertProduto } from "@/hooks/useProdutos";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageUpload } from "@/components/produtos/ImageUpload";
-import { Separator } from "@/components/ui/separator";
+import { Separator as UISeparator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -75,10 +75,10 @@ export default function CatalogoAdminPage() {
   useEffect(() => {
     if (config) {
       if (Array.isArray(config.secoes) && config.secoes.length > 0) {
-        setSections(config.secoes as CatalogSection[]);
+        setSections(config.secoes as unknown as CatalogSection[]);
       }
       if (Array.isArray((config as any).secoes_produto) && (config as any).secoes_produto.length > 0) {
-        setProductSections((config as any).secoes_produto as CatalogSection[]);
+        setProductSections((config as any).secoes_produto as unknown as CatalogSection[]);
       }
       setImagemInstitucionalUrl(config.imagem_institucional_url || "");
       if (config.tema_config && typeof config.tema_config === 'object') {
@@ -145,7 +145,7 @@ export default function CatalogoAdminPage() {
             {showPreview ? <PanelLeftClose className="w-4 h-4 mr-2" /> : <PanelLeftOpen className="w-4 h-4 mr-2" />}
             Preview
           </Button>
-          <Separator orientation="vertical" className="h-4 mx-2" />
+          <UISeparator orientation="vertical" className="h-4 mx-2" />
           <Button variant="outline" size="sm" onClick={() => window.open("/catalogo", "_blank")}>
             <Eye className="w-4 h-4 mr-2" /> Visualizar
           </Button>
@@ -177,7 +177,7 @@ export default function CatalogoAdminPage() {
                   </div>
                   <CatalogSectionBuilder sections={sections} onSectionsChange={setSections} />
                   
-                  <Separator className="my-6" />
+                  <UISeparator className="my-6" />
                   
                   <div className="space-y-4">
                     <div className="space-y-1">

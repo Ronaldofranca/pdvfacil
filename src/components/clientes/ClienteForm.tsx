@@ -289,10 +289,39 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{cliente ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{cliente ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+            {cliente?.id && (
+              <Badge variant="outline" className="font-mono text-[10px] py-0 h-5">
+                ID: {cliente.id.split("-")[0]}...{cliente.id.split("-")[4]}
+              </Badge>
+            )}
+          </div>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            {/* ID - Read only */}
+            {cliente?.id && (
+              <div className="col-span-2">
+                <Label className="text-xs text-muted-foreground">ID Completo</Label>
+                <div className="flex gap-2">
+                  <Input readOnly value={cliente.id} className="font-mono text-xs bg-muted h-8" />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      navigator.clipboard.writeText(cliente.id);
+                      toast.success("ID copiado!");
+                    }}
+                  >
+                    Copiar
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Nome */}
             <div className="col-span-2">
               <Label>Nome *</Label>

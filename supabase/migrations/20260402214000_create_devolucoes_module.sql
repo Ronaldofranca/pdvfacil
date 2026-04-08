@@ -22,6 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_devolucoes_empresa_id ON public.devolucoes(empres
 
 CREATE TABLE IF NOT EXISTS public.itens_devolucao (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    empresa_id UUID NOT NULL REFERENCES public.empresas(id) ON DELETE CASCADE,
     devolucao_id UUID NOT NULL REFERENCES public.devolucoes(id) ON DELETE CASCADE,
     item_venda_id UUID NOT NULL REFERENCES public.itens_venda(id) ON DELETE RESTRICT,
     produto_id UUID NOT NULL REFERENCES public.produtos(id) ON DELETE RESTRICT,
@@ -32,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.itens_devolucao (
 );
 
 CREATE INDEX IF NOT EXISTS idx_itens_devolucao_devolucao_id ON public.itens_devolucao(devolucao_id);
+CREATE INDEX IF NOT EXISTS idx_itens_devolucao_empresa_id ON public.itens_devolucao(empresa_id);
 
 CREATE TABLE IF NOT EXISTS public.credito_clientes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -69,13 +71,13 @@ END $$;
 -- Itens Devolução RLS
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'itens_devolucao' AND policyname = 'Usuários logados podem ver itens_devolucao') THEN
-        CREATE POLICY "Usuários logados podem ver itens_devolucao" ON public.itens_devolucao FOR SELECT USING (devolucao_id IN (SELECT id FROM devolucoes WHERE empresa_id = (SELECT get_my_empresa_id())));
+        CREATE POLICY "Usuários logados podem ver itens_devolucao" ON public.itens_devolucao FOR SELECT USING (empresa_id = (SELECT get_my_empresa_id()));
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'itens_devolucao' AND policyname = 'Usuários logados podem inserir itens_devolucao') THEN
-        CREATE POLICY "Usuários logados podem inserir itens_devolucao" ON public.itens_devolucao FOR INSERT WITH CHECK (devolucao_id IN (SELECT id FROM devolucoes WHERE empresa_id = (SELECT get_my_empresa_id())));
+        CREATE POLICY "Usuários logados podem inserir itens_devolucao" ON public.itens_devolucao FOR INSERT WITH CHECK (empresa_id = (SELECT get_my_empresa_id()));
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'itens_devolucao' AND policyname = 'Usuários logados podem atualizar itens_devolucao') THEN
-        CREATE POLICY "Usuários logados podem atualizar itens_devolucao" ON public.itens_devolucao FOR UPDATE USING (devolucao_id IN (SELECT id FROM devolucoes WHERE empresa_id = (SELECT get_my_empresa_id())));
+        CREATE POLICY "Usuários logados podem atualizar itens_devolucao" ON public.itens_devolucao FOR UPDATE USING (empresa_id = (SELECT get_my_empresa_id()));
     END IF;
 END $$;
 

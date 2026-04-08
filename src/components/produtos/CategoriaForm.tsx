@@ -43,7 +43,7 @@ export function CategoriaForm({ open, onOpenChange, categoria }: Props) {
     e.preventDefault();
     if (!profile) return;
     upsert.mutate(
-      { id: categoria?.id, nome, descricao, imagem_url: imagemUrl, empresa_id: profile.empresa_id },
+      { id: categoria?.id, nome, descricao, imagem_url: imagemUrl, empresa_id: profile.empresa_id } as any,
       { onSuccess: () => onOpenChange(false) }
     );
   };

@@ -17,6 +17,9 @@ BEGIN
     END IF;
   ELSIF NEW.valor_pago > 0 AND NEW.valor_pago < NEW.valor_total THEN
     NEW.status := 'parcial';
+    IF NEW.data_pagamento IS NULL OR (TG_OP = 'UPDATE' AND NEW.valor_pago != OLD.valor_pago) THEN
+      NEW.data_pagamento := now();
+    END IF;
   ELSIF NEW.vencimento < CURRENT_DATE AND NEW.valor_pago < NEW.valor_total THEN
     NEW.status := 'vencida';
   ELSE
