@@ -255,8 +255,8 @@ export function DashboardRenderer({
         <Card key="recebimentos-forma" className="h-full">
           <CardContent className="p-4">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /> Recebimentos por Forma</h3>
-            <div className="flex flex-row items-center justify-between h-[180px] gap-4">
-              <div className="w-fit max-w-[150px] flex flex-col justify-center gap-2 pl-2">
+            <div className="flex flex-row items-center justify-between h-[180px] gap-2">
+              <div className="w-[100px] shrink-0 flex flex-col justify-center gap-2">
                 {(isPreview ? [
                   { forma: "dinheiro", valor: 5000 }, { forma: "cartao_credito", valor: 8000 }, { forma: "pix", valor: 4500 }
                 ] : periodoData.recebimentosPorForma).map((item: any, i: number) => (
@@ -280,8 +280,8 @@ export function DashboardRenderer({
                       data={isPreview ? [
                         { forma: "Dinheiro", valor: 5000 }, { forma: "Cartão", valor: 8000 }, { forma: "Pix", valor: 4500 }
                       ] : periodoData.recebimentosPorForma} 
-                      dataKey="valor" nameKey="forma" cx="50%" cy="50%" 
-                      outerRadius={isPreview ? 50 : 60} 
+                      dataKey="valor" nameKey="forma" cx="65%" cy="50%" 
+                      outerRadius={isPreview ? 50 : 55} 
                       paddingAngle={2}
                       stroke="none"
                       label={isPreview ? false : ({ forma, valor }) => showValues ? `${forma}: ${fmtR(valor)}` : `${forma}: •••`}
