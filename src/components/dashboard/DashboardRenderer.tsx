@@ -281,11 +281,11 @@ export function DashboardRenderer({
                         { forma: "Dinheiro", valor: 5000 }, { forma: "Cartão", valor: 8000 }, { forma: "Pix", valor: 4500 }
                       ] : periodoData.recebimentosPorForma} 
                       dataKey="valor" nameKey="forma" cx="50%" cy="50%" 
-                      outerRadius={isPreview ? 60 : 75} 
+                      outerRadius={isPreview ? 50 : 60} 
                       paddingAngle={2}
                       stroke="none"
-                      label={false}
-                      labelLine={false}
+                      label={isPreview ? false : ({ forma, valor }) => showValues ? `${forma}: ${fmtR(valor)}` : `${forma}: •••`}
+                      labelLine={true}
                     >
                       {(isPreview ? [0,1,2] : periodoData.recebimentosPorForma).map((_: any, i: number) => (
                         <Cell key={i} fill={chartColors[i % chartColors.length]} />
