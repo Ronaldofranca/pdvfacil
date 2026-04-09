@@ -122,6 +122,16 @@ export function PedidoReposicaoForm({ open, onOpenChange, editId }: Props) {
     );
   };
 
+  const updateItemCusto = (produtoId: string, custo: number) => {
+    setItens((prev) =>
+      prev.map((i) =>
+        i.produto_id === produtoId
+          ? { ...i, custo_unitario: custo, subtotal: i.quantidade_solicitada * custo }
+          : i
+      )
+    );
+  };
+
   const handleSubmit = () => {
     if (!profile || !user) return;
     const itemPayload = itens.map((i) => ({
@@ -232,8 +242,15 @@ export function PedidoReposicaoForm({ open, onOpenChange, editId }: Props) {
                           onChange={(e) => updateItemQty(item.produto_id, parseFloat(e.target.value) || 0)}
                         />
                       </TableCell>
-                      <TableCell className="text-right text-sm">
-                        R$ {item.custo_unitario.toFixed(2)}
+                      <TableCell className="text-right">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="w-24 text-right h-8"
+                          value={item.custo_unitario}
+                          onChange={(e) => updateItemCusto(item.produto_id, parseFloat(e.target.value) || 0)}
+                        />
                       </TableCell>
                       <TableCell className="text-right text-sm font-medium">
                         R$ {item.subtotal.toFixed(2)}
