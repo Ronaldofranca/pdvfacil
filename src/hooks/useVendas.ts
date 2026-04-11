@@ -100,7 +100,7 @@ export function generateIdempotencyKey(): string {
 export function invalidateDashboardQueries(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["dashboard"] });
   qc.invalidateQueries({ queryKey: ["dashboard_periodo"] });
-  qc.invalidateQueries({ queryKey: ["vendas"] });
+  qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "vendas" });
   qc.invalidateQueries({ queryKey: ["estoque"] });
   qc.invalidateQueries({ queryKey: ["movimentos_estoque"] });
   qc.invalidateQueries({ queryKey: ["parcelas"] });
@@ -109,18 +109,37 @@ export function invalidateDashboardQueries(qc: ReturnType<typeof useQueryClient>
 }
 
 // ─── Queries ───
-export function useVendas() {
+type VendasFilters = {
+  status?: string;
+  startDate?: Date;
+  endDate?: Date;
+};
+
+export function useVendas(filters?: VendasFilters) {
   return useQuery({
-    queryKey: ["vendas"],
+    queryKey: ["vendas", filters?.status, filters?.startDate?.toISOString(), filters?.endDate?.toISOString()],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("vendas")
         .select("*, clientes(nome)")
         .order("data_venda", { ascending: false })
-        .limit(100);
+        .limit(300);
+
+      if (filters?.status && filters.status !== "todas") {
+        q = q.eq("status", filters.status);
+      }
+      if (filters?.startDate) {
+        q = q.gte("data_venda", filters.startDate.toISOString());
+      }
+      if (filters?.endDate) {
+        q = q.lte("data_venda", filters.endDate.toISOString());
+      }
+
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
+    staleTime: 2 * 60 * 1000, // 2 minutos
   });
 }
 

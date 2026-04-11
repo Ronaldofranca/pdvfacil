@@ -21,7 +21,9 @@ import { PDVModal } from "@/components/vendas/PDVModal";
 import { ReciboVenda } from "@/components/vendas/ReciboVenda";
 import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
 import { DateRangeFilter } from "@/components/vendas/DateRangeFilter";
-import { format, startOfDay, endOfDay, differenceInDays } from "date-fns";
+import { format, startOfDay, endOfDay, differenceInDays, subDays } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Filter } from "lucide-react";
 import { ptBR } from "date-fns/locale";
 import { NovaDevolucaoDialog } from "@/components/devolucoes/NovaDevolucaoDialog";
 import { DetalheDevolucaoDialog } from "@/components/devolucoes/DetalheDevolucaoDialog";
@@ -38,14 +40,22 @@ export default function VendasPage() {
   const isMobile = useIsMobile();
   const { canCreateVenda, isAdmin } = usePermissions();
   const { user } = useAuth();
-  const { data: vendas, isLoading } = useVendas();
+
+  // Filtros — padrão: últimos 3 dias + somente finalizadas
+  const [statusFilter, setStatusFilter] = useState("finalizada");
+  const [startDate, setStartDate] = useState<Date | undefined>(() => startOfDay(subDays(new Date(), 3)));
+  const [endDate, setEndDate] = useState<Date | undefined>(() => endOfDay(new Date()));
+
+  const { data: vendas, isLoading } = useVendas({
+    status: statusFilter,
+    startDate,
+    endDate,
+  });
   const cancelar = useCancelarVenda();
 
   const [pdvOpen, setPdvOpen] = useState(false);
   const [editingVenda, setEditingVenda] = useState<{ id: string; items: any[]; observations: string; clienteId: string } | null>(null);
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [searchParams, setSearchParams] = useSearchParams();
   const [detailId, setDetailId] = useState<string | null>(searchParams.get("viewVenda"));
   const [reciboVenda, setReciboVenda] = useState<any>(null);
@@ -102,20 +112,13 @@ export default function VendasPage() {
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
+  // Filtro de busca por texto (client-side apenas)
   const filtered = vendas?.filter((v) => {
-    const matchesSearch = 
+    if (!search) return true;
+    return (
       (v as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) ||
-      v.id.includes(search);
-    
-    // Range filter: check if data_venda is within [startDate, endDate]
-    const itemDate = new Date(v.data_venda);
-    const matchesStart = !startDate || itemDate >= startOfDay(startDate);
-    const matchesEnd = !endDate || itemDate <= endOfDay(endDate);
-    
-    // Safety check for inverted interval
-    const isValidInterval = !startDate || !endDate || startDate <= endDate;
-
-    return matchesSearch && matchesStart && matchesEnd && isValidInterval;
+      v.id.includes(search)
+    );
   });
 
   const visibleColumnCount = isMobile ? 4 : 6;
@@ -203,8 +206,8 @@ export default function VendasPage() {
         )}
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             className="pl-9"
@@ -221,13 +224,19 @@ export default function VendasPage() {
             onEndDateChange={setEndDate}
           />
         </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[170px]">
+            <Filter className="w-3.5 h-3.5 mr-1" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="finalizada">Finalizadas</SelectItem>
+            <SelectItem value="cancelada">Canceladas</SelectItem>
+            <SelectItem value="pendente">Pendentes</SelectItem>
+            <SelectItem value="todas">Todos os status</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-
-      {isMobile && (
-        <p className="px-1 text-xs text-muted-foreground">
-          Toque em uma venda para abrir ações rápidas sem precisar arrastar a tabela.
-        </p>
-      )}
 
       <Card>
         <Table>
