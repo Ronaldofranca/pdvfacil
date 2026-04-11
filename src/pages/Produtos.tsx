@@ -82,35 +82,70 @@ export default function ProdutosPage() {
           )}
 
           {isMobile && (
-            <p className="px-1 text-xs text-muted-foreground">
-              Toque em um produto para abrir ações rápidas.
-            </p>
+            <p className="px-1 text-xs text-muted-foreground">Toque em um produto para abrir ações.</p>
           )}
 
-          <Card>
+          {/* ── MOBILE: Cards ── */}
+          <div className="md:hidden space-y-2">
+            {loadingProd ? (
+              <p className="text-center text-muted-foreground py-10 text-sm">Carregando...</p>
+            ) : !filteredProdutos?.length ? (
+              <p className="text-center text-muted-foreground py-10 text-sm">Nenhum produto encontrado</p>
+            ) : (
+              filteredProdutos.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="w-full text-left"
+                  onClick={() => setMobileItem(p)}
+                  aria-label={`Abrir ações do produto ${p.nome}`}
+                >
+                  <Card className="p-3 active:bg-muted/60 transition-colors">
+                    <div className="flex items-center gap-3">
+                      {p.imagem_url ? (
+                        <img src={p.imagem_url} alt={p.nome} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm text-foreground truncate">{p.nome}</p>
+                        {p.codigo && <p className="text-xs text-muted-foreground">{p.codigo}</p>}
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-sm font-bold text-primary">{fmt(Number(p.preco))}</span>
+                        <Badge variant={p.ativo ? "default" : "secondary"} className="text-[10px]">{p.ativo ? "Ativo" : "Inativo"}</Badge>
+                      </div>
+                    </div>
+                  </Card>
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* ── DESKTOP: Tabela completa ── */}
+          <Card className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  {!isMobile && <TableHead>Código</TableHead>}
-                  {!isMobile && <TableHead>Categoria</TableHead>}
-                  {!isMobile && <TableHead className="text-right">Custo</TableHead>}
+                  <TableHead>Código</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead className="text-right">Custo</TableHead>
                   <TableHead className="text-right">Preço</TableHead>
                   <TableHead>Status</TableHead>
-                  {!isMobile && canEditProduto && <TableHead className="w-20" />}
+                  {canEditProduto && <TableHead className="w-20" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingProd ? (
-                  <TableRow><TableCell colSpan={isMobile ? 3 : 7} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
                 ) : !filteredProdutos?.length ? (
-                  <TableRow><TableCell colSpan={isMobile ? 3 : 7} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum produto encontrado</TableCell></TableRow>
                 ) : (
                   filteredProdutos.map((p) => (
-                    <TableRow
-                      key={p.id}
-                      {...mobileRowProps(isMobile, () => setMobileItem(p), `Abrir ações do produto ${p.nome}`)}
-                    >
+                    <TableRow key={p.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           {p.imagem_url ? (
@@ -120,28 +155,19 @@ export default function ProdutosPage() {
                               <Package className="w-4 h-4 text-muted-foreground" />
                             </div>
                           )}
-                          <div className="min-w-0">
-                            <p className="truncate">{p.nome}</p>
-                            {isMobile && p.codigo && <p className="text-xs text-muted-foreground">{p.codigo}</p>}
-                          </div>
+                          <p className="truncate">{p.nome}</p>
                         </div>
                       </TableCell>
-                      {!isMobile && <TableCell className="text-muted-foreground">{p.codigo || "—"}</TableCell>}
-                      {!isMobile && <TableCell>{(p as any).categorias?.nome || "—"}</TableCell>}
-                      {!isMobile && <TableCell className="text-right">{fmt(Number(p.custo))}</TableCell>}
+                      <TableCell className="text-muted-foreground">{p.codigo || "—"}</TableCell>
+                      <TableCell>{(p as any).categorias?.nome || "—"}</TableCell>
+                      <TableCell className="text-right">{fmt(Number(p.custo))}</TableCell>
                       <TableCell className="text-right font-medium">{fmt(Number(p.preco))}</TableCell>
-                      <TableCell>
-                        <Badge variant={p.ativo ? "default" : "secondary"}>{p.ativo ? "Ativo" : "Inativo"}</Badge>
-                      </TableCell>
-                      {!isMobile && canEditProduto && (
+                      <TableCell><Badge variant={p.ativo ? "default" : "secondary"}>{p.ativo ? "Ativo" : "Inativo"}</Badge></TableCell>
+                      {canEditProduto && (
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => setProdutoForm({ open: true, data: p })}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => deleteProduto.mutate(p.id)}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setProdutoForm({ open: true, data: p })}><Pencil className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => deleteProduto.mutate(p.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                           </div>
                         </TableCell>
                       )}

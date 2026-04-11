@@ -150,56 +150,84 @@ export default function PedidosPage() {
         </Select>
       </div>
 
-      {isMobile && (
-        <p className="px-1 text-xs text-muted-foreground">
-          Toque em um pedido para abrir ações rápidas.
-        </p>
-      )}
+      {/* ── MOBILE: Card list (zero scroll horizontal) ── */}
+      <div className="md:hidden space-y-2">
+        {isLoading ? (
+          <p className="text-center text-muted-foreground py-10 text-sm">Carregando...</p>
+        ) : !filtered?.length ? (
+          <p className="text-center text-muted-foreground py-10 text-sm">Nenhum pedido encontrado</p>
+        ) : (
+          filtered.map((p) => {
+            const st = STATUS_MAP[p.status] ?? STATUS_MAP.rascunho;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                className="w-full text-left"
+                onClick={() => setMobileItem(p)}
+                aria-label={`Abrir ações do pedido ${p.id.slice(0, 8)}`}
+              >
+                <Card className="p-3 active:bg-muted/60 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-sm text-foreground truncate">{p.clientes?.nome ?? "—"}</p>
+                        {isPortalOrder(p.observacoes) && (
+                          <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20 gap-1 px-1.5 shrink-0">
+                            <Globe className="w-2.5 h-2.5" /> Portal
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                        <span className="text-xs text-muted-foreground">#{p.id.slice(0, 8)}</span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <CalendarClock className="w-3 h-3" />
+                          {format(new Date(p.data_prevista_entrega + "T12:00:00"), "dd/MM/yy")}
+                          {["rascunho", "aguardando_entrega", "em_rota"].includes(p.status) && getEntregaBadge(p.data_prevista_entrega)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
+                      <span className="text-sm font-bold text-foreground">{fmtR(Number(p.valor_total))}</span>
+                    </div>
+                  </div>
+                </Card>
+              </button>
+            );
+          })
+        )}
+      </div>
 
-      {/* Tabela */}
-      <Card>
+      {/* ── DESKTOP: Tabela completa ── */}
+      <Card className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
-              {!isMobile && <TableHead>ID</TableHead>}
+              <TableHead>ID</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Entrega</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
-              {!isMobile && <TableHead className="w-32" />}
+              <TableHead className="w-32" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={isMobile ? 4 : 6} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
             ) : !filtered?.length ? (
-              <TableRow><TableCell colSpan={isMobile ? 4 : 6} className="text-center text-muted-foreground py-8">Nenhum pedido encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum pedido encontrado</TableCell></TableRow>
             ) : (
               filtered.map((p) => (
-                <TableRow
-                  key={p.id}
-                  {...mobileRowProps(isMobile, () => setMobileItem(p), `Abrir ações do pedido ${p.id.slice(0, 8)}`)}
-                >
-                  {!isMobile && <TableCell className="font-mono text-xs">{p.id.slice(0, 8)}</TableCell>}
+                <TableRow key={p.id}>
+                  <TableCell className="font-mono text-xs">{p.id.slice(0, 8)}</TableCell>
                   <TableCell className="font-medium">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate">{p.clientes?.nome ?? "—"}</p>
-                        {isPortalOrder(p.observacoes) && (
-                          <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20 gap-1 px-1.5 hidden sm:inline-flex">
-                            <Globe className="w-3 h-3" /> Portal
-                          </Badge>
-                        )}
-                      </div>
-                      {isMobile && (
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <p className="text-xs text-muted-foreground">#{p.id.slice(0, 8)}</p>
-                          {isPortalOrder(p.observacoes) && (
-                            <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20 gap-1 px-1.5">
-                              <Globe className="w-2 h-2" /> Portal
-                            </Badge>
-                          )}
-                        </div>
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">{p.clientes?.nome ?? "—"}</span>
+                      {isPortalOrder(p.observacoes) && (
+                        <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20 gap-1 px-1.5">
+                          <Globe className="w-3 h-3" /> Portal
+                        </Badge>
                       )}
                     </div>
                   </TableCell>
@@ -211,33 +239,25 @@ export default function PedidosPage() {
                   </TableCell>
                   <TableCell className="text-right font-semibold">{fmtR(Number(p.valor_total))}</TableCell>
                   <TableCell>{getStatusBadge(p.status)}</TableCell>
-                  {!isMobile && (
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setDetailId(p.id)} title="Ver detalhes">
-                          <Eye className="w-4 h-4" />
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => setDetailId(p.id)} title="Ver detalhes"><Eye className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => setReceiptPedido(p)} title="Imprimir Recibo"><Printer className="w-4 h-4 text-muted-foreground" /></Button>
+                      {["rascunho", "aguardando_entrega"].includes(p.status) && (
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(p)} title="Editar"><Pencil className="w-4 h-4 text-muted-foreground" /></Button>
+                      )}
+                      {p.status === "rascunho" && (
+                        <Button variant="ghost" size="icon" onClick={() => atualizarStatus.mutate({ id: p.id, status: "aguardando_entrega" })} title="Confirmar">
+                          <CheckCircle className="w-4 h-4 text-primary" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setReceiptPedido(p)} title="Imprimir Recibo">
-                          <Printer className="w-4 h-4 text-muted-foreground" />
+                      )}
+                      {p.status === "aguardando_entrega" && (
+                        <Button variant="ghost" size="icon" onClick={() => atualizarStatus.mutate({ id: p.id, status: "em_rota" })} title="Em rota">
+                          <Truck className="w-4 h-4 text-blue-600" />
                         </Button>
-                        {["rascunho", "aguardando_entrega"].includes(p.status) && (
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(p)} title="Editar Pedido">
-                            <Pencil className="w-4 h-4 text-muted-foreground" />
-                          </Button>
-                        )}
-                        {p.status === "rascunho" && (
-                          <Button variant="ghost" size="icon" onClick={() => atualizarStatus.mutate({ id: p.id, status: "aguardando_entrega" })} title="Confirmar">
-                            <CheckCircle className="w-4 h-4 text-primary" />
-                          </Button>
-                        )}
-                        {p.status === "aguardando_entrega" && (
-                          <Button variant="ghost" size="icon" onClick={() => atualizarStatus.mutate({ id: p.id, status: "em_rota" })} title="Em rota">
-                            <Truck className="w-4 h-4 text-blue-600" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  )}
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
