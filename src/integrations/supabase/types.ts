@@ -3071,6 +3071,56 @@ export type Database = {
           },
         ]
       }
+      sync_logs: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          empresa_id: string
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          operation: string
+          payload: Json | null
+          status: string
+          table_name: string
+          vendedor_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          empresa_id: string
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          operation: string
+          payload?: Json | null
+          status: string
+          table_name: string
+          vendedor_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          empresa_id?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          operation?: string
+          payload?: Json | null
+          status?: string
+          table_name?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_logs_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sync_queue: {
         Row: {
           created_at: string
@@ -3312,12 +3362,14 @@ export type Database = {
           created_at: string
           data_venda: string
           desconto_total: number
+          device_id: string | null
           empresa_id: string
           id: string
           idempotency_key: string | null
           is_retroativa: boolean | null
           motivo_cancelamento: string | null
           observacoes: string
+          offline_at: string | null
           pagamentos: Json
           status: Database["public"]["Enums"]["status_venda"]
           subtotal: number
@@ -3334,12 +3386,14 @@ export type Database = {
           created_at?: string
           data_venda?: string
           desconto_total?: number
+          device_id?: string | null
           empresa_id: string
           id?: string
           idempotency_key?: string | null
           is_retroativa?: boolean | null
           motivo_cancelamento?: string | null
           observacoes?: string
+          offline_at?: string | null
           pagamentos?: Json
           status?: Database["public"]["Enums"]["status_venda"]
           subtotal?: number
@@ -3356,12 +3410,14 @@ export type Database = {
           created_at?: string
           data_venda?: string
           desconto_total?: number
+          device_id?: string | null
           empresa_id?: string
           id?: string
           idempotency_key?: string | null
           is_retroativa?: boolean | null
           motivo_cancelamento?: string | null
           observacoes?: string
+          offline_at?: string | null
           pagamentos?: Json
           status?: Database["public"]["Enums"]["status_venda"]
           subtotal?: number
@@ -3606,6 +3662,25 @@ export type Database = {
               total: number
             }[]
           }
+      fn_admin_create_user: {
+        Args: {
+          p_email: string
+          p_empresa_id: string
+          p_nome: string
+          p_password: string
+          p_role: string
+        }
+        Returns: string
+      }
+      fn_admin_editar_venda_finalizada: {
+        Args: {
+          _novas_observacoes: string
+          _novos_itens: Json
+          _usuario_id: string
+          _venda_id: string
+        }
+        Returns: Json
+      }
       fn_cancelar_venda: {
         Args: { _motivo: string; _usuario_id: string; _venda_id: string }
         Returns: Json
@@ -3624,42 +3699,26 @@ export type Database = {
         }
         Returns: Json
       }
-      fn_finalizar_venda_atomica:
-        | {
-            Args: {
-              _cliente_id: string
-              _crediario?: Json
-              _data_venda: string
-              _desconto_total: number
-              _empresa_id: string
-              _idempotency_key: string
-              _itens: Json
-              _observacoes: string
-              _pagamentos: Json
-              _subtotal: number
-              _total: number
-              _vendedor_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _cliente_id: string
-              _crediario?: Json
-              _data_venda: string
-              _desconto_total: number
-              _empresa_id: string
-              _idempotency_key: string
-              _is_retroativa?: boolean
-              _itens: Json
-              _observacoes: string
-              _pagamentos: Json
-              _subtotal: number
-              _total: number
-              _vendedor_id: string
-            }
-            Returns: Json
-          }
+      fn_finalizar_venda_atomica: {
+        Args: {
+          _cliente_id: string
+          _crediario?: Json
+          _data_venda: string
+          _desconto_total: number
+          _device_id?: string
+          _empresa_id: string
+          _idempotency_key: string
+          _is_retroativa?: boolean
+          _itens: Json
+          _observacoes: string
+          _offline_at?: string
+          _pagamentos: Json
+          _subtotal: number
+          _total: number
+          _vendedor_id: string
+        }
+        Returns: Json
+      }
       fn_get_cidades_publicas: {
         Args: never
         Returns: {
