@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw,
   Wifi,
@@ -10,8 +10,11 @@ import {
   Trash2,
   RotateCcw,
   Loader2,
+  ListRestart,
+  Database,
+  History,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -21,11 +24,13 @@ import { getAllQueueItems, clearSyncedItems, removeQueueItem, type QueueItem } f
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const OP_LABEL: Record<string, string> = {
   insert: "Inserir",
   update: "Atualizar",
   delete: "Excluir",
+  rpc: "Operação Atômica (RPC)",
 };
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -35,30 +40,64 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
   conflict: { label: "Conflito", variant: "outline" },
 };
 
+interface SyncLog {
+  id: string;
+  table_name: string;
+  operation: string;
+  status: "success" | "error";
+  error_message: string | null;
+  created_at: string;
+  idempotency_key: string | null;
+}
+
 export default function SyncPage() {
-  const { isOnline, isSyncing, pendingCount, errorCount, deviceId, lastSync, sync, retryErrors, refreshCounts } =
+  const { isOnline, isSyncing, pendingCount, errorCount, deviceId, lastSync, syncAll, retryErrors, refreshCounts } =
     useOffline();
 
   const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
+  const [serverLogs, setServerLogs] = useState<SyncLog[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
-  const loadQueue = async () => {
+  const loadQueue = useCallback(async () => {
     const items = await getAllQueueItems();
     setQueueItems(items);
     await refreshCounts();
-  };
+  }, [refreshCounts]);
+
+  const loadServerLogs = useCallback(async () => {
+    if (!isOnline) return;
+    setIsLoadingLogs(true);
+    try {
+      const { data, error } = await supabase
+        .from("sync_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      setServerLogs(data || []);
+    } catch (err) {
+      console.error("Failed to load sync logs:", err);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  }, [isOnline]);
 
   useEffect(() => {
     loadQueue();
-  }, [pendingCount, errorCount]);
+    loadServerLogs();
+  }, [pendingCount, errorCount, loadQueue, loadServerLogs]);
 
   const handleSync = async () => {
-    await sync();
+    await syncAll();
     loadQueue();
+    loadServerLogs();
   };
 
   const handleRetry = async () => {
     await retryErrors();
     loadQueue();
+    loadServerLogs();
   };
 
   const handleRemove = async (uuid: string) => {
@@ -73,140 +112,251 @@ export default function SyncPage() {
     loadQueue();
   };
 
+  const handleForceReload = () => {
+    if (confirm("Isso irá recarregar o aplicativo e limpar cache temporário. Deseja continuar?")) {
+      window.location.reload();
+    }
+  };
+
+  const handleClearAppCache = async () => {
+    if (!confirm("Isso irá limpar TODOS os dados locais de cache (exceto vendas pendentes). Use apenas se o sistema estiver travado no celular. Prosseguir?")) return;
+    
+    try {
+      // Clear Service Worker caches
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+      
+      toast.success("Cache limpo. Recarregando...");
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      toast.error("Erro ao limpar cache");
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto pb-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-            <RefreshCw className="w-5 h-5 text-primary" />
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
+            <RefreshCw className={`w-6 h-6 text-primary ${isSyncing ? 'animate-spin' : ''}`} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">Sincronização</h1>
-            <p className="text-sm text-muted-foreground">Fila offline e status de sync</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Sincronização Robusta</h1>
+            <p className="text-sm text-muted-foreground">Gerencie sua fila offline e audite logs do servidor</p>
           </div>
         </div>
-        <Badge variant={isOnline ? "default" : "destructive"} className="gap-1.5">
-          {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-          {isOnline ? "Online" : "Offline"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={isOnline ? "default" : "destructive"} className="px-3 py-1 gap-1.5 text-xs font-semibold uppercase tracking-wider">
+            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+            {isOnline ? "Online" : "Offline"}
+          </Badge>
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Pendentes</span>
+      <Separator />
+
+      {/* KPIs & Device Info */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-card/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-secondary/50 p-2 rounded-lg">
+                <Smartphone className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <Badge variant="outline" className="font-mono text-[10px]">{deviceId?.slice(0, 8)}</Badge>
             </div>
-            <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">ID do Dispositivo</p>
+              <h3 className="text-xs font-mono text-foreground break-all mt-1">{deviceId}</h3>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-4 h-4 text-destructive" />
-              <span className="text-xs text-muted-foreground">Com erro</span>
+
+        <Card className="bg-card/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-primary/10 p-2 rounded-lg">
+                <Clock className="w-5 h-5 text-primary" />
+              </div>
+              <Badge variant={pendingCount > 0 ? "secondary" : "outline"}>{pendingCount} itens</Badge>
             </div>
-            <p className="text-2xl font-bold text-destructive">{errorCount}</p>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Vendas Pendentes</p>
+              <h3 className="text-2xl font-bold text-foreground mt-1">{pendingCount}</h3>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Smartphone className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Device ID</span>
+
+        <Card className="bg-card/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-destructive/10 p-2 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+              </div>
+              <Badge variant={errorCount > 0 ? "destructive" : "outline"}>{errorCount} erros</Badge>
             </div>
-            <p className="text-xs font-mono text-foreground truncate">{deviceId?.slice(0, 12) ?? "—"}...</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 className="w-4 h-4 text-primary" />
-              <span className="text-xs text-muted-foreground">Último sync</span>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Falhas de Sync</p>
+              <h3 className="text-2xl font-bold text-destructive mt-1">{errorCount}</h3>
             </div>
-            <p className="text-xs text-foreground">
-              {lastSync ? format(new Date(lastSync), "dd/MM HH:mm:ss", { locale: ptBR }) : "Nunca"}
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-2 flex-wrap">
-        <Button size="sm" className="gap-1.5" onClick={handleSync} disabled={isSyncing || !isOnline || pendingCount === 0}>
-          {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          Sincronizar agora
-        </Button>
-        {errorCount > 0 && (
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleRetry} disabled={isSyncing || !isOnline}>
-            <RotateCcw className="w-4 h-4" />
-            Retentar erros ({errorCount})
-          </Button>
-        )}
-        <Button size="sm" variant="ghost" className="gap-1.5" onClick={handleClearSynced}>
-          <Trash2 className="w-4 h-4" />
-          Limpar sincronizados
-        </Button>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {/* Actions Bar */}
+          <div className="flex flex-wrap items-center gap-3 bg-card p-4 rounded-xl border border-border shadow-sm">
+            <Button 
+              size="sm" 
+              className="gap-2 px-4 shadow-sm" 
+              onClick={handleSync} 
+              disabled={isSyncing || !isOnline || (pendingCount === 0 && errorCount === 0)}
+            >
+              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Sincronizar Pendentes e Erros
+            </Button>
+            
+            <Button size="sm" variant="outline" className="gap-2" onClick={handleClearSynced}>
+              <Trash2 className="w-4 h-4" />
+              Limpar Concluídos
+            </Button>
 
-      {/* Queue Table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Fila de Sincronização</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {queueItems.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
-              <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p>Fila vazia — tudo sincronizado.</p>
+            <Separator orientation="vertical" className="h-8 hidden sm:block" />
+
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" className="gap-2 text-xs" onClick={handleForceReload}>
+                <ListRestart className="w-4 h-4" />
+                Atualizar App
+              </Button>
+              <Button size="sm" variant="ghost" className="gap-2 text-xs text-destructive hover:text-destructive" onClick={handleClearAppCache}>
+                <Database className="w-4 h-4" />
+                Limpar Cache
+              </Button>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>UUID</TableHead>
-                  <TableHead>Tabela</TableHead>
-                  <TableHead>Operação</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-16" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {queueItems.map((item) => {
-                  const st = STATUS_MAP[item.status_sync] ?? STATUS_MAP.pending;
-                  return (
-                    <TableRow key={item.uuid}>
-                      <TableCell className="font-mono text-xs">{item.uuid.slice(0, 8)}</TableCell>
-                      <TableCell className="font-medium text-sm">{item.table}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{OP_LABEL[item.operation] ?? item.operation}</Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(item.timestamp), "dd/MM HH:mm:ss", { locale: ptBR })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={st.variant}>{st.label}</Badge>
-                        {item.error_message && (
-                          <p className="text-xs text-destructive mt-1 max-w-[200px] truncate">{item.error_message}</p>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => handleRemove(item.uuid)}>
-                          <Trash2 className="w-4 h-4 text-muted-foreground" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+
+          {/* Queue Table */}
+          <Card className="border-none shadow-none bg-transparent">
+            <CardHeader className="px-0 pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <History className="w-4 h-4 text-primary" />
+                    Fila Offline Atual
+                  </CardTitle>
+                  <CardDescription>Operações aguardando envio neste dispositivo</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-0 pt-0">
+              <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+                {queueItems.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <div className="bg-primary/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle2 className="w-8 h-8 text-primary/40" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground">Tudo em dia!</h3>
+                    <p className="text-muted-foreground text-sm max-w-xs mx-auto">Não há vendas pendentes neste terminal.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead className="w-24">Seq.</TableHead>
+                        <TableHead>Operação</TableHead>
+                        <TableHead>Horário</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="w-10" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {queueItems.map((item, idx) => {
+                        const st = STATUS_MAP[item.status_sync] ?? STATUS_MAP.pending;
+                        return (
+                          <TableRow key={item.uuid} className="group transition-colors hover:bg-muted/30">
+                            <TableCell className="font-mono text-[10px] text-muted-foreground">#{idx + 1}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-sm text-foreground">{item.table.toUpperCase()}</span>
+                                <span className="text-[10px] text-muted-foreground uppercase">{OP_LABEL[item.operation] ?? item.operation}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-[11px] font-medium text-muted-foreground">
+                              {format(new Date(item.timestamp), "HH:mm:ss", { locale: ptBR })}
+                              <span className="block text-[9px] opacity-70">{format(new Date(item.timestamp), "dd/MM/yyyy", { locale: ptBR })}</span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={st.variant} className="text-[10px] uppercase font-bold px-2 py-0">
+                                {st.label}
+                              </Badge>
+                              {item.error_message && (
+                                <p className="text-[10px] text-destructive mt-1 font-medium max-w-[150px] leading-tight">{item.error_message}</p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemove(item.uuid)}>
+                                <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Audit Logs (Sidebar) */}
+        <div className="space-y-4">
+          <Card className="h-full bg-card/50">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-primary" />
+                Últimos Logs do Servidor
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!isOnline ? (
+                <div className="py-10 text-center space-y-2">
+                  <WifiOff className="w-8 h-8 mx-auto text-muted-foreground opacity-30" />
+                  <p className="text-xs text-muted-foreground">Offline: Histórico indisponível</p>
+                </div>
+              ) : isLoadingLogs ? (
+                <div className="py-10 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                </div>
+              ) : serverLogs.length === 0 ? (
+                <p className="text-xs text-center text-muted-foreground py-10">Nenhum log encontrado.</p>
+              ) : (
+                <div className="space-y-3">
+                  {serverLogs.map((log) => (
+                    <div key={log.id} className="p-3 rounded-lg border border-border bg-card/80 text-[11px] relative overflow-hidden">
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${log.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-bold uppercase">{log.table_name}</span>
+                        <span className="text-[9px] opacity-60">{format(new Date(log.created_at), "HH:mm:ss", { locale: ptBR })}</span>
+                      </div>
+                      <p className="text-muted-foreground mb-1 italic">
+                        {log.operation.split(':')[1] || log.operation}
+                      </p>
+                      {log.error_message ? (
+                        <p className="text-destructive font-bold break-words">{log.error_message}</p>
+                      ) : (
+                        <p className="text-green-500 font-bold">✓ Sincronizado com sucesso</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

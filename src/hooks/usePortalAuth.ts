@@ -69,27 +69,60 @@ export function usePortalAuth(): PortalAuth {
     let mounted = true;
 
     const init = async () => {
-      const { data: { session: s } } = await supabase.auth.getSession();
-      if (!mounted) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) {
-        await fetchClienteData(s.user.id);
+      // Timeout de segurança: Se em 7s não carregar, solta o spinner
+      const safetyTimeout = setTimeout(() => {
+        if (mounted) {
+          console.warn("PortalAuth: Tempo de resposta excedido no carregamento inicial.");
+          setLoading(false);
+        }
+      }, 7000);
+
+      try {
+        const { data: { session: s } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (s?.user) {
+          await fetchClienteData(s.user.id);
+        }
+      } catch (err) {
+        console.error("Erro ao inicializar PortalAuth:", err);
+      } finally {
+        if (mounted) {
+          clearTimeout(safetyTimeout);
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       if (!mounted) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) {
-        await fetchClienteData(s.user.id);
-      } else {
-        setCliente(null);
-        setIsCliente(false);
+      
+      const sessionTimeout = setTimeout(() => {
+        if (mounted) {
+          console.warn("PortalAuth: Tempo de resposta excedido na mudança de sessão.");
+          setLoading(false);
+        }
+      }, 7000);
+
+      try {
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (s?.user) {
+          await fetchClienteData(s.user.id);
+        } else {
+          setCliente(null);
+          setIsCliente(false);
+        }
+      } catch (err) {
+        console.error("Erro na mudança de sessão PortalAuth:", err);
+      } finally {
+        if (mounted) {
+          clearTimeout(sessionTimeout);
+          setLoading(false);
+        }
       }
     });
 
@@ -110,17 +143,33 @@ export function usePortalAuth(): PortalAuth {
   const signInWithCPF = async (cpf: string, password: string) => {
     try {
       const normalizedCPF = cpf.replace(/\D/g, "");
-      const { data, error } = await supabase.functions.invoke("portal-auth", {
-        body: { action: "cpf-lookup", cpf: normalizedCPF },
+      // Busca o email associado ao CPF via RPC SQL
+      const { data, error } = await (supabase as any).rpc("fn_portal_cpf_lookup", { 
+        p_cpf: normalizedCPF 
       });
 
-      if (error || !data?.email) {
-        return { error: new Error("Credenciais inválidas") };
+      if (error || !data) {
+        return { error: new Error("CPF nÃ£o encontrado ou nÃ£o habilitado.") };
       }
 
-      return signIn(data.email, password);
-    } catch {
-      return { error: new Error("Credenciais inválidas") };
+      // Supabase RPC returns a list of result objects
+      const rows = Array.isArray(data) ? data : [data];
+      const result = rows[0];
+
+      if (!result) {
+        return { error: new Error("CPF nÃ£o localizado.") };
+      }
+
+      const email = typeof result === 'string' ? result : (result as any).email;
+
+      if (!email) {
+        return { error: new Error("Cadastro incompleto. Fale com seu vendedor.") };
+      }
+
+      return signIn(email, password);
+    } catch (err: any) {
+      console.error("Erro no signInWithCPF:", err);
+      return { error: new Error("Erro na comunicação com o servidor.") };
     }
   };
 

@@ -196,6 +196,7 @@ export function unmarkOneGift(cart: CartItem[], lineId: string): CartItem[] {
 export function updateCartItem(cart: CartItem[], lineId: string, updates: Partial<CartItem>): CartItem[] {
   return cart.map((item) => {
     if (item.line_id !== lineId) return item;
+    
     const merged = { ...item, ...updates };
     if (merged.bonus) {
       merged.subtotal = 0;
@@ -213,10 +214,23 @@ export function changeLineQty(cart: CartItem[], lineId: string, delta: number): 
   return cart.map((item) => {
     if (item.line_id !== lineId) return item;
     const newQty = Math.max(1, item.quantidade + delta);
+    
     if (item.bonus) {
       return { ...item, quantidade: newQty, subtotal: 0 };
     }
-    return { ...item, quantidade: newQty, subtotal: newQty * item.preco_vendido - item.desconto };
+
+    let newDesconto = item.desconto;
+    // If there was an auto-discount (price edited), adjust it proportionally to new quantity
+    if (item.preco_vendido < item.preco_original) {
+      newDesconto = (item.preco_original - item.preco_vendido) * newQty;
+    }
+
+    return { 
+      ...item, 
+      quantidade: newQty, 
+      desconto: newDesconto,
+      subtotal: newQty * item.preco_vendido - newDesconto 
+    };
   });
 }
 

@@ -42,19 +42,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Mask email to prevent full PII exposure: j***@g***.com
-      const email = cliente.email;
-      const [localPart, domain] = email.split("@");
-      const maskedLocal = localPart.length > 1
-        ? localPart[0] + "***"
-        : localPart;
-      const domainParts = domain.split(".");
-      const maskedDomain = domainParts[0].length > 1
-        ? domainParts[0][0] + "***." + domainParts.slice(1).join(".")
-        : domain;
-      const maskedEmail = `${maskedLocal}@${maskedDomain}`;
-
-      return new Response(JSON.stringify({ email: maskedEmail, hint: true }), {
+      // Return real email so frontend can perform signIn
+      return new Response(JSON.stringify({ email: cliente.email, hint: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -165,7 +154,41 @@ Deno.serve(async (req) => {
         });
       }
 
-      return new Response(JSON.stringify({ success: true, user_id: newUser.user?.id }), {
+      const userId = newUser.user?.id;
+      if (!userId) {
+        return new Response(JSON.stringify({ error: "Erro ao recuperar ID do novo usuário" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 1. Update the role created by the trigger (trigger defaults to 'vendedor')
+      // and ensure it is 'cliente'
+      const { error: roleErr } = await supabase
+        .from("user_roles")
+        .update({ role: "cliente" })
+        .eq("user_id", userId)
+        .eq("empresa_id", clienteData.empresa_id);
+
+      if (roleErr) {
+        // If update fails (e.g. trigger didn't run for some reason), try insert
+        await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, empresa_id: clienteData.empresa_id, role: "cliente" });
+      }
+
+      // 2. Link the client record to the new auth user
+      const { error: linkErr } = await supabase
+        .from("clientes")
+        .update({ user_id: userId })
+        .eq("id", cliente_id);
+
+      if (linkErr) {
+        console.error("Erro ao vincular cliente ao usuário:", linkErr.message);
+        // We don't fail here as the user is already created, but it's a critical error
+      }
+
+      return new Response(JSON.stringify({ success: true, user_id: userId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

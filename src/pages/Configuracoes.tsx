@@ -17,7 +17,7 @@ import {
   User, Building2, Palette, ShoppingCart, CreditCard, CalendarDays,
   MapPin, Users, BookOpen, Bell, HardDrive, Shield, LogOut, Plus, Trash2, Save, Award, Sun, Moon, Monitor, Globe, FileDown,
   ArrowUp, ArrowDown, LayoutDashboard, RefreshCw,
-  Eye, EyeOff, Columns, Square
+  Eye, EyeOff, Columns, Square, ExternalLink, Copy
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useUserPreferences } from "@/contexts/UserPreferencesContext";
@@ -63,12 +63,12 @@ const TABS = [
   { id: "pagamento", label: "Pagamento", icon: CreditCard },
   { id: "parcelas", label: "Parcelas", icon: CalendarDays },
   { id: "vendedores", label: "Vendedores", icon: Users },
-  { id: "indicacoes", label: "IndicaÃ§Ãµes", icon: Award },
-  { id: "catalogo", label: "CatÃ¡logo", icon: BookOpen },
+  { id: "indicacoes", label: "Indicações", icon: Award },
+  { id: "catalogo", label: "Catálogo", icon: BookOpen },
   { id: "portal", label: "Portal", icon: Globe },
-  { id: "notificacoes", label: "NotificaÃ§Ãµes", icon: Bell },
+  { id: "notificacoes", label: "Notificações", icon: Bell },
   { id: "backup", label: "Backup", icon: HardDrive },
-  { id: "seguranca", label: "SeguranÃ§a", icon: Shield },
+  { id: "seguranca", label: "Segurança", icon: Shield },
   { id: "interface", label: "Minha Interface", icon: LayoutDashboard },
 ];
 
@@ -105,7 +105,7 @@ const PRESET_THEMES = [
   },
   { 
     id: "sunset", 
-    label: "CrepÃºsculo", 
+    label: "Crepúsculo", 
     primary: "#f43f5e",
     background: "#180c10", 
     card: "#2a141a", 
@@ -115,7 +115,7 @@ const PRESET_THEMES = [
   },
   { 
     id: "amber", 
-    label: "Ã‚mbar", 
+    label: "Âmbar", 
     primary: "#f59e0b",
     background: "#0c0a09", 
     card: "#1c1917", 
@@ -135,7 +135,7 @@ const PRESET_THEMES = [
   },
   { 
     id: "coffee", 
-    label: "ArÃ¡bica", 
+    label: "Arábica", 
     primary: "#92400e",
     background: "#1a1310", 
     card: "#261c17", 
@@ -145,7 +145,7 @@ const PRESET_THEMES = [
   },
   { 
     id: "slate", 
-    label: "ArdÃ³sia", 
+    label: "Ardósia", 
     primary: "#64748b",
     background: "#020617", 
     card: "#0f172a", 
@@ -227,7 +227,7 @@ export default function ConfiguracoesPage() {
       // Silently handle - don't reveal if email exists
     }
     // Always show the same message regardless of result
-    toast.success("Se o email estiver cadastrado, vocÃª receberÃ¡ instruÃ§Ãµes para redefinir sua senha.");
+    toast.success("Se o email estiver cadastrado, você receberá instruções para redefinir sua senha.");
   };
 
   const SwitchRow = ({ label, description, checked, onCheckedChange, disabled }: {
@@ -247,7 +247,7 @@ export default function ConfiguracoesPage() {
   return (
     <div className="space-y-4 pb-20">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">ConfiguraÃ§Ãµes</h1>
+        <h1 className="text-xl font-bold text-foreground">Configurações</h1>
         <Button variant="destructive" size="sm" onClick={handleLogout}>
           <LogOut className="h-4 w-4 mr-1" /> Sair
         </Button>
@@ -268,7 +268,7 @@ export default function ConfiguracoesPage() {
           })}
         </TabsList>
 
-        {/* 0. MINHA INTERFACE (PERSONALIZAÃ‡ÃƒO INDIVIDUAL) */}
+        {/* 0. MINHA INTERFACE (PERSONALIZAÇÃO INDIVIDUAL) */}
         <TabsContent value="interface">
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             
@@ -322,7 +322,7 @@ export default function ConfiguracoesPage() {
                         </div>
                         
                         <div className="flex items-center gap-1.5 ml-auto">
-                          {/* BotÃµes de Coluna (Apenas para tipos que nÃ£o sejam KPI do topo) */}
+                          {/* Botões de Coluna (Apenas para tipos que não sejam KPI do topo) */}
                           {item.id !== "resumo-dia" && item.id !== "periodo-kpis" && (
                             <div className="flex items-center gap-1 bg-muted/30 rounded-md p-1 mr-2 border border-border/50">
                                <span className="text-[9px] font-bold text-muted-foreground mr-1 uppercase">Largura:</span>
@@ -357,7 +357,7 @@ export default function ConfiguracoesPage() {
                     ))}
                   </div>
                   <Button variant="outline" size="sm" className="w-full text-[10px] mt-2 h-7" onClick={resetToDefault}>
-                    <RefreshCw className="h-3 w-3 mr-2" /> Restaurar PadrÃ£o
+                    <RefreshCw className="h-3 w-3 mr-2" /> Restaurar Padrão
                   </Button>
                 </CardContent>
               </Card>
@@ -441,7 +441,7 @@ export default function ConfiguracoesPage() {
                         <Label className="text-[10px] text-muted-foreground">Cores do Sistema</Label>
                         <div className="space-y-3 p-3 rounded-xl border bg-muted/20">
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px]">PrimÃ¡ria</span>
+                            <span className="text-[11px]">Primária</span>
                             <Input 
                               type="color" className="w-8 h-8 p-0.5 cursor-pointer rounded-full border-none" 
                               value={visualConfig.primary || "#10b981"} 
@@ -460,7 +460,7 @@ export default function ConfiguracoesPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-[10px] text-muted-foreground">Cores de GrÃ¡ficos</Label>
+                        <Label className="text-[10px] text-muted-foreground">Cores de Gráficos</Label>
                         <div className="flex flex-wrap gap-2 p-3 rounded-xl border bg-muted/20 content-center h-full max-h-[82px] overflow-y-auto">
                           {(visualConfig.charts || ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"]).map((color, i) => (
                             <Input 
@@ -478,7 +478,7 @@ export default function ConfiguracoesPage() {
                     </div>
 
                     <Button variant="ghost" size="sm" className="w-full text-[10px] text-muted-foreground hover:text-primary transition-colors" onClick={() => updateVisualConfig({})}>
-                       <RefreshCw className="h-3 w-3 mr-2" /> Limpar CustomizaÃ§Ã£o
+                       <RefreshCw className="h-3 w-3 mr-2" /> Limpar Customização
                     </Button>
                   </div>
                 </CardContent>
@@ -489,7 +489,7 @@ export default function ConfiguracoesPage() {
             <div className="flex-1 w-full lg:sticky lg:top-24 space-y-4">
                <div className="flex items-center justify-between px-1">
                  <h3 className="text-sm font-bold flex items-center gap-2">
-                   <Monitor className="h-4 w-4 text-muted-foreground" /> VisualizaÃ§Ã£o em Tempo Real
+                   <Monitor className="h-4 w-4 text-muted-foreground" /> Visualização em Tempo Real
                  </h3>
                  <div className="flex bg-muted p-1 rounded-lg">
                     <Button 
@@ -544,8 +544,8 @@ export default function ConfiguracoesPage() {
 
                <div className="bg-muted/50 p-3 rounded-lg border border-dashed text-center">
                   <p className="text-[11px] text-muted-foreground">
-                    O que vocÃª vÃª acima Ã© exatamente como seu Dashboard ficarÃ¡. <br/>
-                    As alteraÃ§Ãµes sÃ£o sincronizadas com sua conta em nuvem.
+                    O que você vê acima é exatamente como seu Dashboard ficará. <br/>
+                    As alterações são sincronizadas com sua conta em nuvem.
                   </p>
                </div>
             </div>
@@ -557,8 +557,8 @@ export default function ConfiguracoesPage() {
         <TabsContent value="perfil">
           <Card>
             <CardHeader>
-              <CardTitle>Perfil do UsuÃ¡rio</CardTitle>
-              <CardDescription>Suas informaÃ§Ãµes pessoais</CardDescription>
+              <CardTitle>Perfil do Usuário</CardTitle>
+              <CardDescription>Suas informações pessoais</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -568,7 +568,7 @@ export default function ConfiguracoesPage() {
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input value={user?.email ?? ""} disabled />
-                <p className="text-xs text-muted-foreground">O email nÃ£o pode ser alterado por aqui.</p>
+                <p className="text-xs text-muted-foreground">O email não pode ser alterado por aqui.</p>
               </div>
               <div className="space-y-2">
                 <Label>Empresa</Label>
@@ -591,7 +591,7 @@ export default function ConfiguracoesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Dados da Empresa</CardTitle>
-              <CardDescription>InformaÃ§Ãµes cadastrais</CardDescription>
+              <CardDescription>Informações cadastrais</CardDescription>
             </CardHeader>
             <CardContent>
               {empresa && <EmpresaForm empresa={empresa} onSave={(v) => updateEmpresa.mutate({ id: empresa.id, ...v })} />}
@@ -612,8 +612,8 @@ export default function ConfiguracoesPage() {
               {["cor_primaria", "cor_secundaria", "cor_botoes", "cor_fundo"].map((key) => {
                 const labels: Record<string, string> = {
                   cor_primaria: "Cor Principal",
-                  cor_secundaria: "Cor SecundÃ¡ria",
-                  cor_botoes: "Cor dos BotÃµes",
+                  cor_secundaria: "Cor Secundária",
+                  cor_botoes: "Cor dos Botões",
                   cor_fundo: "Cor de Fundo",
                 };
                 return (
@@ -628,7 +628,7 @@ export default function ConfiguracoesPage() {
                   </div>
                 );
               })}
-              <p className="text-xs text-muted-foreground">As cores sÃ£o aplicadas ao catÃ¡logo pÃºblico automaticamente.</p>
+              <p className="text-xs text-muted-foreground">As cores são aplicadas ao catálogo público automaticamente.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -637,8 +637,8 @@ export default function ConfiguracoesPage() {
         <TabsContent value="recibo">
           <Card>
             <CardHeader>
-              <CardTitle>PersonalizaÃ§Ã£o do Recibo</CardTitle>
-              <CardDescription>Customize cores, conteÃºdo e aparÃªncia dos recibos de venda e pagamento</CardDescription>
+              <CardTitle>Personalização do Recibo</CardTitle>
+              <CardDescription>Customize cores, conteúdo e aparência dos recibos de venda e pagamento</CardDescription>
             </CardHeader>
             <CardContent>
               <ReciboConfig config={config} empresa={empresa} onSave={saveConfig} />
@@ -650,14 +650,14 @@ export default function ConfiguracoesPage() {
         <TabsContent value="pdv">
           <Card>
             <CardHeader>
-              <CardTitle>ConfiguraÃ§Ãµes do PDV</CardTitle>
+              <CardTitle>Configurações do PDV</CardTitle>
               <CardDescription>Regras de venda</CardDescription>
             </CardHeader>
             <CardContent className="divide-y">
               <SwitchRow label="Permitir venda sem estoque (admin)" checked={config?.permitir_venda_sem_estoque ?? false} onCheckedChange={(v) => saveConfig({ permitir_venda_sem_estoque: v })} />
               <SwitchRow label="Bloquear venda sem estoque (vendedores)" checked={config?.bloquear_venda_sem_estoque_vendedor ?? true} onCheckedChange={(v) => saveConfig({ bloquear_venda_sem_estoque_vendedor: v })} />
-              <SwitchRow label="Mostrar preÃ§o de custo" checked={config?.mostrar_preco_custo ?? false} onCheckedChange={(v) => saveConfig({ mostrar_preco_custo: v })} />
-              <SwitchRow label="Permitir alterar preÃ§o na venda" checked={config?.permitir_alterar_preco ?? false} onCheckedChange={(v) => saveConfig({ permitir_alterar_preco: v })} />
+              <SwitchRow label="Mostrar preço de custo" checked={config?.mostrar_preco_custo ?? false} onCheckedChange={(v) => saveConfig({ mostrar_preco_custo: v })} />
+              <SwitchRow label="Permitir alterar preço na venda" checked={config?.permitir_alterar_preco ?? false} onCheckedChange={(v) => saveConfig({ permitir_alterar_preco: v })} />
               <SwitchRow label="Permitir desconto" checked={config?.permitir_desconto ?? true} onCheckedChange={(v) => saveConfig({ permitir_desconto: v })} />
               <SwitchRow label="Permitir produto como brinde" checked={config?.permitir_brinde ?? false} onCheckedChange={(v) => saveConfig({ permitir_brinde: v })} />
             </CardContent>
@@ -669,7 +669,7 @@ export default function ConfiguracoesPage() {
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>ConfiguraÃ§Ãµes PIX</CardTitle>
+                <CardTitle>Configurações PIX</CardTitle>
                 <CardDescription>Configure a chave PIX para recebimentos, QR Codes e recibos</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -688,7 +688,7 @@ export default function ConfiguracoesPage() {
                         <SelectItem value="cnpj">CNPJ</SelectItem>
                         <SelectItem value="telefone">Telefone</SelectItem>
                         <SelectItem value="email">E-mail</SelectItem>
-                        <SelectItem value="aleatoria">Chave AleatÃ³ria</SelectItem>
+                        <SelectItem value="aleatoria">Chave Aleatória</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -712,13 +712,13 @@ export default function ConfiguracoesPage() {
                     <Label>Cidade do Recebedor</Label>
                     <Input
                       defaultValue={(config as any)?.pix_cidade_recebedor ?? ""}
-                      placeholder="Ex: SÃ£o Paulo"
+                      placeholder="Ex: São Paulo"
                       onBlur={(e) => saveConfig({ pix_cidade_recebedor: e.target.value.trim() })}
                     />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Essas informaÃ§Ãµes sÃ£o usadas para gerar QR Codes PIX e cÃ³digos copiÃ¡veis em recibos e cobranÃ§as.
+                  Essas informações são usadas para gerar QR Codes PIX e códigos copiáveis em recibos e cobranças.
                 </p>
               </CardContent>
             </Card>
@@ -760,12 +760,12 @@ export default function ConfiguracoesPage() {
         <TabsContent value="parcelas">
           <Card>
             <CardHeader>
-              <CardTitle>CondiÃ§Ãµes de Pagamento</CardTitle>
+              <CardTitle>Condições de Pagamento</CardTitle>
               <CardDescription>Parcelamento e juros</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>MÃ¡ximo de parcelas</Label>
+                <Label>Máximo de parcelas</Label>
                 <Input
                   type="number" min={1} max={24}
                   defaultValue={config?.parcelas_max ?? 6}
@@ -797,12 +797,12 @@ export default function ConfiguracoesPage() {
         <TabsContent value="vendedores">
           <Card>
             <CardHeader>
-              <CardTitle>ConfiguraÃ§Ãµes de Vendedores</CardTitle>
-              <CardDescription>ComissÃ£o e metas padrÃ£o</CardDescription>
+              <CardTitle>Configurações de Vendedores</CardTitle>
+              <CardDescription>Comissão e metas padrão</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>ComissÃ£o padrÃ£o (%)</Label>
+                <Label>Comissão padrão (%)</Label>
                 <Input
                   type="number" min={0} step={0.5}
                   defaultValue={config?.comissao_padrao ?? 5}
@@ -810,7 +810,7 @@ export default function ConfiguracoesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Meta mensal padrÃ£o (R$)</Label>
+                <Label>Meta mensal padrão (R$)</Label>
                 <Input
                   type="number" min={0}
                   defaultValue={config?.meta_mensal_padrao ?? 10000}
@@ -818,21 +818,21 @@ export default function ConfiguracoesPage() {
                 />
               </div>
               <Separator />
-              <p className="text-xs text-muted-foreground">PermissÃµes individuais de vendedores podem ser gerenciadas em UsuÃ¡rios.</p>
+              <p className="text-xs text-muted-foreground">Permissões individuais de vendedores podem ser gerenciadas em Usuários.</p>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* INDICAÃ‡Ã•ES */}
+        {/* INDICAÇÕES */}
         <TabsContent value="indicacoes">
           <Card>
             <CardHeader>
-              <CardTitle>Programa de IndicaÃ§Ãµes</CardTitle>
-              <CardDescription>ConfiguraÃ§Ãµes de pontuaÃ§Ã£o por indicaÃ§Ã£o de clientes</CardDescription>
+              <CardTitle>Programa de Indicações</CardTitle>
+              <CardDescription>Configurações de pontuação por indicação de clientes</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Pontos por indicaÃ§Ã£o que gera venda</Label>
+                <Label>Pontos por indicação que gera venda</Label>
                 <Input
                   type="number" min={1}
                   defaultValue={config?.pontos_por_indicacao ?? 10}
@@ -841,7 +841,7 @@ export default function ConfiguracoesPage() {
                 <p className="text-xs text-muted-foreground">Pontos creditados ao indicador quando o cliente indicado realiza uma compra.</p>
               </div>
               <div className="space-y-2">
-                <Label>Valor mÃ­nimo de compra para validar indicaÃ§Ã£o (R$)</Label>
+                <Label>Valor mínimo de compra para validar indicação (R$)</Label>
                 <Input
                   type="number" min={0} step={0.01}
                   defaultValue={config?.valor_minimo_indicacao ?? 0}
@@ -859,19 +859,19 @@ export default function ConfiguracoesPage() {
         <TabsContent value="catalogo">
           <Card>
             <CardHeader>
-              <CardTitle>ConfiguraÃ§Ãµes do CatÃ¡logo</CardTitle>
-              <CardDescription>CatÃ¡logo pÃºblico online</CardDescription>
+              <CardTitle>Configurações do Catálogo</CardTitle>
+              <CardDescription>Catálogo público online</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <SwitchRow
-                label="CatÃ¡logo pÃºblico ativo"
-                description="Permite acesso pÃºblico ao catÃ¡logo de produtos"
+                label="Catálogo público ativo"
+                description="Permite acesso público ao catálogo de produtos"
                 checked={config?.catalogo_publico_ativo ?? true}
                 onCheckedChange={(v) => saveConfig({ catalogo_publico_ativo: v })}
               />
               <Separator />
               <p className="text-xs text-muted-foreground">
-                ConfiguraÃ§Ãµes avanÃ§adas do catÃ¡logo (tÃ­tulo, descriÃ§Ã£o, cores, banner) podem ser editadas na pÃ¡gina do CatÃ¡logo Interno.
+                Configurações avançadas do catálogo (título, descrição, cores, banner) podem ser editadas na página do Catálogo Interno.
               </p>
             </CardContent>
           </Card>
@@ -881,23 +881,23 @@ export default function ConfiguracoesPage() {
         <TabsContent value="portal">
           <Card>
             <CardHeader>
-              <CardTitle>ConfiguraÃ§Ãµes do Portal do Cliente</CardTitle>
+              <CardTitle>Configurações do Portal do Cliente</CardTitle>
               <CardDescription>Personalize o portal de acesso dos seus clientes</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>TÃ­tulo do Portal</Label>
+                  <Label>Título do Portal</Label>
                   <Input
                     defaultValue={(config as any)?.portal_titulo ?? "Portal do Cliente"}
                     onBlur={(e) => saveConfig({ portal_titulo: e.target.value.trim() || "Portal do Cliente" })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Texto do RodapÃ©</Label>
+                  <Label>Texto do Rodapé</Label>
                   <Input
                     defaultValue={(config as any)?.portal_rodape ?? ""}
-                    placeholder="Ex: Â© 2026 Minha Empresa"
+                    placeholder="Ex: © 2026 Minha Empresa"
                     onBlur={(e) => saveConfig({ portal_rodape: e.target.value.trim() })}
                   />
                 </div>
@@ -905,21 +905,61 @@ export default function ConfiguracoesPage() {
                   <Label>Mensagem de Boas-vindas</Label>
                   <Input
                     defaultValue={(config as any)?.portal_mensagem_boas_vindas ?? ""}
-                    placeholder="Mensagem exibida na pÃ¡gina inicial do portal"
+                    placeholder="Mensagem exibida na página inicial do portal"
                     onBlur={(e) => saveConfig({ portal_mensagem_boas_vindas: e.target.value.trim() })}
                   />
                 </div>
               </div>
               <Separator />
-              <p className="text-sm font-semibold">SeÃ§Ãµes VisÃ­veis no Portal</p>
+              <p className="text-sm font-semibold">Seções Visíveis no Portal</p>
               <div className="divide-y">
-                <SwitchRow label="Mostrar InÃ­cio / Dashboard" description="Permite ao cliente ver o resumo financeiro e aÃ§Ãµes rÃ¡pidas" checked={(config as any)?.portal_mostrar_home ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_home: v })} />
+                <SwitchRow label="Mostrar Início / Dashboard" description="Permite ao cliente ver o resumo financeiro e ações rápidas" checked={(config as any)?.portal_mostrar_home ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_home: v })} />
                 <SwitchRow label="Mostrar Pedidos" description="Permite ao cliente ver e criar pedidos" checked={(config as any)?.portal_mostrar_pedidos ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pedidos: v })} />
                 <SwitchRow label="Mostrar Parcelas" description="Permite ao cliente ver parcelas e saldos" checked={(config as any)?.portal_mostrar_parcelas ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_parcelas: v })} />
-                <SwitchRow label="Mostrar HistÃ³rico de Compras" description="Permite ao cliente ver compras anteriores" checked={(config as any)?.portal_mostrar_compras ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_compras: v })} />
-                <SwitchRow label="Mostrar HistÃ³rico de Pagamentos" description="Permite ao cliente visualizar os recibos e baixas de pagamentos" checked={(config as any)?.portal_mostrar_pagamentos ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pagamentos: v })} />
+                <SwitchRow label="Mostrar Histórico de Compras" description="Permite ao cliente ver compras anteriores" checked={(config as any)?.portal_mostrar_compras ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_compras: v })} />
+                <SwitchRow label="Mostrar Histórico de Pagamentos" description="Permite ao cliente visualizar os recibos e baixas de pagamentos" checked={(config as any)?.portal_mostrar_pagamentos ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pagamentos: v })} />
                 <SwitchRow label="Mostrar Meus Dados" description="Permite ao cliente visualizar seu perfil e dados cadastrais" checked={(config as any)?.portal_mostrar_perfil ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_perfil: v })} />
                 <SwitchRow label="Mostrar Chave PIX" description="Exibe a chave PIX para pagamento no portal" checked={(config as any)?.portal_mostrar_pix ?? true} onCheckedChange={(v) => saveConfig({ portal_mostrar_pix: v })} />
+              </div>
+              <Separator />
+              <div className="space-y-3 pt-2">
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <Globe className="w-4 h-4 text-primary" /> Link de Acesso ao Portal (Compartilhar com Clientes)
+                </Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input 
+                      readOnly 
+                      value={window.location.origin + "/portal/login"} 
+                      className="pr-10 bg-muted/30 font-mono text-xs h-9"
+                    />
+                    <div className="absolute right-0 top-0 h-full flex items-center pr-2">
+                      <Badge variant="outline" className="text-[10px] py-0 h-5">Público</Badge>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-1.5 h-9 shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.origin + "/portal/login");
+                      toast.success("Link copiado para a área de transferência!");
+                    }}
+                  >
+                    <Copy className="w-3.5 h-3.5" /> Copiar Link
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="gap-1.5 h-9 shrink-0"
+                    onClick={() => window.open(window.location.origin + "/portal/login", "_blank")}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Abrir no Navegador
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground italic">
+                  * Envie este link para que seus clientes possam acessar os pedidos, parcelas e realizar novas compras.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -927,18 +967,18 @@ export default function ConfiguracoesPage() {
         <TabsContent value="notificacoes">
           <Card>
             <CardHeader>
-              <CardTitle>NotificaÃ§Ãµes</CardTitle>
-              <CardDescription>Alertas automÃ¡ticos do sistema</CardDescription>
+              <CardTitle>Notificações</CardTitle>
+              <CardDescription>Alertas automáticos do sistema</CardDescription>
             </CardHeader>
             <CardContent className="divide-y">
               <SwitchRow label="Parcelas vencidas" description="Alertar sobre parcelas vencidas" checked={config?.alerta_parcelas_vencidas ?? true} onCheckedChange={(v) => saveConfig({ alerta_parcelas_vencidas: v })} />
-              <SwitchRow label="Estoque baixo" description="Alertar quando estoque estiver abaixo do mÃ­nimo" checked={config?.alerta_estoque_baixo ?? true} onCheckedChange={(v) => saveConfig({ alerta_estoque_baixo: v })} />
+              <SwitchRow label="Estoque baixo" description="Alertar quando estoque estiver abaixo do mínimo" checked={config?.alerta_estoque_baixo ?? true} onCheckedChange={(v) => saveConfig({ alerta_estoque_baixo: v })} />
               <SwitchRow label="Cliente inativo" description="Alertar sobre clientes sem compras recentes" checked={config?.alerta_cliente_inativo ?? true} onCheckedChange={(v) => saveConfig({ alerta_cliente_inativo: v })} />
               <SwitchRow label="Meta de vendedor" description="Alertar sobre metas de vendedores" checked={config?.alerta_meta_vendedor ?? true} onCheckedChange={(v) => saveConfig({ alerta_meta_vendedor: v })} />
               <Separator />
               <div className="pt-3 space-y-4">
                 <div className="space-y-2">
-                  <Label>Estoque mÃ­nimo para alerta</Label>
+                  <Label>Estoque mínimo para alerta</Label>
                   <Input
                     type="number" min={1}
                     defaultValue={config?.estoque_minimo_alerta ?? 5}
@@ -963,11 +1003,11 @@ export default function ConfiguracoesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Backup</CardTitle>
-              <CardDescription>ExportaÃ§Ã£o de dados do sistema</CardDescription>
+              <CardDescription>Exportação de dados do sistema</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Acesse a pÃ¡gina de Backup para visualizar e exportar seus dados.
+                Acesse a página de Backup para visualizar e exportar seus dados.
               </p>
               <Button variant="outline" onClick={() => navigate("/backup")}>
                 <HardDrive className="h-4 w-4 mr-2" /> Ir para Backup
@@ -976,16 +1016,16 @@ export default function ConfiguracoesPage() {
           </Card>
         </TabsContent>
 
-        {/* 12. SEGURANÃ‡A */}
+        {/* 12. SEGURANÇA */}
         <TabsContent value="seguranca">
           <Card>
             <CardHeader>
-              <CardTitle>SeguranÃ§a</CardTitle>
-              <CardDescription>ConfiguraÃ§Ãµes de seguranÃ§a do sistema</CardDescription>
+              <CardTitle>Segurança</CardTitle>
+              <CardDescription>Configurações de segurança do sistema</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>ExpiraÃ§Ã£o da sessÃ£o (horas)</Label>
+                <Label>Expiração da sessão (horas)</Label>
                 <Input
                   type="number" min={1} max={720}
                   defaultValue={config?.sessao_expiracao_horas ?? 24}
@@ -1002,7 +1042,7 @@ export default function ConfiguracoesPage() {
               </div>
               <Separator />
               <Button variant="outline" onClick={() => navigate("/audit")}>
-                <Shield className="h-4 w-4 mr-2" /> Ver Logs de SeguranÃ§a
+                <Shield className="h-4 w-4 mr-2" /> Ver Logs de Segurança
               </Button>
             </CardContent>
           </Card>
@@ -1039,7 +1079,7 @@ function ThemeSelector() {
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        {theme === "system" ? "O tema seguirÃ¡ a preferÃªncia do seu sistema operacional." : `Tema ${theme === "dark" ? "escuro" : "claro"} ativo.`}
+        {theme === "system" ? "O tema seguirá a preferência do seu sistema operacional." : `Tema ${theme === "dark" ? "escuro" : "claro"} ativo.`}
       </p>
     </div>
   );
@@ -1068,11 +1108,11 @@ function NiveisRecompensaManager() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold">NÃ­veis de Recompensa</h3>
+          <h3 className="text-sm font-semibold">Níveis de Recompensa</h3>
           <p className="text-xs text-muted-foreground">Defina faixas de pontos para classificar clientes indicadores</p>
         </div>
         <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}>
-          <Plus className="h-3 w-3 mr-1" /> Novo NÃ­vel
+          <Plus className="h-3 w-3 mr-1" /> Novo Nível
         </Button>
       </div>
 
@@ -1081,16 +1121,16 @@ function NiveisRecompensaManager() {
           <CardContent className="p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Nome do nÃ­vel</Label>
+                <Label className="text-xs">Nome do nível</Label>
                 <Input placeholder="Ex: Bronze" value={form.nome} onChange={(e) => setForm(p => ({ ...p, nome: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Pontos mÃ­nimos</Label>
+                <Label className="text-xs">Pontos mínimos</Label>
                 <Input type="number" min={0} placeholder="Ex: 50" value={form.pontos_minimos} onChange={(e) => setForm(p => ({ ...p, pontos_minimos: e.target.value }))} />
               </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">BenefÃ­cios</Label>
+              <Label className="text-xs">Benefícios</Label>
               <Input placeholder="Ex: 5% de desconto em compras" value={form.beneficios} onChange={(e) => setForm(p => ({ ...p, beneficios: e.target.value }))} />
             </div>
             <div className="space-y-1">
@@ -1136,7 +1176,7 @@ function NiveisRecompensaManager() {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground text-center py-4">Nenhum nÃ­vel cadastrado. Crie nÃ­veis como Bronze, Prata, Ouro para classificar seus indicadores.</p>
+        <p className="text-xs text-muted-foreground text-center py-4">Nenhum nível cadastrado. Crie níveis como Bronze, Prata, Ouro para classificar seus indicadores.</p>
       )}
     </div>
   );
@@ -1220,7 +1260,7 @@ function EmpresaForm({ empresa, onSave }: { empresa: any; onSave: (v: any) => vo
         
         <div className="space-y-1 flex-1">
           <h4 className="text-sm font-semibold">Logomarca da Empresa</h4>
-          <p className="text-xs text-muted-foreground">Esta logo serÃ¡ exibida nos seus recibos, catÃ¡logo e portal do cliente.</p>
+          <p className="text-xs text-muted-foreground">Esta logo será exibida nos seus recibos, catálogo e portal do cliente.</p>
           <div className="flex gap-2 mt-3 items-center">
             <label className="relative inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 text-sm font-medium cursor-pointer transition-colors shadow-sm">
               {empresa.logo_url ? "Substituir Logo" : "Fazer Upload"}
@@ -1247,7 +1287,7 @@ function EmpresaForm({ empresa, onSave }: { empresa: any; onSave: (v: any) => vo
           <Input value={form.nome} onChange={(e) => handleChange("nome", e.target.value)} onBlur={() => onSave({ nome: form.nome })} />
         </div>
         <div className="space-y-2">
-          <Label>RazÃ£o Social</Label>
+          <Label>Razão Social</Label>
           <Input value={form.razao_social} onChange={(e) => handleChange("razao_social", e.target.value)} onBlur={() => onSave({ razao_social: form.razao_social })} />
         </div>
         <div className="space-y-2">
@@ -1263,14 +1303,14 @@ function EmpresaForm({ empresa, onSave }: { empresa: any; onSave: (v: any) => vo
           <Input value={form.email} onChange={(e) => handleChange("email", e.target.value)} onBlur={() => onSave({ email: form.email })} />
         </div>
         <div className="space-y-2">
-          <Label>EndereÃ§o</Label>
+          <Label>Endereço</Label>
           <Input value={form.endereco} onChange={(e) => handleChange("endereco", e.target.value)} onBlur={() => onSave({ endereco: form.endereco })} />
         </div>
       </div>
       
       <div className="pt-4 flex justify-end">
         <Button onClick={() => onSave(form)} className="gap-2">
-          <Save className="h-4 w-4" /> Salvar AlteraÃ§Ãµes
+          <Save className="h-4 w-4" /> Salvar Alterações
         </Button>
       </div>
     </div>

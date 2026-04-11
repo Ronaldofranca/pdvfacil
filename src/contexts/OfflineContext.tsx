@@ -18,6 +18,7 @@ interface OfflineContextType {
   deviceId: string | null;
   lastSync: string | null;
   sync: () => Promise<SyncResult | null>;
+  syncAll: () => Promise<SyncResult | null>;
   retryErrors: () => Promise<SyncResult | null>;
   refreshCounts: () => Promise<void>;
 }
@@ -82,12 +83,41 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     }
   }, [isSyncing, refreshCounts]);
 
+  const syncAll = useCallback(async (): Promise<SyncResult | null> => {
+    if (!navigator.onLine || isSyncing) return null;
+    setIsSyncing(true);
+    try {
+      // First, reset error items to pending
+      await retryErrorItems();
+      // Then, process everything
+      const result = await processSyncQueue();
+      await clearSyncedItems();
+      await refreshCounts();
+      
+      if (result.processed > 0) {
+        if (result.failed === 0) {
+          toast.success(`${result.succeeded} operações sincronizadas`);
+        } else {
+          toast.warning(`${result.succeeded} ok, ${result.failed} com erro`);
+        }
+      } else {
+        toast.info("Nada para sincronizar");
+      }
+      return result;
+    } catch (err) {
+      console.error("SyncAll error:", err);
+      return null;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isSyncing, refreshCounts]);
+
   // Online/offline listeners
   useEffect(() => {
     const goOnline = () => {
       setIsOnline(true);
-      toast.success("Conexão restabelecida");
-      sync();
+      toast.success("Conexão restabelecida. Sincronizando dados...");
+      retryErrors(); 
     };
     const goOffline = () => {
       setIsOnline(false);
@@ -100,7 +130,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("online", goOnline);
       window.removeEventListener("offline", goOffline);
     };
-  }, [sync]);
+  }, [retryErrors]);
 
   // Init
   useEffect(() => {
@@ -120,7 +150,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 
   return (
     <OfflineContext.Provider
-      value={{ isOnline, isSyncing, pendingCount, errorCount, deviceId, lastSync, sync, retryErrors, refreshCounts }}
+      value={{ isOnline, isSyncing, pendingCount, errorCount, deviceId, lastSync, sync, syncAll, retryErrors, refreshCounts }}
     >
       {children}
     </OfflineContext.Provider>

@@ -32,7 +32,7 @@ const CACHE_KEY_CLIENTES = "pdv:clientes";
  * that the syncEngine processes once connectivity is restored.
  */
 export function useOfflinePDV() {
-  const { isOnline, refreshCounts } = useOffline();
+  const { isOnline, refreshCounts, deviceId } = useOffline();
   const { profile, user } = useAuth();
   const qc = useQueryClient();
 
@@ -98,17 +98,22 @@ export function useOfflinePDV() {
       const subtotalBruto = input.itens.reduce((s, i) => s + i.quantidade * i.preco_original, 0);
       const total = input.itens.reduce((s, i) => s + i.subtotal, 0);
       const idempotencyKey = generateIdempotencyKey();
+      const now = new Date().toISOString();
 
       // Prepare items payload matching the RPC signature
       const itensPayload = input.itens.map((i) => {
         const isKit = !!i.is_kit;
         const kitItens = i.kit_itens ?? [];
         let realKitId: string | null = null;
+        let cleanProdutoId = i.produto_id;
         if (isKit && kitItens.length) {
-          realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : null;
+          realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : i.produto_id;
+          cleanProdutoId = kitItens[0].produto_id; // Use first component as DB produto_id
+        } else if (i.produto_id.startsWith("kit_")) {
+          cleanProdutoId = i.produto_id.slice(4);
         }
         return {
-          produto_id: i.produto_id,
+          produto_id: cleanProdutoId,
           nome: i.nome,
           quantidade: i.quantidade,
           preco_original: i.preco_original,
@@ -139,15 +144,16 @@ export function useOfflinePDV() {
             _subtotal: subtotalBruto,
             _desconto_total: input.desconto_total,
             _total: total,
-            _pagamentos: JSON.stringify(
-              hasCrediario
-                ? [{ forma: "crediario", valor: total }]
-                : input.pagamentos.filter((p) => p.valor > 0)
-            ),
+            _pagamentos: hasCrediario
+              ? [{ forma: "crediario", valor: total }]
+              : input.pagamentos.filter((p) => p.valor > 0),
             _observacoes: input.observacoes ?? "",
-            _data_venda: new Date().toISOString(),
-            _itens: JSON.stringify(itensPayload),
+            _data_venda: now,
+            _itens: itensPayload,
             _crediario: null, // Crediario config not available in offline simplified flow
+            _is_retroativa: false,
+            _device_id: deviceId,
+            _offline_at: now,
           },
         });
 
@@ -160,7 +166,7 @@ export function useOfflinePDV() {
         return false;
       }
     },
-    [profile, user, refreshCounts]
+    [profile, user, refreshCounts, deviceId]
   );
 
   return {

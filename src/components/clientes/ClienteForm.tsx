@@ -27,9 +27,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cliente?: any;
+  onSuccess?: (cliente: any) => void;
 }
 
-export function ClienteForm({ open, onOpenChange, cliente }: Props) {
+export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
   const { profile } = useAuth();
   const upsert = useUpsertCliente();
   const saveTelefones = useSaveClienteTelefones();
@@ -269,6 +270,7 @@ export function ClienteForm({ open, onOpenChange, cliente }: Props) {
         }
         clearDraft();
         try { localStorage.removeItem(telefonesKey); } catch {}
+        if (onSuccess) onSuccess({ ...payload, id: clienteId });
         onOpenChange(false);
       },
     });

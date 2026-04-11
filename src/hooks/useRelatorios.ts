@@ -421,3 +421,72 @@ export function useRelLucroResumo(inicio: string, fim: string) {
     },
   });
 }
+
+// ─── Clientes Completos (Relatório de CRM) ───
+export function useRelClientesCompletos() {
+  return useQuery({
+    queryKey: ["rel_clientes_completos"],
+    queryFn: async () => {
+      // Fetch all clients
+      const { data: clientes, error: cErr } = await supabase
+        .from("clientes")
+        .select("*")
+        .eq("ativo", true);
+      
+      if (cErr) throw cErr;
+
+      // Group sales by client to get count and total spent
+      const { data: vendas, error: vErr } = await supabase
+        .from("vendas")
+        .select("cliente_id, total")
+        .eq("status", "finalizada" as any);
+      
+      if (vErr) throw vErr;
+
+      const statsMap = new Map<string, { count: number; total: number }>();
+      for (const v of vendas ?? []) {
+        if (!v.cliente_id) continue;
+        const curr = statsMap.get(v.cliente_id) ?? { count: 0, total: 0 };
+        curr.count += 1;
+        curr.total += Number(v.total);
+        statsMap.set(v.cliente_id, curr);
+      }
+
+      return (clientes ?? []).map(c => {
+        const stats = statsMap.get(c.id) ?? { count: 0, total: 0 };
+        return {
+          ...c,
+          qtd_compras: stats.count,
+          total_gasto: stats.total
+        };
+      });
+    },
+  });
+}
+
+// ─── Edição em lote de telefones ───
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+export function useBatchUpdateTelefones() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id: string; telefone: string }[]) => {
+      // Use parallel promises for simple batching since Supabase doesn't have a specific batch update by multiple IDs in a single row
+      const promises = payload.map(item => 
+        supabase
+          .from("clientes")
+          .update({ telefone: item.telefone })
+          .eq("id", item.id)
+      );
+      
+      const results = await Promise.all(promises);
+      const errors = results.filter(r => r.error).map(r => r.error);
+      if (errors.length > 0) throw errors[0];
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rel_clientes_completos"] });
+      queryClient.invalidateQueries({ queryKey: ["clientes"] });
+    }
+  });
+}

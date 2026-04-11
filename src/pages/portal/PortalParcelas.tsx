@@ -30,6 +30,42 @@ const statusColors: Record<string, string> = {
   vencida: "bg-destructive/10 text-destructive",
 };
 
+function PaymentHistory({ parcelaId }: { parcelaId: string }) {
+  const { data: payments, isLoading } = useQuery({
+    queryKey: ["portal-pagamentos", parcelaId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select("id, valor_pago, data_pagamento, observacoes")
+        .eq("parcela_id", parcelaId)
+        .order("data_pagamento", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  if (isLoading) return <div className="animate-pulse h-8 bg-muted rounded mt-2" />;
+  if (!payments || payments.length === 0) return null;
+
+  return (
+    <div className="mt-4 space-y-2 border-t pt-4">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Histórico de Pagamentos</p>
+      <div className="space-y-2">
+        {payments.map((p) => (
+          <div key={p.id} className="flex justify-between items-start text-sm bg-muted/30 p-2 rounded border border-border/50">
+            <div className="space-y-0.5">
+              <p className="font-medium">{format(new Date(p.data_pagamento), "dd/MM/yyyy")}</p>
+              {p.observacoes && <p className="text-xs text-muted-foreground">{p.observacoes}</p>}
+            </div>
+            <p className="font-bold text-green-600">+{fmtR(Number(p.valor_pago))}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function PortalParcelasPage() {
   const { config: layoutConfig } = useOutletContext<{ config: any }>();
   const { cliente } = usePortalAuth();
@@ -47,7 +83,7 @@ export default function PortalParcelasPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("parcelas")
-        .select("id, numero, vencimento, valor_total, valor_pago, saldo, status, forma_pagamento")
+        .select("id, numero, vencimento, valor_total, valor_pago, saldo, status, forma_pagamento, observacoes")
         .eq("cliente_id", cliente!.id)
         .order("vencimento", { ascending: true });
       return data ?? [];
@@ -157,6 +193,9 @@ export default function PortalParcelasPage() {
               <Badge className={`text-[10px] ${statusColors[p.status] ?? ""}`}>
                 {statusLabels[p.status] ?? p.status}
               </Badge>
+              {p.observacoes && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.observacoes}</p>
+              )}
             </div>
             <div className="text-right space-y-0.5">
               <p className="text-sm font-bold">{fmtR(Number(p.valor_total))}</p>
@@ -204,6 +243,9 @@ export default function PortalParcelasPage() {
                   📋 Após realizar o pagamento, envie o comprovante no WhatsApp para confirmação.
                 </p>
               </div>
+
+              {/* Payment History (Extrato) */}
+              <PaymentHistory parcelaId={p.id} />
 
               {/* WhatsApp Button */}
               {whatsAppUrl && (

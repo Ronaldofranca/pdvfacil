@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Zap, UserCircle } from "lucide-react";
+import { Zap, UserCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,34 +33,69 @@ export default function PortalLoginPage() {
     e.preventDefault();
     if (!email.trim() || !password) return;
     setLoading(true);
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      setLoading(false);
-      toast({ title: "Credenciais inválidas", description: "Verifique seu email e senha.", variant: "destructive" });
-    } else {
-      // Verificação estrita: Esta tela é APENAS para clientes
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData?.user) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userData.user.id);
 
-        const isCliente = roles?.some((r: any) => r.role === "cliente");
-        if (!isCliente) {
-          // Admin ou Vendedor tentando usar o portal
-          await signOut();
-          setLoading(false);
-          toast({
-            title: "Acesso Negado",
-            description: "Esta tela é exclusiva para Clientes. Acesse pelo link administrativo.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
+    const timeoutId = setTimeout(() => {
       setLoading(false);
+      toast({
+        title: "Tempo de resposta excedido",
+        description: "A conexÃ£o demorou demais. Verifique sua internet ou fale com o suporte.",
+        variant: "destructive",
+      });
+    }, 15000);
+
+    try {
+      toast({ title: "Iniciando login", description: "Enviando credenciais..." });
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({ title: "Credenciais inválidas", description: "Verifique seu email e senha.", variant: "destructive" });
+        return;
+      } 
+      
+      toast({ title: "Verificando sessão", description: "Aguardando resposta do servidor..." });
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData?.user) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({ title: "Erro de autenticação", description: "Não foi possível recuperar seus dados.", variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "Verificando permissões", description: "Consultando nível de acesso..." });
+      const { data: roles, error: rolesErr } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id);
+
+      if (rolesErr) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({ title: "Erro de permissão", description: "Falha ao verificar seu nível de acesso.", variant: "destructive" });
+        return;
+      }
+
+      const isCliente = roles?.some((r: any) => r.role === "cliente");
+      if (!isCliente) {
+        await signOut();
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({
+          title: "Acesso Negado",
+          description: "Sua conta não tem permissão de Cliente. Role encontrada: " + (roles?.[0]?.role || "nenhuma"),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Sucesso!", description: "Redirecionando para o portal...", variant: "default" });
+      clearTimeout(timeoutId);
+      setLoading(false);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      toast({ title: "Erro no login", description: "Ocorreu um erro inesperado.", variant: "destructive" });
     }
   };
 
@@ -73,33 +108,69 @@ export default function PortalLoginPage() {
     }
     if (!password) return;
     setLoading(true);
-    const { error } = await signInWithCPF(normalized, password);
-    
-    if (error) {
-      setLoading(false);
-      toast({ title: "Credenciais inválidas", description: "Verifique seu CPF e senha.", variant: "destructive" });
-    } else {
-      // Verificação estrita
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData?.user) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userData.user.id);
 
-        const isCliente = roles?.some((r: any) => r.role === "cliente");
-        if (!isCliente) {
-          await signOut();
-          setLoading(false);
-          toast({
-            title: "Acesso Negado",
-            description: "Esta tela é exclusiva para Clientes. Acesse pelo link administrativo.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
+    const timeoutId = setTimeout(() => {
       setLoading(false);
+      toast({
+        title: "Tempo de resposta excedido",
+        description: "A conexão demorou demais. Tente novamente.",
+        variant: "destructive",
+      });
+    }, 15000);
+
+    try {
+      toast({ title: "Buscando CPF", description: "Localizando cadastro do cliente..." });
+      const { error } = await signInWithCPF(normalized, password);
+      
+      if (error) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({ title: "Credenciais inválidas", description: "CPF ou senha incorretos.", variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "Sessão iniciada", description: "Verificando perfil..." });
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData?.user) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({ title: "Erro de autenticação", description: "Não foi possível recuperar seus dados.", variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "Validando acesso", description: "Checando se é o Portal do Cliente..." });
+      const { data: roles, error: rolesErr } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id);
+
+      if (rolesErr) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({ title: "Erro de permissão", description: "Falha ao validar seu nível de acesso.", variant: "destructive" });
+        return;
+      }
+
+      const isCliente = roles?.some((r: any) => r.role === "cliente");
+      if (!isCliente) {
+        await signOut();
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({
+          title: "Acesso Negado",
+          description: "Esta conta nÃ£o tem permissÃ£o de Cliente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Sucesso!", description: "Bem-vindo ao portal!", variant: "default" });
+      clearTimeout(timeoutId);
+      setLoading(false);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      toast({ title: "Erro no login", description: "Ocorreu um erro inesperado.", variant: "destructive" });
     }
   };
 
@@ -182,8 +253,25 @@ export default function PortalLoginPage() {
           </TabsContent>
         </Tabs>
 
+        {session && !isCliente && !loading && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg border border-amber-200 dark:border-amber-800 text-center space-y-3">
+             <p className="text-xs text-amber-800 dark:text-amber-300">
+               Você já está logado com uma conta Administrativa. 
+               Para entrar no Portal do Cliente, você precisa sair primeiro.
+             </p>
+             <Button 
+               variant="outline" 
+               size="sm" 
+               className="w-full h-8 gap-2 border-amber-300 text-amber-900 dark:text-amber-200"
+               onClick={() => signOut()}
+             >
+               <LogOut className="w-3.5 h-3.5" /> Sair da conta atual
+             </Button>
+          </div>
+        )}
+
         <p className="text-center text-xs text-muted-foreground">
-          Não tem acesso? Fale com seu vendedor para ativar seu portal.
+          NÃ£o tem acesso? Fale com seu vendedor para ativar seu portal.
         </p>
       </div>
     </div>

@@ -80,6 +80,7 @@ export function usePDVPersistence() {
     observacoes: string;
     pagamentos: any[];
     crediarioConfig: any;
+    editingVendaId?: string;
     step?: string;
   }) => {
     try {
@@ -96,6 +97,7 @@ export function usePDVPersistence() {
     observacoes: string;
     pagamentos: any[];
     crediarioConfig: any;
+    editingVendaId?: string;
     step?: string;
   } | null => {
     try {

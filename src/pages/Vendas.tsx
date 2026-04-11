@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ShoppingCart, Search, Plus, Eye, XCircle, Receipt, CreditCard, RefreshCw } from "lucide-react";
+import { ShoppingCart, Search, Plus, Eye, XCircle, Receipt, CreditCard, RefreshCw, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ import { PDVModal } from "@/components/vendas/PDVModal";
 import { ReciboVenda } from "@/components/vendas/ReciboVenda";
 import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
 import { DateRangeFilter } from "@/components/vendas/DateRangeFilter";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { NovaDevolucaoDialog } from "@/components/devolucoes/NovaDevolucaoDialog";
 import { DetalheDevolucaoDialog } from "@/components/devolucoes/DetalheDevolucaoDialog";
@@ -42,6 +42,7 @@ export default function VendasPage() {
   const cancelar = useCancelarVenda();
 
   const [pdvOpen, setPdvOpen] = useState(false);
+  const [editingVenda, setEditingVenda] = useState<{ id: string; items: any[]; observations: string; clienteId: string } | null>(null);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -135,6 +136,52 @@ export default function VendasPage() {
   const openMobileActions = (vendaId: string) => {
     if (!isMobile) return;
     setMobileActionVendaId(vendaId);
+  };
+
+  const handleEditAdmin = (venda: any, itens: any[]) => {
+    if (!venda || !itens) return;
+    
+    let sumLineDiscounts = 0;
+    const mappedItems = itens.map(i => {
+      sumLineDiscounts += Number(i.desconto || 0);
+      return {
+        line_id: i.id,
+        produto_id: i.produto_id,
+        nome: i.nome_produto,
+        quantidade: Number(i.quantidade),
+        preco_original: Number(i.preco_original),
+        preco_vendido: Number(i.preco_vendido),
+        desconto: Number(i.desconto),
+        bonus: i.bonus,
+        subtotal: Number(i.subtotal),
+        custo_unitario: Number(i.custo_unitario),
+        is_kit: i.item_type === "kit",
+        kit_itens: i._kit_composicao || []
+      };
+    }) as any[];
+    
+    // Redistribute any global discount that wasn't included in the individual lines
+    const globalDiscount = Number(venda.desconto_total || 0) - sumLineDiscounts;
+    if (globalDiscount > 0.01 && mappedItems.length > 0) {
+      const nonBonus = mappedItems.filter(i => !i.bonus && i.subtotal > 0);
+      if (nonBonus.length > 0) {
+        nonBonus[0].desconto += globalDiscount;
+        nonBonus[0].subtotal -= globalDiscount;
+      }
+    }
+    
+    setEditingVenda({
+      id: venda.id,
+      items: mappedItems,
+      observations: venda.observacoes || "",
+      clienteId: venda.cliente_id || ""
+    });
+  };
+
+  const isEditable = (venda: any) => {
+    if (!venda || venda.status !== "finalizada") return false;
+    const diff = differenceInDays(new Date(), new Date(venda.data_venda));
+    return diff < 30;
   };
 
   return (
@@ -279,6 +326,24 @@ export default function VendasPage() {
                               >
                                 <RefreshCw className="w-4 h-4 text-amber-500" />
                               </Button>
+                              {isEditable(v) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Editar venda ${saleIdLabel}`}
+                                  onClick={async () => {
+                                    // Pre-fetch items if not already available in row (though we usually need hook data)
+                                    // For simplicity, we just set the detailId and user can edit from the Detail Sheet
+                                    // or we trigger a direct fetch here. 
+                                    // To keep it robust, we'll suggest using Detail Sheet edit which already has itensDetail loaded.
+                                    setDetailId(v.id);
+                                    toast.info("Abra os detalhes para editar esta venda.");
+                                  }}
+                                  title="Editar venda (Admin)"
+                                >
+                                  <Edit className="w-4 h-4 text-primary" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -387,6 +452,19 @@ export default function VendasPage() {
                     >
                       <RefreshCw className="w-4 h-4 text-amber-500" /> Devolver itens
                     </Button>
+                    {isEditable(vendaAcoes) && (
+                      <Button
+                        className="w-full justify-start gap-2"
+                        variant="outline"
+                        onClick={() => {
+                          setMobileActionVendaId(null);
+                          setDetailId(vendaAcoes.id);
+                          toast.info("Abra os detalhes para editar esta venda.");
+                        }}
+                      >
+                        <Edit className="w-4 h-4 text-primary" /> Editar venda (Admin)
+                      </Button>
+                    )}
                     <Button
                       className="w-full justify-start gap-2"
                       variant="destructive"
@@ -406,7 +484,19 @@ export default function VendasPage() {
       </Drawer>
 
       {/* PDV */}
-      <PDVModal open={pdvOpen} onOpenChange={setPdvOpen} />
+      <PDVModal 
+        open={pdvOpen || !!editingVenda} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setPdvOpen(false);
+            setEditingVenda(null);
+          }
+        }} 
+        initialCart={editingVenda?.items}
+        initialClienteId={editingVenda?.clienteId}
+        initialObservacoes={editingVenda?.observations}
+        editingVendaId={editingVenda?.id}
+      />
 
       <PagamentoForm
         open={pagamentoState.open}
@@ -587,6 +677,15 @@ export default function VendasPage() {
               )}
 
               <Separator />
+              {isAdmin && isEditable(vendaDetail) && (
+                <Button
+                  className="w-full gap-2 bg-primary/10 text-primary hover:bg-primary/20"
+                  variant="outline"
+                  onClick={() => handleEditAdmin(vendaDetail, itensDetail || [])}
+                >
+                  <Edit className="w-4 h-4" /> Editar Venda (Admin)
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="w-full gap-1.5"

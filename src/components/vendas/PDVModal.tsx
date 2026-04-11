@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle, Layers } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle, Layers, UserPlus, Edit } from "lucide-react";
 import { usePDVPersistence } from "@/hooks/useFormPersistence";
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { addItemToCart, markOneUnitAsGift, unmarkOneGift, updateCartItem, changeLineQty, removeCartLine, ensureAllLineIds } from "@/lib/cartUtils";
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useProdutos, useKits } from "@/hooks/useProdutos";
 import { useEstoque } from "@/hooks/useEstoque";
 import { useClientes } from "@/hooks/useClientes";
-import { useFinalizarVenda, generateIdempotencyKey, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
+import { useFinalizarVenda, useEditarVendaAdmin, generateIdempotencyKey, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,6 +24,7 @@ import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { useCreditoCliente } from "@/hooks/useDevolucoes";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { PDVMobile } from "./PDVMobile";
+import { ClienteForm } from "@/components/clientes/ClienteForm";
 import { toast } from "sonner";
 
 const FORMAS_PAGAMENTO = [
@@ -43,6 +44,8 @@ interface Props {
   initialCart?: CartItem[];
   initialClienteId?: string;
   onFinalize?: () => void;
+  editingVendaId?: string;
+  initialObservacoes?: string;
 }
 
 function DesktopProductButton({ product, onAdd, fmt }: { product: any; onAdd: (p: any) => void; fmt: (v: number) => string }) {
@@ -103,7 +106,15 @@ function DesktopQuickSection({ title, items, allProducts, onAdd, fmt }: {
   );
 }
 
-export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, onFinalize }: Props) {
+export function PDVModal({ 
+  open, 
+  onOpenChange, 
+  initialCart, 
+  initialClienteId, 
+  onFinalize,
+  editingVendaId,
+  initialObservacoes
+}: Props) {
   const isMobile = useIsMobile();
   const { profile, user, isAdmin } = useAuth();
   const { data: produtosRaw } = useProdutos();
@@ -111,6 +122,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
   const { data: clientes } = useClientes();
   const { data: estoqueData } = useEstoque(user?.id);
   const finalizar = useFinalizarVenda();
+  const editarAdmin = useEditarVendaAdmin();
   const { data: maisVendidos } = useProdutosMaisVendidos();
   const { data: recentes } = useProdutosRecentes();
   const { data: niveis } = useNiveisRecompensa();
@@ -126,9 +138,10 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
     })(),
   };
 
+  const [isClientFormOpen, setIsClientFormOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>(() => ensureAllLineIds(initialCart ?? []));
   const [clienteId, setClienteId] = useState(initialClienteId ?? "");
-  const [observacoes, setObservacoes] = useState("");
+  const [observacoes, setObservacoes] = useState(initialObservacoes ?? "");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
   const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>(defaultCrediario);
@@ -136,6 +149,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
   // Venda Retroativa
   const [isRetroativa, setIsRetroativa] = useState(false);
   const [dataRetroativa, setDataRetroativa] = useState("");
+  const [activeEditingVendaId, setActiveEditingVendaId] = useState<string | undefined>(editingVendaId);
 
   const { data: topIndicadores } = { data: [] }; // placeholder
   const { data: saldoCredito } = useCreditoCliente(clienteId || null);
@@ -158,20 +172,26 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
           setObservacoes(saved.observacoes || "");
           setPagamentos(saved.pagamentos?.length ? saved.pagamentos : [{ forma: "dinheiro", valor: 0 }]);
           if (saved.crediarioConfig) setCrediarioConfig(saved.crediarioConfig);
+          if (saved.editingVendaId) setActiveEditingVendaId(saved.editingVendaId);
         }
       }
       if (initialCart?.length) setCart(ensureAllLineIds(initialCart));
       if (initialClienteId) setClienteId(initialClienteId);
+      if (initialObservacoes) setObservacoes(initialObservacoes);
+      if (editingVendaId) setActiveEditingVendaId(editingVendaId);
     }
-    if (!open) restoredRef.current = false;
-  }, [open, initialCart, initialClienteId]);
+    if (!open) {
+      restoredRef.current = false;
+      setActiveEditingVendaId(undefined); // Reset when closing
+    }
+  }, [open, initialCart, initialClienteId, initialObservacoes, editingVendaId]);
 
   // Auto-save PDV state on changes
   useEffect(() => {
     if (cart.length > 0) {
-      pdvPersistence.save({ cart, clienteId, observacoes, pagamentos, crediarioConfig });
+      pdvPersistence.save({ cart, clienteId, observacoes, pagamentos, crediarioConfig, editingVendaId: activeEditingVendaId });
     }
-  }, [cart, clienteId, observacoes, pagamentos, crediarioConfig]);
+  }, [cart, clienteId, observacoes, pagamentos, crediarioConfig, activeEditingVendaId]);
 
   // Merge kits into product list
   const kitsAsProducts = useMemo(() => {
@@ -299,10 +319,13 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
   const handleFinalizar = () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
-    if (finalizingRef.current || finalizar.isPending) return; // Block duplicate calls
+    if (finalizingRef.current || finalizar.isPending || editarAdmin.isPending) return;
     
+    // If in Admin Edit mode, we don't need all the payment validation since we update existing parcelas
+    const isAdminEdit = !!activeEditingVendaId;
+
     // Validate kit component stock for non-admin users
-    if (!isAdmin) {
+    if (!isAdmin && !isAdminEdit) {
       const estoqueMap = new Map<string, number>();
       for (const e of estoqueData ?? []) {
         estoqueMap.set(e.produto_id, Number(e.quantidade));
@@ -325,15 +348,15 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
       }
     }
 
-    // Check fiado restriction
-    if (hasCrediario) {
+    // Check fiado restriction (Skip for Admin Edit as we are adjusting existing sale)
+    if (hasCrediario && !isAdminEdit) {
       if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");
       const clienteFiado = clientes?.find((c) => c.id === clienteId);
       if (clienteFiado && (clienteFiado as any).permitir_fiado === false) {
         return toast.error("Este cliente está restrito para compras fiado. Permitir apenas pagamento à vista.");
       }
       if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
-    } else {
+    } else if (!isAdminEdit) {
       if (totalPago < total) return toast.error("Valor pago insuficiente");
       
       // Validate House Credit balance
@@ -358,6 +381,36 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
     setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Gravando itens e estoque..."); }, 1500);
     setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Gerando parcelas..."); }, 3000);
     setTimeout(() => { if (finalizingRef.current) setFinalizingStep("Concluindo..."); }, 4500);
+
+    if (isAdminEdit) {
+      setFinalizingStep("Salvando alterações administrativas...");
+      editarAdmin.mutate(
+        {
+          vendaId: activeEditingVendaId!,
+          itens: cart,
+          observacoes,
+          userId: user.id,
+        },
+        {
+          onSuccess: () => {
+            finalizingRef.current = false;
+            setFinalizingStep("");
+            setCart([]);
+            setClienteId("");
+            setObservacoes("");
+            setPagamentos([{ forma: "dinheiro", valor: 0 }]);
+            pdvPersistence.clear();
+            onFinalize?.();
+            onOpenChange(false);
+          },
+          onError: () => {
+            finalizingRef.current = false;
+            setFinalizingStep("");
+          },
+        }
+      );
+      return;
+    }
 
     finalizar.mutate(
       {
@@ -403,16 +456,34 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
 
   // Mobile: use full-screen PDV
   if (isMobile) {
-    return <PDVMobile open={open} onOpenChange={onOpenChange} initialCart={initialCart} initialClienteId={initialClienteId} onFinalize={onFinalize} />;
+    return (
+      <PDVMobile 
+        open={open} 
+        onOpenChange={onOpenChange} 
+        initialCart={initialCart} 
+        initialClienteId={initialClienteId} 
+        onFinalize={onFinalize}
+        editingVendaId={activeEditingVendaId}
+        initialObservacoes={initialObservacoes}
+      />
+    );
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5 text-primary" /> PDV — Nova Venda
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-primary" /> 
+              {activeEditingVendaId ? "Edição Administrativa de Venda" : "PDV — Nova Venda"}
+            </DialogTitle>
+            {activeEditingVendaId && (
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 font-bold gap-1 animate-pulse mr-8">
+                <Edit className="w-3 h-3" /> MODO EDIÇÃO #{activeEditingVendaId.slice(0, 8)}
+              </Badge>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -453,17 +524,28 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
             {/* Cliente */}
             <div className="space-y-2">
               <Label className="text-xs">Cliente (opcional)</Label>
-              <Select value={clienteId} onValueChange={setClienteId}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  {clientes?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome}
-                      {(c as any).permitir_fiado === false && " ⚠️ (Restrito fiado)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-1.5">
+                <Select value={clienteId} onValueChange={setClienteId}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {clientes?.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome}
+                        {(c as any).permitir_fiado === false && " ⚠️ (Restrito fiado)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon" 
+                  title="Novo cliente"
+                  onClick={() => setIsClientFormOpen(true)}
+                >
+                  <UserPlus className="w-4 h-4" />
+                </Button>
+              </div>
               {/* Fiado restriction warning */}
               {clienteId && clienteSel && (clienteSel as any).permitir_fiado === false && (
                 <div className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg bg-destructive/10 text-destructive">
@@ -537,7 +619,7 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
                           <Plus className="w-3 h-3" />
                         </Button>
                       </div>
-                      {/* Preço - only for non-bonus */}
+                      {/* Preço (Líquido) - only for non-bonus */}
                       {!item.bonus && (
                         <div className="flex items-center gap-1">
                           <DollarSign className="w-3 h-3 text-muted-foreground" />
@@ -545,8 +627,15 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
                             type="number"
                             step="0.01"
                             className="h-7 w-20 text-xs"
-                            value={item.preco_vendido || ""}
-                            onChange={(e) => updateItem(item.line_id, { preco_vendido: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
+                            value={Number((item.preco_vendido - (item.desconto / item.quantidade)).toFixed(2)) || ""}
+                            onChange={(e) => {
+                              const v = e.target.value === "" ? 0 : parseFloat(e.target.value) || 0;
+                              if (v > 0 && v < item.preco_vendido) {
+                                updateItem(item.line_id, { desconto: (item.preco_vendido - v) * item.quantidade });
+                              } else {
+                                updateItem(item.line_id, { preco_vendido: v, desconto: 0 });
+                              }
+                            }}
                           />
                         </div>
                       )}
@@ -719,12 +808,21 @@ export function PDVModal({ open, onOpenChange, initialCart, initialClienteId, on
             onClick={handleFinalizar}
           >
             <ShoppingCart className="w-4 h-4" />
-            {finalizar.isPending || finalizingRef.current
-              ? (finalizingStep || "Finalizando...")
-              : `Finalizar ${fmt(total)}`}
+            {finalizar.isPending || editarAdmin.isPending || finalizingRef.current
+              ? (finalizingStep || "Processando...")
+              : editingVendaId 
+                ? `Confirmar Alterações (${fmt(total)})`
+                : `Finalizar ${fmt(total)}`}
           </Button>
         </div>
       </DialogContent>
+      <ClienteForm 
+        open={isClientFormOpen} 
+        onOpenChange={setIsClientFormOpen} 
+        onSuccess={(c) => {
+          if (c?.id) setClienteId(c.id);
+        }}
+      />
     </Dialog>
   );
 }

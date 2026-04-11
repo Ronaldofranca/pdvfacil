@@ -17,6 +17,33 @@ export interface SyncResult {
   errors: { uuid: string; message: string }[];
 }
 
+async function logSyncEvent(item: QueueItem, status: "success" | "error", error?: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // For RPC calls like fn_finalizar_venda_atomica, the RPC itself might already log to sync_logs.
+    // However, to ensure all operations (insert, update, delete) are tracked, we log here too.
+    // If it's the specific sale RPC, it already logs, so we could skip it to avoid double logs,
+    // but the server-side log is more reliable for database errors.
+    // We'll log here as "Client-side Sync Report".
+    
+    await supabase.from("sync_logs").insert({
+      empresa_id: (item.payload as any).params?._empresa_id || (item.payload as any)._empresa_id || (item.payload as any).empresa_id,
+      vendedor_id: user.id,
+      device_id: item.device_id,
+      table_name: item.table,
+      operation: item.operation,
+      idempotency_key: (item.payload as any).idempotency_key || (item.payload as any).params?._idempotency_key,
+      status: status,
+      error_message: error,
+      payload: item.payload,
+    });
+  } catch (err) {
+    console.warn("Failed to log sync event to server:", err);
+  }
+}
+
 async function processItem(item: QueueItem): Promise<"ok" | "skipped"> {
   const { table, operation, payload } = item;
   const client = supabase as any;
@@ -30,50 +57,57 @@ async function processItem(item: QueueItem): Promise<"ok" | "skipped"> {
       if (error.message?.includes("already_processed") || error.code === "23505") {
         return "skipped";
       }
+      await logSyncEvent(item, "error", error.message);
       throw error;
     }
     // Check if RPC returned already_processed flag
     if (data?.already_processed) {
       return "skipped";
     }
+    await logSyncEvent(item, "success");
     return "ok";
   }
 
-  switch (operation) {
-    case "insert": {
-      // Idempotent insert: use upsert with the payload's id to avoid duplicates
-      if (payload.id) {
-        const { error } = await client.from(table).upsert(payload, {
-          onConflict: "id",
-          ignoreDuplicates: true,
-        });
-        if (error) {
-          // If it's a unique constraint violation, the record already exists — skip
-          if (error.code === "23505") return "skipped";
-          throw error;
+  try {
+    switch (operation) {
+      case "insert": {
+        // Idempotent insert: use upsert with the payload's id to avoid duplicates
+        if (payload.id) {
+          const { error } = await client.from(table).upsert(payload, {
+            onConflict: "id",
+            ignoreDuplicates: true,
+          });
+          if (error) {
+            if (error.code === "23505") return "skipped";
+            throw error;
+          }
+        } else {
+          const { error } = await client.from(table).insert(payload);
+          if (error) {
+            if (error.code === "23505") return "skipped";
+            throw error;
+          }
         }
-      } else {
-        const { error } = await client.from(table).insert(payload);
-        if (error) {
-          if (error.code === "23505") return "skipped";
-          throw error;
-        }
+        break;
       }
-      break;
+      case "update": {
+        const { id, ...rest } = payload;
+        const { error } = await client.from(table).update(rest).eq("id", id);
+        if (error) throw error;
+        break;
+      }
+      case "delete": {
+        const { error } = await client.from(table).delete().eq("id", payload.id);
+        if (error) throw error;
+        break;
+      }
     }
-    case "update": {
-      const { id, ...rest } = payload;
-      const { error } = await client.from(table).update(rest).eq("id", id);
-      if (error) throw error;
-      break;
-    }
-    case "delete": {
-      const { error } = await client.from(table).delete().eq("id", payload.id);
-      if (error) throw error;
-      break;
-    }
+    await logSyncEvent(item, "success");
+    return "ok";
+  } catch (err: any) {
+    await logSyncEvent(item, "error", err.message);
+    throw err;
   }
-  return "ok";
 }
 
 export async function processSyncQueue(): Promise<SyncResult> {
@@ -90,7 +124,7 @@ export async function processSyncQueue(): Promise<SyncResult> {
   const seen = new Map<string, QueueItem>();
   const deduped: QueueItem[] = [];
   for (const item of pending) {
-    const key = `${item.table}:${item.operation}:${(item.payload as any).id ?? (item.payload as any).idempotency_key ?? item.uuid}`;
+    const key = `${item.table}:${item.operation}:${(item.payload as any).id ?? (item.payload as any).idempotency_key ?? (item.payload as any).params?._idempotency_key ?? item.uuid}`;
     if (seen.has(key)) {
       // Remove earlier duplicate from queue
       const earlier = seen.get(key)!;
@@ -115,6 +149,13 @@ export async function processSyncQueue(): Promise<SyncResult> {
       }
     } catch (err: any) {
       const message = err?.message ?? "Erro desconhecido";
+      
+      // Detecção de erro de rede (transiente)
+      if (message.toLowerCase().includes("failed to fetch") || (err?.name === "TypeError" && message.toLowerCase().includes("failed"))) {
+        console.warn("SyncEngine: Falha de rede detectada. Abortando sincronização para tentar mais tarde.");
+        return { processed: pending.length, succeeded, failed, skipped, errors };
+      }
+
       const retries = item.retries + 1;
 
       if (retries >= MAX_RETRIES) {
@@ -154,3 +195,4 @@ export async function retryErrorItems(): Promise<SyncResult> {
 
   return processSyncQueue();
 }
+

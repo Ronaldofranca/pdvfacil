@@ -57,6 +57,8 @@ export default function UsuariosPage() {
   const [inviteCargo, setInviteCargo] = useState("");
   const [inviteRole, setInviteRole] = useState("vendedor");
   const [inviting, setInviting] = useState(false);
+  const [directMode, setDirectMode] = useState(false);
+  const [invitePassword, setInvitePassword] = useState("");
 
   // ── Reset senha cliente ──
   const [resetState, setResetState] = useState<{ open: boolean; cliente?: any }>({ open: false });
@@ -133,25 +135,49 @@ export default function UsuariosPage() {
 
   const handleInvite = async () => {
     if (!inviteEmail) {
-      toast({ title: "Email é obrigatório", variant: "destructive" });
+      toast.error("Email é obrigatório");
       return;
     }
     setInviting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("invite-user", {
-        body: { email: inviteEmail, nome: inviteNome, cargo: inviteCargo, role: inviteRole },
-      });
-      if (error) {
-        toast({ title: "Erro ao convidar", description: error.message, variant: "destructive" });
-      } else if (data?.error) {
-        toast({ title: "Erro", description: data.error, variant: "destructive" });
-      } else {
-        toast({ title: "Convite enviado!", description: `Email enviado para ${inviteEmail}` });
+      if (directMode) {
+        if (!invitePassword || invitePassword.length < 6) {
+          toast.error("Senha deve ter no mínimo 6 caracteres");
+          setInviting(false);
+          return;
+        }
+
+        const { data, error } = await (supabase as any).rpc("fn_admin_create_user", {
+          p_email: inviteEmail.trim().toLowerCase(),
+          p_password: invitePassword,
+          p_nome: inviteNome || inviteEmail.split('@')[0],
+          p_empresa_id: profile?.empresa_id,
+          p_role: inviteRole
+        });
+
+        if (error) {
+          console.error("Erro RPC fn_admin_create_user:", error);
+          throw new Error(error.message || "Erro ao criar usuário no banco");
+        }
+
+        toast.success("Usuário cadastrado com sucesso!");
         setInviteOpen(false);
-        setInviteEmail(""); setInviteNome(""); setInviteCargo(""); setInviteRole("vendedor");
+        setInviteEmail(""); setInviteNome(""); setInviteCargo(""); setInvitePassword("");
+      } else {
+        const { data, error } = await supabase.functions.invoke("invite-user", {
+          body: { email: inviteEmail, nome: inviteNome, cargo: inviteCargo, role: inviteRole },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        toast.success(`Convite enviado para ${inviteEmail}`);
+        setInviteOpen(false);
+        setInviteEmail(""); setInviteNome(""); setInviteCargo("");
       }
-    } catch {
-      toast({ title: "Erro inesperado", variant: "destructive" });
+    } catch (e: any) {
+      console.error("Erro no processo de cadastro/convite:", e);
+      toast.error("Erro: " + (e.message || "Ocorreu um erro inesperado"));
     }
     setInviting(false);
   };
@@ -453,17 +479,40 @@ export default function UsuariosPage() {
                   <SelectItem value="vendedor">Vendedor</SelectItem>
                   <SelectItem value="gerente">Gerente</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="cliente">Cliente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center justify-between py-2 border-t border-b border-border">
+              <div className="space-y-0.5">
+                <Label>Cadastro Direto</Label>
+                <p className="text-[10px] text-muted-foreground">Define a senha agora sem enviar email</p>
+              </div>
+              <Switch checked={directMode} onCheckedChange={setDirectMode} />
+            </div>
+
+            {directMode && (
+              <div className="space-y-1">
+                <Label>Senha Temporária *</Label>
+                <Input 
+                  value={invitePassword} 
+                  onChange={(e) => setInvitePassword(e.target.value)} 
+                  placeholder="MÃnimo 6 caracteres" 
+                  type="password" 
+                />
+              </div>
+            )}
+
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setInviteOpen(false)}>Cancelar</Button>
               <Button className="flex-1" onClick={handleInvite} disabled={inviting}>
-                {inviting ? "Enviando..." : "Enviar Convite"}
+                {inviting ? "Processando..." : directMode ? "Criar Usuário" : "Enviar Convite"}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              O usuário receberá um email para definir a senha no primeiro acesso.
+            <p className="text-[10px] text-muted-foreground text-center">
+              {directMode 
+                ? "O usuário será criado imediatamente e já poderá acessar o sistema." 
+                : "O usuário receberá um email para definir a senha no primeiro acesso."}
             </p>
           </div>
         </DialogContent>

@@ -20,6 +20,7 @@ import {
   BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
+import { RelatorioClientesMaster } from "@/components/relatorios/RelatorioClientesMaster";
 import {
   useRelVendasPeriodo, useRelVendasDetalhadas, useRelProdutosVendidos,
   useRelParcelasPagas, useRelParcelasVencidas, useRelTodasParcelas,
@@ -780,49 +781,8 @@ export default function RelatoriosPage() {
           )}
         </TabsContent>
 
-        {/* ═══ CLIENTES ═══ */}
         <TabsContent value="clientes" className="space-y-4">
-          <ExportBar
-            onCSV={() => doExportCSV(vendasPorCliente.map((c) => ({ Cliente: c.nome, Vendas: c.qtd, Total: c.total })), "clientes")}
-            onPDF={() => doExportPDF("Relatório de Clientes",
-              ["Cliente", "Vendas", "Total"],
-              vendasPorCliente.map((c) => [c.nome, String(c.qtd), fmtR(c.total)])
-            )}
-          />
-          <Tabs defaultValue="top">
-            <TabsList className="h-8 text-xs">
-              <TabsTrigger value="top" className="text-xs">Mais Compram</TabsTrigger>
-              <TabsTrigger value="inadimplentes" className="text-xs">Inadimplentes</TabsTrigger>
-            </TabsList>
-            <TabsContent value="top">
-              <Card><Table><TableHeader><TableRow>
-                <TableHead>Cliente</TableHead><TableHead className="text-right">Vendas</TableHead><TableHead className="text-right">Total</TableHead>
-              </TableRow></TableHeader><TableBody>
-                {vendasPorCliente.map((c) => (
-                  <TableRow key={c.nome}>
-                    <TableCell className="font-medium">{c.nome}</TableCell>
-                    <TableCell className="text-right">{c.qtd}</TableCell>
-                    <TableCell className="text-right font-semibold">{fmtR(c.total)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody></Table></Card>
-            </TabsContent>
-            <TabsContent value="inadimplentes">
-              <Card><Table><TableHeader><TableRow>
-                <TableHead>Cliente</TableHead><TableHead className="text-right">Comprado</TableHead>
-                <TableHead className="text-right">Pago</TableHead><TableHead className="text-right">Vencido</TableHead>
-              </TableRow></TableHeader><TableBody>
-                {(parcelasPorCliente ?? []).filter((c) => c.total_vencido > 0).map((c) => (
-                  <TableRow key={c.cliente_id}>
-                    <TableCell className="font-medium">{c.nome}</TableCell>
-                    <TableCell className="text-right">{fmtR(c.total_comprado)}</TableCell>
-                    <TableCell className="text-right text-primary">{fmtR(c.total_pago)}</TableCell>
-                    <TableCell className="text-right font-semibold text-destructive">{fmtR(c.total_vencido)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody></Table></Card>
-            </TabsContent>
-          </Tabs>
+          <RelatorioClientesMaster />
         </TabsContent>
 
         {/* ═══ ROMANEIO ═══ */}

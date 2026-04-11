@@ -158,7 +158,7 @@ export function useVendaItens(vendaId: string | null) {
       if (kitIds.length > 0) {
         const { data: kitItens } = await supabase
           .from("kit_itens")
-          .select("kit_id, quantidade, produtos(nome)")
+          .select("kit_id, produto_id, quantidade, produtos(nome)")
           .in("kit_id", kitIds);
         for (const ki of kitItens ?? []) {
           const list = kitCompositions.get(ki.kit_id) ?? [];
@@ -312,6 +312,55 @@ export function useCancelarVenda() {
         msg += ` ⚠️ ${data.parcelas_com_pagamento} parcela(s) tinham pagamentos (${fmt}).`;
       }
       toast.success(msg);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+export function useEditarVendaAdmin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ vendaId, itens, observacoes, userId }: { vendaId: string; itens: CartItem[]; observacoes: string; userId: string }) => {
+      // Prepare items payload for RPC (similar to finalize)
+      const itensPayload = itens.map((i) => {
+        const isKit = !!(i as any).is_kit;
+        const kitItens = (i as any).kit_itens as KitItemRef[] | undefined;
+        let realKitId: string | null = null;
+        let cleanProdutoId = i.produto_id;
+        if (isKit && kitItens?.length) {
+          realKitId = i.produto_id.startsWith("kit_") ? i.produto_id.slice(4) : i.produto_id;
+          cleanProdutoId = kitItens[0].produto_id;
+        } else if (i.produto_id.startsWith("kit_")) {
+          cleanProdutoId = i.produto_id.slice(4);
+        }
+        return {
+          produto_id: cleanProdutoId,
+          nome: i.nome,
+          quantidade: i.quantidade,
+          preco_original: i.preco_original,
+          preco_vendido: i.preco_vendido,
+          desconto: i.desconto,
+          bonus: i.bonus,
+          subtotal: i.subtotal,
+          custo_unitario: (i as any).custo_unitario ?? 0,
+          is_kit: isKit,
+          kit_itens: kitItens ?? [],
+          real_kit_id: realKitId,
+        };
+      });
+
+      const { data, error } = await supabase.rpc("fn_admin_editar_venda_finalizada" as any, {
+        _venda_id: vendaId,
+        _novos_itens: itensPayload,
+        _novas_observacoes: observacoes,
+        _usuario_id: userId,
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      invalidateDashboardQueries(qc);
+      toast.success("Venda editada administrativamente com sucesso!");
     },
     onError: (e: Error) => toast.error(e.message),
   });

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { ClienteForm } from "@/components/clientes/ClienteForm";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
   DollarSign, X, Package, CreditCard, Check, WifiOff,
@@ -15,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useProdutos, useKits } from "@/hooks/useProdutos";
 import { useEstoque } from "@/hooks/useEstoque";
 import { useClientes } from "@/hooks/useClientes";
-import { useFinalizarVenda, generateIdempotencyKey, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
+import { useFinalizarVenda, useEditarVendaAdmin, generateIdempotencyKey, type CartItem, type Pagamento, type CrediarioConfig, type KitItemRef } from "@/hooks/useVendas";
 import { useProdutosMaisVendidos, useProdutosRecentes, useProdutosDoCliente, useUltimaVendaCliente } from "@/hooks/useProdutosRapidos";
 import { useOfflinePDV, type CachedProduto, type CachedCliente } from "@/hooks/useOfflinePDV";
 import { useOffline } from "@/contexts/OfflineContext";
@@ -46,15 +47,26 @@ interface Props {
   initialCart?: CartItem[];
   initialClienteId?: string;
   onFinalize?: () => void;
+  editingVendaId?: string;
+  initialObservacoes?: string;
 }
 
-export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, onFinalize }: Props) {
+export function PDVMobile({ 
+  open, 
+  onOpenChange, 
+  initialCart, 
+  initialClienteId, 
+  onFinalize,
+  editingVendaId,
+  initialObservacoes
+}: Props) {
   const { profile, user, isAdmin } = useAuth();
   const { data: onlineProdutos } = useProdutos();
   const { data: onlineKits } = useKits();
   const { data: onlineClientes } = useClientes();
   const { data: estoqueData } = useEstoque(user?.id);
   const finalizar = useFinalizarVenda();
+  const editarAdmin = useEditarVendaAdmin();
   const { data: maisVendidos } = useProdutosMaisVendidos();
   const { data: recentes } = useProdutosRecentes();
   const { isOnline, pendingCount } = useOffline();
@@ -65,7 +77,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
   const [step, setStep] = useState<Step>("cliente");
   const [cart, setCart] = useState<CartItem[]>(() => ensureAllLineIds(initialCart ?? []));
   const [clienteId, setClienteId] = useState(initialClienteId ?? "");
-  const [observacoes, setObservacoes] = useState("");
+  const [observacoes, setObservacoes] = useState(initialObservacoes ?? "");
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
   const [searchCliente, setSearchCliente] = useState("");
@@ -73,6 +85,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
   const [filterType, setFilterType] = useState<"todos" | "produtos" | "kits">("todos");
   const [kitDetailId, setKitDetailId] = useState<string | null>(null);
   const [expandedCartKit, setExpandedCartKit] = useState<string | null>(null);
+  const [isClientFormOpen, setIsClientFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>({
     entrada: 0,
@@ -84,6 +97,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
     })(),
   });
 
+  const [activeEditingVendaId, setActiveEditingVendaId] = useState<string | undefined>(editingVendaId);
   const hasCrediario = pagamentos.some((p) => p.forma === "crediario");
 
   // Navigation guard
@@ -114,6 +128,7 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
           setObservacoes(saved.observacoes || "");
           setPagamentos(saved.pagamentos?.length ? saved.pagamentos : [{ forma: "dinheiro", valor: 0 }]);
           if (saved.crediarioConfig) setCrediarioConfig(saved.crediarioConfig);
+          if (saved.editingVendaId) setActiveEditingVendaId(saved.editingVendaId);
           if (saved.step) setStep(saved.step as Step);
           else setStep("carrinho");
         }
@@ -126,16 +141,21 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
         setClienteId(initialClienteId);
         if (!initialCart?.length) setStep("produtos");
       }
+      if (initialObservacoes) setObservacoes(initialObservacoes);
+      if (editingVendaId) setActiveEditingVendaId(editingVendaId);
     }
-    if (!open) restoredRef.current = false;
-  }, [open, initialCart, initialClienteId]);
+    if (!open) {
+      restoredRef.current = false;
+      setActiveEditingVendaId(undefined);
+    }
+  }, [open, initialCart, initialClienteId, initialObservacoes, editingVendaId]);
 
   // Auto-save PDV state
   useEffect(() => {
     if (cart.length > 0) {
-      pdvPersistence.save({ cart, clienteId, observacoes, pagamentos, crediarioConfig, step });
+      pdvPersistence.save({ cart, clienteId, observacoes, pagamentos, crediarioConfig, step, editingVendaId: activeEditingVendaId });
     }
-  }, [cart, clienteId, observacoes, pagamentos, crediarioConfig, step]);
+  }, [cart, clienteId, observacoes, pagamentos, crediarioConfig, step, activeEditingVendaId]);
 
   // Merge kits into product list for unified search
   const kitsAsProducts = useMemo(() => {
@@ -268,10 +288,13 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
   const handleFinalizar = async () => {
     if (!profile || !user) return;
     if (cart.length === 0) return toast.error("Adicione itens à venda");
-    if (finalizingRef.current || isSubmitting || finalizar.isPending) return; // Block duplicate calls
+    if (finalizingRef.current || isSubmitting || finalizar.isPending || (editarAdmin && editarAdmin.isPending)) return;
     
+    // If in Admin Edit mode, we don't need all the payment validation since we update existing parcelas
+    const isAdminEdit = !!activeEditingVendaId;
+
     // Validate kit component stock for non-admin users
-    if (!isAdmin) {
+    if (!isAdmin && !isAdminEdit) {
       const estoqueMap = new Map<string, number>();
       for (const e of estoqueData ?? []) {
         estoqueMap.set(e.produto_id, Number(e.quantidade));
@@ -294,14 +317,14 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
       }
     }
 
-    if (hasCrediario) {
+    if (hasCrediario && !isAdminEdit) {
       if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");
       const clienteFiado = clientes?.find((c: any) => c.id === clienteId);
       if (clienteFiado && (clienteFiado as any).permitir_fiado === false) {
         return toast.error("Este cliente está restrito para compras fiado. Permitir apenas pagamento à vista.");
       }
       if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
-    } else {
+    } else if (!isAdminEdit) {
       if (totalPago < total) return toast.error("Valor pago insuficiente");
     }
 
@@ -323,6 +346,28 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
       setFinalizingStep("");
       stepTimers.forEach(clearTimeout);
     };
+
+    if (isAdminEdit) {
+      setFinalizingStep("Salvando alterações administrativas...");
+      editarAdmin.mutate(
+        {
+          vendaId: activeEditingVendaId!,
+          itens: cart,
+          observacoes,
+          userId: user.id,
+        },
+        {
+          onSuccess: () => {
+            cleanup();
+            resetForm();
+            onFinalize?.();
+            onOpenChange(false);
+          },
+          onError: () => cleanup(),
+        }
+      );
+      return;
+    }
 
     if (isOnline) {
       finalizar.mutate(
@@ -444,9 +489,14 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
               {pendingCount > 0 && ` (${pendingCount})`}
             </Badge>
           )}
-          <div className="flex items-center gap-1.5">
-            <Zap className="w-4 h-4 text-primary" />
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
             <h2 className="font-bold text-foreground">Venda Rápida</h2>
+            {activeEditingVendaId && (
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20 font-bold text-[10px] px-1.5 h-5 animate-pulse">
+                EDIÇÃO
+              </Badge>
+            )}
           </div>
         </div>
         {cart.length > 0 ? (
@@ -498,15 +548,25 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
         {step === "cliente" && (
           <div className="flex flex-col h-full">
             <div className="p-4 sticky top-0 bg-background z-10 border-b">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  className="pl-11 h-14 text-lg rounded-2xl"
-                  placeholder="Buscar cliente..."
-                  value={searchCliente}
-                  onChange={(e) => setSearchCliente(e.target.value)}
-                  autoFocus
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    className="pl-11 h-14 text-lg rounded-2xl"
+                    placeholder="Buscar cliente..."
+                    value={searchCliente}
+                    onChange={(e) => setSearchCliente(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="h-14 w-14 rounded-2xl shrink-0"
+                  onClick={() => setIsClientFormOpen(true)}
+                >
+                  <Plus className="w-6 h-6" />
+                </Button>
               </div>
             </div>
 
@@ -1131,6 +1191,18 @@ export function PDVMobile({ open, onOpenChange, initialCart, initialClienteId, o
           </div>
         </div>
       )}
+
+      {/* ─── Cliente Novo Modal (Quick Add) ─── */}
+      <ClienteForm 
+        open={isClientFormOpen} 
+        onOpenChange={setIsClientFormOpen} 
+        onSuccess={(c) => {
+          if (c?.id) {
+            setClienteId(c.id);
+            setStep("produtos");
+          }
+        }}
+      />
     </div>
   );
 }
