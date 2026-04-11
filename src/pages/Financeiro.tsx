@@ -154,6 +154,23 @@ export default function FinanceiroPage() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
+  // Lógica para Selecionar Tudo
+  const selectableFiltered = useMemo(() => {
+    return filtered?.filter(p => p.status !== "paga") || [];
+  }, [filtered]);
+
+  const isAllSelected = selectableFiltered.length > 0 && selectableFiltered.every(p => selectedIds.has(p.id));
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      clearSelection();
+    } else {
+      const newIds = new Set(selectedIds);
+      selectableFiltered.forEach(p => newIds.add(p.id));
+      setSelectedIds(newIds);
+    }
+  };
+
   const visibleColumnCount = isMobile ? 5 : 10;
 
   const openMobileActions = (parcela: any) => {
@@ -239,16 +256,26 @@ export default function FinanceiroPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              {canRegisterPagamento && <TableHead className="w-10" />}
-              <TableHead>Nº</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Vencimento</TableHead>
-              {!isMobile && <TableHead>Pago em</TableHead>}
-              {!isMobile && <TableHead className="text-right">Valor</TableHead>}
-              {!isMobile && <TableHead className="text-right">Pago</TableHead>}
-              <TableHead className="text-right">Saldo</TableHead>
-              <TableHead>Status</TableHead>
-              {!isMobile && canRegisterPagamento && <TableHead className="w-24">Ações</TableHead>}
+              {canRegisterPagamento && (
+                <TableHead className="w-10">
+                  {selectableFiltered.length > 0 && (
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Selecionar todas"
+                    />
+                  )}
+                </TableHead>
+              )}
+              <TableHead className="w-12 text-xs">Nº</TableHead>
+              <TableHead className="text-xs">Cliente</TableHead>
+              <TableHead className="w-20 md:w-24 text-xs">Venc.</TableHead>
+              {!isMobile && <TableHead className="w-24 text-xs text-center">Pago em</TableHead>}
+              {!isMobile && <TableHead className="w-20 text-right text-xs">Valor</TableHead>}
+              {!isMobile && <TableHead className="w-20 text-right text-xs">Pago</TableHead>}
+              <TableHead className="w-24 text-right text-xs">Saldo</TableHead>
+              <TableHead className="w-24 text-center text-xs">Status</TableHead>
+              {!isMobile && canRegisterPagamento && <TableHead className="w-[180px] text-center text-xs">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -306,70 +333,72 @@ export default function FinanceiroPage() {
                         )}
                       </TableCell>
                     )}
-                    <TableCell className="font-medium">{p.numero}ª</TableCell>
+                    <TableCell className="font-medium text-xs text-center">{p.numero}ª</TableCell>
                     <TableCell>
-                      <div className="min-w-0">
-                        <p className="truncate">{(p as any).clientes?.nome ?? "—"}</p>
+                      <div className="min-w-0 max-w-[140px] sm:max-w-[200px]">
+                        <p className="truncate text-xs font-semibold">{(p as any).clientes?.nome ?? "—"}</p>
                         {isMobile && (
-                          <div className="text-xs text-muted-foreground">
-                            <span>Total {fmt(Number(p.valor_total))}</span>
+                          <div className="text-[10px] text-muted-foreground">
+                            <span>{fmt(Number(p.valor_total))}</span>
                             {(isPaga || isParcial) && latestPaymentDateStr && (
-                              <span className="ml-2">• Pago em {paymentDateDisplay}</span>
+                              <span className="ml-1">• Pag: {paymentDateDisplay}</span>
                             )}
                           </div>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                    <TableCell className="text-xs">
+                      {format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yy", { locale: ptBR })}
                     </TableCell>
                     {!isMobile && (
-                      <TableCell className="text-sm text-muted-foreground">
-                        {paymentDateDisplay}
+                      <TableCell className="text-xs text-center text-muted-foreground">
+                        {paymentDateDisplay !== "—" ? format(new Date(latestPaymentDateStr), "dd/MM/yy", { locale: ptBR }) : "—"}
                       </TableCell>
                     )}
-                    {!isMobile && <TableCell className="text-right">{fmt(Number(p.valor_total))}</TableCell>}
-                    {!isMobile && <TableCell className="text-right">{fmt(Number(p.valor_pago))}</TableCell>}
-                    <TableCell className="text-right font-semibold">{fmt(Number(p.saldo))}</TableCell>
-                    <TableCell>
-                      <Badge variant={cfg.variant} className="gap-1">
+                    {!isMobile && <TableCell className="text-right text-xs">{fmt(Number(p.valor_total))}</TableCell>}
+                    {!isMobile && <TableCell className="text-right text-xs">{fmt(Number(p.valor_pago))}</TableCell>}
+                    <TableCell className="text-right font-semibold text-xs text-destructive">{fmt(Number(p.saldo))}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={cfg.variant} className="gap-1 text-[10px] py-0">
                         <Icon className="w-3 h-3" />
                         {cfg.label}
                       </Badge>
                     </TableCell>
                     {!isMobile && canRegisterPagamento && (
-                      <TableCell className="flex gap-1">
-                        {p.status !== "paga" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1 text-xs"
-                            aria-label={`Registrar recebimento da parcela ${p.numero}`}
-                            onClick={() => setPagamentoState({ open: true, data: p })}
-                          >
-                            <CreditCard className="w-3 h-3" /> Pagar
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1 text-xs"
-                          aria-label={`Gerar recibo da parcela ${p.numero}`}
-                          onClick={() => setReciboState({ open: true, data: p })}
-                        >
-                          <Receipt className="w-3 h-3" /> Recibo
-                        </Button>
-                        {(p.venda_id || (p as any).vendas?.id) && (
+                      <TableCell>
+                        <div className="flex items-center justify-center gap-1">
+                          {p.status !== "paga" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-[10px]"
+                              aria-label={`Pagar parcela ${p.numero}`}
+                              onClick={() => setPagamentoState({ open: true, data: p })}
+                            >
+                              <CreditCard className="w-3 h-3 mr-1" /> Pagar
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="gap-1 text-xs text-primary"
-                            title="Ver Venda de Origem"
-                            onClick={() => navigate(`/vendas?viewVenda=${p.venda_id || (p as any).vendas?.id}`)}
+                            className="h-7 px-2 text-[10px]"
+                            aria-label={`Recibo parcela ${p.numero}`}
+                            onClick={() => setReciboState({ open: true, data: p })}
                           >
-                            <ShoppingBag className="w-3 h-3" /> Venda
+                            <Receipt className="w-3 h-3" />
                           </Button>
-                        )}
+                          {(p.venda_id || (p as any).vendas?.id) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[10px] text-primary"
+                              title="Ver Venda de Origem"
+                              onClick={() => navigate(`/vendas?viewVenda=${p.venda_id || (p as any).vendas?.id}`)}
+                            >
+                              <ShoppingBag className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
