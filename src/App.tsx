@@ -49,7 +49,7 @@ import DevolucoesPage from "./pages/Devolucoes";
 import AgendaEntregasPage from "./pages/AgendaEntregas";
 import NotFound from "./pages/NotFound";
 import CidadesAtendidasPublicaPage from "./pages/CidadesAtendidasPublica";
-import GitHubDataPage from "./pages/GitHubData";
+
 
 
 // Portal do Cliente
@@ -127,7 +127,7 @@ const MainRoutes = () => {
           <Route path="/configuracoes" element={<ProtectedRoute requiredRole="admin"><ConfiguracoesPage /></ProtectedRoute>} />
           <Route path="/conciliacao" element={<ConciliacaoPage />} />
           <Route path="/mais" element={<MaisPage />} />
-          <Route path="/github" element={<GitHubDataPage />} />
+          
 
         </Route>
       )}
