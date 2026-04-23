@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
   
   const { signIn, session, profile, rolesLoaded, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
 
   useEffect(() => {
     // Blocks redirect if we're waiting for MFA
@@ -82,7 +82,7 @@ export default function LoginPage() {
       if (useBackupMode) {
         // Fluxo de Código de Backup (Consome o código e cancela o MFA do usuário)
          const { data: { user } } = await supabase.auth.getUser();
-         const backupCodes = user?.user_meta_data?.backup_codes || [];
+         const backupCodes = user?.user_metadata?.backup_codes || [];
          
          if (backupCodes.includes(mfaCode.trim().toUpperCase())) {
             // Success Backup Code
@@ -100,11 +100,11 @@ export default function LoginPage() {
               data: { backup_codes: newCodes, mfa_active: false }
             });
 
-            toast({ title: "Acesso por Backup", description: "Autenticador desativado. Você deve configurar um novo nas opções." });
+            toast.success("Autenticador desativado. Você deve configurar um novo nas opções.");
             setRequireMFA(false);
             navigate("/", { replace: true });
          } else {
-            toast({ title: "Código Incorreto", description: "Código de backup inválido ou já usado.", variant: "destructive" });
+            toast.error("Código de backup inválido ou já usado.");
          }
       } else {
         // Fluxo normal TOTP
@@ -123,11 +123,7 @@ export default function LoginPage() {
         navigate("/", { replace: true });
       }
     } catch (e: any) {
-       toast({
-         title: "Falha na Verificação",
-         description: "Código inválido. Tente novamente.",
-         variant: "destructive"
-       });
+       toast.error("Código inválido. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -139,7 +135,7 @@ export default function LoginPage() {
     if (!trimmedEmail || !password) return;
 
     if (blocked) {
-      toast({ title: "Acesso bloqueado", description: "Muitas tentativas de login. " + getBlockTimeRemaining(), variant: "destructive" });
+      toast.error("Muitas tentativas de login. " + getBlockTimeRemaining());
       return;
     }
 
@@ -150,7 +146,7 @@ export default function LoginPage() {
       setBlocked(true);
       setBlockedUntil(rateLimitResult.blocked_until || null);
       setLoading(false);
-      toast({ title: "Acesso bloqueado", description: "Muitas tentativas.", variant: "destructive" });
+      toast.error("Muitas tentativas.");
       return;
     }
 
@@ -160,7 +156,7 @@ export default function LoginPage() {
       setLoading(false);
       const remaining = rateLimitResult.remaining;
       setRemainingAttempts(typeof remaining === "number" ? remaining : null);
-      toast({ title: "Credenciais inválidas", description: "Verifique seu email e senha e tente novamente.", variant: "destructive" });
+      toast.error("Verifique seu email e senha e tente novamente.");
     } else {
       // MFA CHECK
       const mfaCheck = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -182,7 +178,7 @@ export default function LoginPage() {
         if (hasRole("cliente")) {
           await supabase.auth.signOut();
           setLoading(false);
-          toast({ title: "Acesso Negado", description: "Clientes devem acessar o Portal pelo link correto.", variant: "destructive" });
+          toast.error("Clientes devem acessar o Portal pelo link correto.");
           return;
         }
       }

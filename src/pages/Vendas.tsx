@@ -30,6 +30,7 @@ import { ptBR } from "date-fns/locale";
 import { NovaDevolucaoDialog } from "@/components/devolucoes/NovaDevolucaoDialog";
 import { DetalheVendaSheet } from "@/components/vendas/DetalheVendaSheet";
 import { useRelVendedores } from "@/hooks/useRelatorios";
+import { toast } from "sonner";
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   rascunho: { label: "Rascunho", variant: "outline" },
