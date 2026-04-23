@@ -25,7 +25,9 @@ import {
   Scale,
   ClipboardList,
   CalendarClock,
+  Github,
   type LucideIcon,
+
 } from "lucide-react";
 import type { ModuleKey } from "@/types/modules";
 
