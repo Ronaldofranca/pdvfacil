@@ -73,7 +73,7 @@ export default function VendasPage() {
   }, [clearStatus, setStartDate, setEndDate, setSearch]);
 
   const { data: vendas, isLoading } = useVendas({
-    status: statusFilter,
+    status: statusFilter as any,
     startDate,
     endDate,
     limit: (!startDate && !endDate && !search) ? 10 : 300,

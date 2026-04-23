@@ -28,7 +28,7 @@ async function logSyncEvent(item: QueueItem, status: "success" | "error", error?
     // but the server-side log is more reliable for database errors.
     // We'll log here as "Client-side Sync Report".
     
-    await supabase.from("sync_logs").insert({
+    await (supabase as any).from("sync_logs").insert({
       empresa_id: (item.payload as any).params?._empresa_id || (item.payload as any)._empresa_id || (item.payload as any).empresa_id,
       vendedor_id: user.id,
       device_id: item.device_id,
