@@ -135,6 +135,5 @@ export type ModuleKey =
   | "caixa"
   | "importacao"
   | "configuracoes"
-  | "conciliacao"
-  | "github";
+  | "conciliacao";
 
