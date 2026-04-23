@@ -37,6 +37,7 @@ export function exportPDF(options: {
   const { title, periodo, empresa, headers, rows, totals } = options;
 
   const safeTitle = escapeHtml(title);
+  const normalizedTitle = normalizeFileName(title);
   const safePeriodo = periodo ? escapeHtml(periodo) : "";
   const safeEmpresa = empresa ? escapeHtml(empresa) : "";
 
@@ -53,7 +54,7 @@ export function exportPDF(options: {
 <html>
 <head>
 <meta charset="utf-8">
-<title>${safeTitle}</title>
+<title>${normalizedTitle}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 24px; color: #1a1a2e; font-size: 11px; }
@@ -557,7 +558,7 @@ export async function exportReceiptFromElement(
     }
 
     console.info("[Receipt] início do compartilhamento", { fileName, size: blob.size });
-    const file = new File([blob], fileName, { type: "application/pdf" });
+    const file = new File([blob], normalizeFileName(fileName), { type: "application/pdf" });
     const titles: Record<string, string> = {
       pagamento: `Recibo de Pagamento #${options?.id}`,
       pedido: `Recibo de Pedido #${options?.id}`,
@@ -610,11 +611,18 @@ export async function exportReceiptFromElement(
   }
 }
 
+function normalizeFileName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename;
+  a.download = normalizeFileName(filename);
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
