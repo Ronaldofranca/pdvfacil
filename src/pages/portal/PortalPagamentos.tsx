@@ -1,7 +1,7 @@
 import { Receipt, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";

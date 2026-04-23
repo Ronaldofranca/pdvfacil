@@ -55,12 +55,13 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
   const registrarLote = useRegistrarPagamentoLote();
 
   // Saldo total das parcelas selecionadas
-  const saldoTotal = parcelas.reduce((s, p) => s + Number(p.saldo), 0);
+  const saldoTotal = parcelas?.reduce((s, p) => s + Number(p.saldo), 0) || 0;
 
   // Estado do formulário
   const [valor, setValor] = useState(saldoTotal.toFixed(2));
   const [forma, setForma] = useState("pix");
   const [obs, setObs] = useState("");
+  const [dataPagamento, setDataPagamento] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
 
   // Sincroniza o valor padrão quando as parcelas mudam (ex: ao abrir novamente)
   const [lastSaldo, setLastSaldo] = useState(saldoTotal);
@@ -72,7 +73,7 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
   // Converte parcelas completas para o formato da função pura
   const parcelasInput: ParcelaParaDistribuir[] = useMemo(
     () =>
-      parcelas.map((p) => ({
+      (parcelas || []).map((p) => ({
         id: p.id,
         vencimento: p.vencimento,
         saldo: Number(p.saldo),
@@ -92,6 +93,19 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
   const temSobra = sobra > 0.005;
   const valorValido = valorNum > 0 && parcelasInput.length > 0;
 
+  // Helper: convert datetime-local string to ISO WITH local timezone offset
+  function toLocalIso(localDateStr: string): string {
+    const d = new Date(localDateStr);
+    const offsetMs = d.getTimezoneOffset() * 60 * 1000;
+    const localMs = d.getTime() - offsetMs;
+    const localDate = new Date(localMs);
+    const sign = d.getTimezoneOffset() <= 0 ? "+" : "-";
+    const pad = (n: number) => String(Math.abs(n)).padStart(2, "0");
+    const offsetH = pad(Math.floor(Math.abs(d.getTimezoneOffset()) / 60));
+    const offsetM = pad(Math.abs(d.getTimezoneOffset()) % 60);
+    return localDate.toISOString().slice(0, 19) + `${sign}${offsetH}:${offsetM}`;
+  }
+
   // ─── Submit ──────────────────────────────────────────────────────────────
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -106,6 +120,7 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
         forma_pagamento: forma,
         usuario_id: user.id,
         observacoes: obs,
+        data_pagamento: toLocalIso(dataPagamento),
       },
       {
         onSuccess: () => {
@@ -120,7 +135,7 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
-  if (parcelas.length === 0) return null;
+  if (!parcelas || parcelas.length === 0) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,17 +147,17 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
         </DialogHeader>
 
         {/* ── Resumo das parcelas selecionadas ── */}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-muted p-2">
-            <p className="text-xs text-muted-foreground">Parcelas</p>
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
+          <div className="rounded-lg bg-muted p-1.5 sm:p-2">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Parcelas</p>
             <p className="text-sm font-bold">{parcelas.length}</p>
           </div>
-          <div className="rounded-lg bg-muted p-2">
-            <p className="text-xs text-muted-foreground">Saldo total</p>
+          <div className="rounded-lg bg-muted p-1.5 sm:p-2">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Saldo total</p>
             <p className="text-sm font-bold text-destructive">{fmt(saldoTotal)}</p>
           </div>
-          <div className="rounded-lg bg-muted p-2">
-            <p className="text-xs text-muted-foreground">Será aplicado</p>
+          <div className="rounded-lg bg-muted p-1.5 sm:p-2">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Aplicado</p>
             <p className="text-sm font-bold text-primary">{fmt(preview.totalAplicado)}</p>
           </div>
         </div>
@@ -160,7 +175,7 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
 
         {/* ── Formulário ── */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Valor recebido (R$) *</Label>
               <Input
@@ -193,6 +208,16 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
             </div>
           </div>
           <div>
+            <Label>Data do Pagamento *</Label>
+            <Input 
+              required 
+              type="datetime-local" 
+              value={dataPagamento} 
+              max={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+              onChange={(e) => setDataPagamento(e.target.value)} 
+            />
+          </div>
+          <div>
             <Label>Observações</Label>
             <Textarea
               value={obs}
@@ -207,8 +232,8 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
           {/* ── Prévia da distribuição ── */}
           <div>
             <p className="text-sm font-semibold mb-2">Prévia da distribuição</p>
-            <div className="rounded-lg border overflow-hidden">
-              <table className="w-full text-xs">
+            <div className="rounded-lg border overflow-x-auto">
+              <table className="w-full text-xs min-w-[400px]">
                 <thead>
                   <tr className="bg-muted text-muted-foreground">
                     <th className="text-left px-3 py-2 font-medium">Parcela</th>
@@ -285,11 +310,11 @@ export function PagamentoLoteForm({ open, onOpenChange, parcelas, onSuccess }: P
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={registrarLote.isPending || !valorValido}>
+            <Button type="submit" className="w-full sm:w-auto" disabled={registrarLote.isPending || !valorValido}>
               {registrarLote.isPending ? "Registrando..." : "Confirmar Recebimento"}
             </Button>
           </div>

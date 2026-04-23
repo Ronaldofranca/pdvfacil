@@ -59,6 +59,57 @@ export function useClientes() {
   });
 }
 
+export function useContaAcesso(clienteId: string | null) {
+  return useQuery({
+    queryKey: ["conta_acesso", clienteId],
+    enabled: !!clienteId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("conta_acesso")
+        .select("id, login, ativo")
+        .eq("cliente_id", clienteId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useSaveContaAcesso() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ clienteId, login, senha, ativo, isNew }: { clienteId: string, login: string, senha?: string, ativo: boolean, isNew: boolean }) => {
+      if (isNew) {
+        if (!senha) throw new Error("Senha é obrigatória para criar acesso");
+        const { data, error } = await (supabase as any).rpc("fn_criar_conta_acesso", {
+          p_cliente_id: clienteId,
+          p_login: login,
+          p_senha: senha,
+          p_ativo: ativo
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        return data;
+      } else {
+        const { data, error } = await (supabase as any).rpc("fn_atualizar_conta_acesso", {
+          p_cliente_id: clienteId,
+          p_login: login,
+          p_senha: senha || null,
+          p_ativo: ativo
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        return data;
+      }
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["conta_acesso", vars.clienteId] });
+      toast.success("Conta de acesso salva!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 export function useCliente(id: string | null) {
   return useQuery({
     queryKey: ["clientes", id],

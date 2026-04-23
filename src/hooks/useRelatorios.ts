@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Vendas por período ───
 export function useRelVendasPeriodo(inicio: string, fim: string) {
@@ -8,7 +9,10 @@ export function useRelVendasPeriodo(inicio: string, fim: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendas")
-        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, pagamentos, clientes(nome)")
+        .select(`
+          id, total, desconto_total, subtotal, data_venda, status, vendedor_id, pagamentos, 
+          clientes(nome)
+        `)
         .gte("data_venda", inicio)
         .lte("data_venda", fim + "T23:59:59")
         .eq("status", "finalizada" as any)
@@ -26,7 +30,11 @@ export function useRelVendasDetalhadas(inicio: string, fim: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vendas")
-        .select("id, total, desconto_total, subtotal, data_venda, status, vendedor_id, cliente_id, clientes(nome), itens_venda(produto_id, nome_produto, quantidade, preco_vendido, preco_original, subtotal, desconto, bonus, custo_unitario)")
+        .select(`
+          id, total, desconto_total, subtotal, data_venda, status, vendedor_id, cliente_id, 
+          clientes(nome),
+          itens_venda(produto_id, nome_produto, quantidade, preco_vendido, preco_original, subtotal, desconto, bonus, custo_unitario)
+        `)
         .gte("data_venda", inicio)
         .lte("data_venda", fim + "T23:59:59")
         .eq("status", "finalizada" as any)
@@ -120,6 +128,7 @@ export function useRelTodasParcelas(inicio: string, fim: string) {
       const { data, error } = await supabase
         .from("parcelas")
         .select("*, clientes(nome)")
+        .neq("status", "cancelada" as any)
         .gte("vencimento", inicio)
         .lte("vencimento", fim)
         .order("vencimento");
@@ -136,7 +145,8 @@ export function useRelParcelasPorCliente() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("parcelas")
-        .select("*, clientes(nome)")
+        .select("*, clientes(nome), vendas(vendedor_id)")
+        .neq("status", "cancelada" as any)
         .order("vencimento");
       if (error) throw error;
 
@@ -256,14 +266,53 @@ export function useRelCurvaABC(inicio: string, fim: string) {
   });
 }
 
-// ─── Vendedores (profiles) ───
+// ─── Todos os profiles (para o mapa nome de vendedores) ───
+export function useRelTodosProfiles() {
+  return useQuery({
+    queryKey: ["rel_todos_profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, user_id, nome, email")
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+// ─── Vendedores (profiles com roles) — apenas para o dropdown de filtro ───
+// Busca TODOS os profiles com roles, mas inclui qualquer um que tenha feito vendas.
+// O filtro de exibição no dropdown usa apenas admin/gerente/vendedor/master.
 export function useRelVendedores() {
   return useQuery({
     queryKey: ["rel_vendedores"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("user_id, nome, email");
+      const { data, error } = await (supabase as any)
+        .from("profiles")
+        .select(`
+          id,
+          user_id, 
+          nome, 
+          email,
+          user_roles(role)
+        `)
+        .order("nome");
+      
       if (error) throw error;
-      return data;
+      
+      // Retorna TODOS os perfis que tenham ao menos uma role definida (admin/master/gerente/vendedor)
+      // OU que não tenham nenhuma role (para garantir que o admin principal não suma)
+      const rows: any[] = data ?? [];
+      return rows.filter((p) => {
+        const roles: string[] = (p.user_roles ?? []).map((r: any) => r.role);
+        // Se tem roles, só aparece se for role de usuário do sistema
+        if (roles.length > 0) {
+          return roles.some((r) => ["admin", "gerente", "vendedor", "master"].includes(r));
+        }
+        // Se não tem roles definidas, inclui por precaução (pode ser o admin principal)
+        return true;
+      });
     },
   });
 }
@@ -273,7 +322,7 @@ export function useRelClientes() {
   return useQuery({
     queryKey: ["rel_clientes_list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome");
+      const { data, error } = await supabase.from("clientes").select("id, nome, telefone, cidade").eq("ativo", true).order("nome");
       if (error) throw error;
       return data;
     },
@@ -483,6 +532,69 @@ export function useBatchUpdateTelefones() {
       const errors = results.filter(r => r.error).map(r => r.error);
       if (errors.length > 0) throw errors[0];
       return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rel_clientes_completos"] });
+      queryClient.invalidateQueries({ queryKey: ["clientes"] });
+    }
+  });
+}
+
+// ─── Edição em lote de cidades ───
+
+export function useCidadesAtendidas() {
+  return useQuery({
+    queryKey: ["cidades_atendidas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cidades_atendidas")
+        .select("id, cidade, nome_normalizado")
+        .eq("ativa", true)
+        .order("cidade");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+export function useCriarOuObterCidade() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ cidade }: { cidade: string }) => {
+      if (!user) throw new Error("Não autenticado");
+      
+      const { data, error } = await supabase.rpc("fn_criar_ou_obter_cidade", {
+        _empresa_id: user.user_metadata?.empresa_id || user.id,
+        _nome_cidade: cidade
+      }); 
+      
+      if (error) throw error;
+      return data; // Returns the UUID
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cidades_atendidas"] });
+    }
+  });
+}
+
+export function useBatchUpdateCidades() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (payload: { id: string; cidade_id: string; cidade_nome: string }[]) => {
+      if (!user) throw new Error("Não autenticado");
+
+      const { data, error } = await supabase.rpc("fn_batch_update_clientes_cidades", {
+        _cambios: payload,
+        _user_id: user.id
+      });
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rel_clientes_completos"] });

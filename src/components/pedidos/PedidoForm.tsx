@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { normalizeSearch } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ClienteSearchInput } from "@/components/clientes/ClienteSearchInput";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -112,7 +114,7 @@ export function PedidoForm({ open, onOpenChange, pedidoId, initialData }: Props)
   const totalDescontos = cart.reduce((s, i) => s + i.desconto + (i.bonus ? i.quantidade * i.preco_original : 0), 0);
 
   const filteredProdutos = produtos?.filter((p) => p.ativo).filter((p) =>
-    p.nome.toLowerCase().includes(searchProd.toLowerCase()) || p.codigo?.toLowerCase().includes(searchProd.toLowerCase())
+    normalizeSearch(p.nome).includes(normalizeSearch(searchProd)) || normalizeSearch(p.codigo ?? "").includes(normalizeSearch(searchProd))
   );
 
   const handleSalvar = () => {
@@ -159,8 +161,8 @@ export function PedidoForm({ open, onOpenChange, pedidoId, initialData }: Props)
           {/* LEFT: Produtos */}
           <div className="lg:col-span-2 space-y-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Buscar produto..." value={searchProd} onChange={(e) => setSearchProd(e.target.value)} className="pl-9" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input placeholder="Buscar produto..." value={searchProd} onChange={(e) => setSearchProd(e.target.value)} className="pl-8 h-8 text-xs" />
             </div>
             <div className="space-y-1 max-h-[250px] overflow-y-auto pr-1">
               {filteredProdutos?.map((p) => (
@@ -192,14 +194,13 @@ export function PedidoForm({ open, onOpenChange, pedidoId, initialData }: Props)
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Cliente *</Label>
-                <Select value={clienteId} onValueChange={setClienteId}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
-                  <SelectContent>
-                    {clientes?.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ClienteSearchInput
+                  value={clienteId || null}
+                  onSelect={(c) => setClienteId(c?.id ?? "")}
+                  clientes={clientes ?? []}
+                  placeholder="Buscar cliente..."
+                  className="w-full"
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>

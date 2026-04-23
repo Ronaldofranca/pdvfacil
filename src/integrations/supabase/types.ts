@@ -549,6 +549,10 @@ export type Database = {
           updated_at: string
           user_id: string | null
           vendedor_id: string | null
+          limite_credito_total: number
+          limite_utilizado: number
+          permitir_atraso: boolean
+          modo_limite: string
         }
         Insert: {
           ativo?: boolean
@@ -804,6 +808,10 @@ export type Database = {
           sessao_expiracao_horas: number
           updated_at: string
           valor_minimo_indicacao: number
+          verificar_limite_credito: boolean
+          limite_padrao_credito: number
+          carencia_dias_atraso: number
+          teto_aumento_credito_automatico: number
         }
         Insert: {
           alerta_cliente_inativo?: boolean

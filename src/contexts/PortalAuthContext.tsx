@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 
@@ -26,10 +26,13 @@ interface PortalAuth {
   isCliente: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithCPF: (cpf: string, password: string) => Promise<{ error: Error | null }>;
+  signInWithConta: (login: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
-export function usePortalAuth(): PortalAuth {
+const PortalAuthContext = createContext<PortalAuth | undefined>(undefined);
+
+export function PortalAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [cliente, setCliente] = useState<ClienteRecord | null>(null);
@@ -65,28 +68,58 @@ export function usePortalAuth(): PortalAuth {
     }
   }, []);
 
+  const aggressiveSessionCleanup = useCallback(() => {
+    // Termina qualquer deadlock limpando as chaves de sessão corrompidas do localStorage
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sb-') && key.includes('-auth-token')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    } catch (e) {
+      console.error("Erro ao limpar localStorage:", e);
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
     const init = async () => {
-      // Timeout de segurança: Se em 7s não carregar, solta o spinner
       const safetyTimeout = setTimeout(() => {
         if (mounted) {
-          console.warn("PortalAuth: Tempo de resposta excedido no carregamento inicial.");
+          console.warn("PortalAuth: Tempo de resposta excedido no carregamento inicial. Forçando quebra de deadlock.");
+          aggressiveSessionCleanup();
+          setSession(null);
+          setUser(null);
+          setCliente(null);
+          setIsCliente(false);
           setLoading(false);
         }
       }, 7000);
 
       try {
-        const { data: { session: s } } = await supabase.auth.getSession();
+        const { data: { session: s }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+           console.warn("PortalAuth: Erro validando sessão. Limpando resíduos.", error);
+           aggressiveSessionCleanup();
+        }
+
         if (!mounted) return;
         setSession(s);
         setUser(s?.user ?? null);
         if (s?.user) {
           await fetchClienteData(s.user.id);
+        } else {
+          setCliente(null);
+          setIsCliente(false);
         }
       } catch (err) {
         console.error("Erro ao inicializar PortalAuth:", err);
+        aggressiveSessionCleanup();
       } finally {
         if (mounted) {
           clearTimeout(safetyTimeout);
@@ -97,17 +130,22 @@ export function usePortalAuth(): PortalAuth {
 
     init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       if (!mounted) return;
       
       const sessionTimeout = setTimeout(() => {
         if (mounted) {
-          console.warn("PortalAuth: Tempo de resposta excedido na mudança de sessão.");
+          console.warn("PortalAuth: Timeout no AuthStateChange. Quebrando deadlock.");
+          aggressiveSessionCleanup();
           setLoading(false);
         }
       }, 7000);
 
       try {
+        if (event === 'SIGNED_OUT') {
+           aggressiveSessionCleanup();
+        }
+
         setSession(s);
         setUser(s?.user ?? null);
         if (s?.user) {
@@ -130,7 +168,7 @@ export function usePortalAuth(): PortalAuth {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchClienteData]);
+  }, [fetchClienteData, aggressiveSessionCleanup]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -143,21 +181,19 @@ export function usePortalAuth(): PortalAuth {
   const signInWithCPF = async (cpf: string, password: string) => {
     try {
       const normalizedCPF = cpf.replace(/\D/g, "");
-      // Busca o email associado ao CPF via RPC SQL
       const { data, error } = await (supabase as any).rpc("fn_portal_cpf_lookup", { 
         p_cpf: normalizedCPF 
       });
 
       if (error || !data) {
-        return { error: new Error("CPF nÃ£o encontrado ou nÃ£o habilitado.") };
+        return { error: new Error("CPF não encontrado ou não habilitado.") };
       }
 
-      // Supabase RPC returns a list of result objects
       const rows = Array.isArray(data) ? data : [data];
       const result = rows[0];
 
       if (!result) {
-        return { error: new Error("CPF nÃ£o localizado.") };
+        return { error: new Error("CPF não localizado.") };
       }
 
       const email = typeof result === 'string' ? result : (result as any).email;
@@ -173,7 +209,25 @@ export function usePortalAuth(): PortalAuth {
     }
   };
 
+  const signInWithConta = async (login: string, password: string) => {
+    try {
+      const { data: email, error } = await (supabase as any).rpc("fn_portal_login_conta", { 
+        p_login: login.trim() 
+      });
+
+      if (error || !email) {
+        return { error: new Error("Login não encontrado ou desativado.") };
+      }
+
+      return signIn(email, password);
+    } catch (err: any) {
+      console.error("Erro no signInWithConta:", err);
+      return { error: new Error("Erro na comunicação com o servidor.") };
+    }
+  };
+
   const signOut = async () => {
+    aggressiveSessionCleanup();
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
@@ -181,5 +235,30 @@ export function usePortalAuth(): PortalAuth {
     setIsCliente(false);
   };
 
-  return { session, user, cliente, loading, isCliente, signIn, signInWithCPF, signOut };
+  const value = {
+    session,
+    user,
+    cliente,
+    loading,
+    isCliente,
+    signIn,
+    signInWithCPF,
+    signInWithConta,
+    signOut
+  };
+
+  return (
+    <PortalAuthContext.Provider value={value}>
+      {children}
+    </PortalAuthContext.Provider>
+  );
+}
+
+// Hook padronizado para as views
+export function usePortalAuth() {
+  const context = useContext(PortalAuthContext);
+  if (context === undefined) {
+    throw new Error("usePortalAuth deve ser usado dentro de um PortalAuthProvider");
+  }
+  return context;
 }

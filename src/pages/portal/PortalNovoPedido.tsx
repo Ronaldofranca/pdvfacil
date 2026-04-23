@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Plus, Minus, ShoppingCart, Search, Send } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -68,7 +69,7 @@ export default function PortalNovoPedidoPage() {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
   const filtered = produtos?.filter((p) => {
-    const matchSearch = !search || p.nome.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || normalizeSearch(p.nome).includes(normalizeSearch(search));
     const matchCat = !selectedCat || p.categoria_id === selectedCat;
     return matchSearch && matchCat;
   });
@@ -98,8 +99,20 @@ export default function PortalNovoPedidoPage() {
   const submitOrder = async () => {
     if (!cliente || cart.length === 0 || sending) return;
 
+    let vendedorId = cliente.vendedor_id;
+    
+    // Fallback: se o cliente for genérico e não tiver vendedor, pega um admin da empresa
+    if (!vendedorId) {
+      const { data, error } = await supabase.rpc('fn_get_default_vendedor_id', { 
+        p_empresa_id: cliente.empresa_id 
+      });
+      if (!error && data) {
+        vendedorId = data as string;
+      }
+    }
+
     // Validate vendedor_id exists
-    if (!cliente.vendedor_id) {
+    if (!vendedorId) {
       toast.error("Não foi possível identificar o vendedor responsável. Entre em contato com o suporte.");
       return;
     }
@@ -121,7 +134,7 @@ export default function PortalNovoPedidoPage() {
         .insert({
           empresa_id: cliente.empresa_id,
           cliente_id: cliente.id,
-          vendedor_id: cliente.vendedor_id,
+          vendedor_id: vendedorId,
           data_prevista_entrega: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
           status: "aguardando_entrega" as any,
           subtotal: total,
@@ -146,6 +159,17 @@ export default function PortalNovoPedidoPage() {
 
       const { error: iErr } = await supabase.from("itens_pedido").insert(itens);
       if (iErr) throw iErr;
+
+      // Notifica o vendedor / admin sobre o novo pedido
+      await supabase.from("notificacoes").insert({
+        empresa_id: cliente.empresa_id,
+        titulo: "🛍️ Novo Pedido (Portal do Cliente)!",
+        mensagem: `O cliente ${cliente.nome} acaba de gerar um pedido no valor de R$ ${total.toFixed(2)}.`,
+        tipo: 'success',
+        usuario_id: vendedorId,
+        lida: false,
+        link: '/pedidos',
+      });
 
       toast.success("Pedido enviado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["portal-pedidos"] });

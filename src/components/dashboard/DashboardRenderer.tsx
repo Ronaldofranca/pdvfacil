@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
@@ -51,6 +53,8 @@ export function DashboardRenderer({
   setPeriodo, isAdmin, isPreview = false
 }: DashboardRendererProps) {
   
+  const [activeModal, setActiveModal] = React.useState<string | null>(null);
+
   const v = (val: string) => showValues ? val : MASKED;
 
   const chartColors = visualConfig.charts && visualConfig.charts.length > 0 
@@ -73,9 +77,24 @@ export function DashboardRenderer({
             color="text-primary" 
             loading={isLoading} 
             title="Total de vendas feitas hoje, subtraindo devoluções de vendas de hoje"
+            onClick={() => setActiveModal("vendas-hoje")}
           />
-          <KPICard icon={TrendingUp} label="Lucro Estimado" value={data ? v(fmtR(data.lucroDia)) : "—"} color="text-primary" loading={isLoading} />
-          <KPICard icon={CreditCard} label="A Receber Hoje" value={data ? v(fmtR(data.totalAReceber)) : "—"} sub={data ? `${data.qtdPendentes} parcela(s)` : ""} loading={isLoading} />
+          <KPICard 
+            icon={TrendingUp} 
+            label="Lucro Estimado" 
+            value={data ? v(fmtR(data.lucroDia)) : "—"} 
+            color="text-primary" 
+            loading={isLoading} 
+            onClick={() => setActiveModal("lucro")}
+          />
+          <KPICard 
+            icon={CreditCard} 
+            label="A Receber Hoje" 
+            value={data ? v(fmtR(data.totalAReceber)) : "—"} 
+            sub={data ? `${data.qtdPendentes} parcela(s)` : ""} 
+            loading={isLoading} 
+            onClick={() => setActiveModal("receber-hoje")}
+          />
           <KPICard 
             icon={DollarSign} 
             label="Recebido Hoje" 
@@ -83,8 +102,17 @@ export function DashboardRenderer({
             sub={data ? `Vendas: ${fmtR(data.recebidoAVista)} | Fiados: ${fmtR(data.recebidoParcelas)}` : ""}
             color="text-primary" 
             loading={isLoading} 
+            onClick={() => setActiveModal("recebido-hoje")}
           />
-          <KPICard icon={AlertTriangle} label="Parcelas Vencidas" value={data ? v(fmtR(data.totalVencido)) : "—"} sub={data ? `${data.qtdVencidas} parcela(s)` : ""} color="text-destructive" loading={isLoading} />
+          <KPICard 
+            icon={AlertTriangle} 
+            label="Parcelas Vencidas" 
+            value={data ? v(fmtR(data.totalVencido)) : "—"} 
+            sub={data ? `${data.qtdVencidas} parcela(s)` : ""} 
+            color="text-destructive" 
+            loading={isLoading} 
+            onClick={() => setActiveModal("parcelas-vencidas")}
+          />
         </div>
       </div>
     ),
@@ -211,7 +239,16 @@ export function DashboardRenderer({
           )}
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KPICard icon={ShoppingCart} label="Vendas Período" value={periodoData ? v(fmtR(periodoData.totalVendas)) : "—"} sub={periodoData ? `${periodoData.qtdVendas} venda(s) líq.` : ""} color="text-primary" loading={isPeriodoLoading} title="Total de vendas no período, subtraindo apenas devoluções de vendas deste período" />
+          <KPICard 
+            icon={ShoppingCart} 
+            label="Vendas Período" 
+            value={periodoData ? v(fmtR(periodoData.totalVendas)) : "—"} 
+            sub={periodoData ? `${periodoData.qtdVendas} venda(s) líq.` : ""} 
+            color="text-primary" 
+            loading={isPeriodoLoading} 
+            title="Total de vendas no período, subtraindo apenas devoluções de vendas deste período" 
+            onClick={() => setActiveModal("vendas-periodo")}
+          />
           <KPICard 
             icon={TrendingUp} 
             label="Lucro Período" 
@@ -219,9 +256,18 @@ export function DashboardRenderer({
             sub={periodoData?.lucroPeriodo === 0 && periodoData?.totalVendas > 0 ? "Sem dados de custo" : ""}
             color="text-primary" 
             loading={isPeriodoLoading} 
+            onClick={() => setActiveModal("lucro")}
           />
           <KPICard icon={DollarSign} label="Recebido Total" value={periodoData ? v(fmtR(periodoData.totalRecebido)) : "—"} color="text-primary" loading={isPeriodoLoading} title="Total de entradas financeiras no período (Vendas à vista + recebimento de fiados)" />
-          <KPICard icon={PackageX} label="Alerta Estoque" value={data ? `${data.estoqueBaixo.length}` : "—"} sub={`${data?.estoqueSemEstoque ?? 0} sem estoque`} color="text-destructive" loading={isLoading} />
+          <KPICard 
+            icon={PackageX} 
+            label="Alerta Estoque" 
+            value={data ? `${data.estoqueBaixo.length}` : "—"} 
+            sub={`${data?.estoqueSemEstoque ?? 0} sem estoque`} 
+            color="text-destructive" 
+            loading={isLoading} 
+            onClick={() => setActiveModal("alerta-estoque")}
+          />
           <KPICard icon={XCircle} label="Vendas Canc." value={periodoData ? v(fmtR(periodoData.totalCancelado ?? 0)) : "—"} sub={periodoData ? `${periodoData.qtdCanceladas ?? 0} cancelada(s)` : ""} color="text-destructive" loading={isPeriodoLoading} />
         </div>
       </div>
@@ -255,7 +301,7 @@ export function DashboardRenderer({
         <Card key="recebimentos-forma" className="h-full">
           <CardContent className="p-4">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /> Recebimentos por Forma</h3>
-            <div className="flex flex-row items-center justify-between h-[180px] gap-2">
+            <div className="flex flex-row items-center justify-between h-[250px] gap-2">
               <div className="w-[100px] shrink-0 flex flex-col justify-center gap-2">
                 {(isPreview ? [
                   { forma: "dinheiro", valor: 5000 }, { forma: "cartao_credito", valor: 8000 }, { forma: "pix", valor: 4500 }
@@ -281,7 +327,7 @@ export function DashboardRenderer({
                         { forma: "Dinheiro", valor: 5000 }, { forma: "Cartão", valor: 8000 }, { forma: "Pix", valor: 4500 }
                       ] : periodoData.recebimentosPorForma} 
                       dataKey="valor" nameKey="forma" cx="65%" cy="50%" 
-                      outerRadius={isPreview ? 50 : 55} 
+                      outerRadius={isPreview ? 50 : 65} 
                       paddingAngle={2}
                       stroke="none"
                       label={isPreview ? false : ({ forma, valor }) => showValues ? `${forma}: ${fmtR(valor)}` : `${forma}: •••`}
@@ -567,6 +613,188 @@ export function DashboardRenderer({
     }
   }
 
+  // Drill-down Modals content
+  const renderModalContent = () => {
+    switch(activeModal) {
+      case "receber-hoje":
+        return (
+          <ScrollArea className="h-[calc(100vh-120px)] pr-4">
+            <div className="space-y-3 mt-4 pb-10">
+              {data?.parcelasPendentesHoje?.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhuma parcela vencendo hoje.</p>
+              ) : (
+                data?.parcelasPendentesHoje?.map((p: any) => (
+                  <div key={p.id} className="p-3 rounded-lg border bg-card flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-sm">{p.clientes?.nome || "Cliente Removido"}</p>
+                      <p className="text-xs text-muted-foreground">Vencimento: {format(new Date(p.vencimento), "dd/MM/yyyy")} • Parc. {p.numero}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">{v(fmtR(p.saldo))}</p>
+                      <Badge variant={p.status === 'pendente' ? 'outline' : 'secondary'} className="text-[10px] mt-1">{p.status}</Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        );
+      case "recebido-hoje":
+        return (
+          <ScrollArea className="h-[calc(100vh-120px)] pr-4">
+            <div className="space-y-3 mt-4 pb-10">
+              <h3 className="text-xs font-bold uppercase text-muted-foreground">Pagamentos Recebidos</h3>
+              {data?.pagamentosHojeDetalhados?.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhum pagamento registrado hoje.</p>
+              ) : (
+                data?.pagamentosHojeDetalhados?.map((p: any) => {
+                  const cliente = p.parcelas?.clientes?.nome || p.vendas?.clientes?.nome || "Avulso";
+                  const ref = p.parcelas ? `Parcela ${p.parcelas.numero}` : `Venda ${p.vendas?.id?.split('-')[0]}`;
+                  return (
+                    <div key={p.id} className="p-3 rounded-lg border bg-card flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-sm">{cliente}</p>
+                        <p className="text-xs text-muted-foreground">{ref} • {p.forma_pagamento?.replace(/_/g, ' ')}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-green-600">{v(fmtR(p.valor_pago))}</p>
+                        <p className="text-[10px] text-muted-foreground">{format(new Date(p.data_pagamento), "HH:mm")}</p>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </ScrollArea>
+        );
+      case "parcelas-vencidas":
+        return (
+          <ScrollArea className="h-[calc(100vh-120px)] pr-4">
+            <div className="space-y-3 mt-4 pb-10">
+              {data?.parcelasVencidas?.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhuma parcela vencida.</p>
+              ) : (
+                data?.parcelasVencidas?.map((p: any) => {
+                  const diasAtraso = Math.floor((new Date().getTime() - new Date(p.vencimento).getTime()) / (1000 * 3600 * 24));
+                  return (
+                    <div key={p.id} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5 flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-sm">{p.clientes?.nome || "Cliente Removido"}</p>
+                        <p className="text-xs text-muted-foreground">Venc. {format(new Date(p.vencimento), "dd/MM/yyyy")} • {diasAtraso} dias de atraso</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-destructive">{v(fmtR(p.saldo))}</p>
+                        <Badge variant="destructive" className="text-[10px] mt-1">Parc. {p.numero}</Badge>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </ScrollArea>
+        );
+      case "vendas-hoje":
+        return (
+          <ScrollArea className="h-[calc(100vh-120px)] pr-4">
+            <div className="space-y-3 mt-4 pb-10">
+              {data?.vendasRecentes?.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhuma venda hoje.</p>
+              ) : (
+                data?.vendasRecentes?.map((venda: any) => (
+                  <div key={venda.id} className="p-3 rounded-lg border bg-card flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-sm">{venda.clientes?.nome || "Avulso"}</p>
+                      <p className="text-xs text-muted-foreground">{format(new Date(venda.data_venda), "HH:mm")}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">{v(fmtR(venda.total))}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        );
+      case "vendas-periodo":
+        return (
+          <ScrollArea className="h-[calc(100vh-120px)] pr-4">
+            <div className="space-y-3 mt-4 pb-10">
+              {periodoData?.vendasDetalhadas?.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhuma venda no período.</p>
+              ) : (
+                periodoData?.vendasDetalhadas?.map((venda: any) => (
+                  <div key={venda.id} className="p-3 rounded-lg border bg-card flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-sm">{venda.clientes?.nome || "Avulso"}</p>
+                      <p className="text-xs text-muted-foreground">{format(new Date(venda.data_venda), "dd/MM/yyyy HH:mm")}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">{v(fmtR(venda.total))}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        );
+      case "alerta-estoque":
+        return (
+          <ScrollArea className="h-[calc(100vh-120px)] pr-4">
+            <div className="space-y-3 mt-4 pb-10">
+              {data?.estoqueBaixo?.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhum produto com estoque crítico.</p>
+              ) : (
+                data?.estoqueBaixo?.map((e: any) => (
+                  <div key={e.id} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5 flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-sm">{e.produtos?.nome}</p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={Number(e.quantidade) <= 0 ? "destructive" : "secondary"} className="text-xs">
+                        {e.quantidade} {e.produtos?.unidade}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        );
+      case "lucro":
+        return (
+          <div className="mt-4 space-y-4">
+            <p className="text-sm text-muted-foreground">O lucro estimado é calculado subtraindo o Custo Total dos produtos (registrado no momento da venda) do Valor Total da Venda.</p>
+            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Vendas (Subtotal):</span>
+                <span>{v(fmtR(periodoData?.totalVendas || data?.totalVendasDia || 0))}</span>
+              </div>
+              <div className="flex justify-between text-sm font-bold text-primary pt-2 border-t border-border">
+                <span>Lucro Estimado:</span>
+                <span>{v(fmtR(periodoData?.lucroPeriodo || data?.lucroDia || 0))}</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground italic text-center">Apenas vendas finalizadas são contabilizadas.</p>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getModalTitle = () => {
+    switch(activeModal) {
+      case "receber-hoje": return "A Receber Hoje";
+      case "recebido-hoje": return "Recebido Hoje";
+      case "parcelas-vencidas": return "Parcelas Vencidas";
+      case "vendas-hoje": return "Vendas de Hoje";
+      case "vendas-periodo": return "Vendas do Período";
+      case "alerta-estoque": return "Estoque Baixo/Crítico";
+      case "lucro": return "Detalhamento de Lucro";
+      default: return "";
+    }
+  }
+
   return (
     <div className="space-y-6">
       {groupedLayout.map((group, groupIndex) => {
@@ -583,6 +811,18 @@ export function DashboardRenderer({
           </div>
         );
       })}
+
+      <Sheet open={!!activeModal} onOpenChange={(open) => !open && setActiveModal(null)}>
+        <SheetContent className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{getModalTitle()}</SheetTitle>
+            <SheetDescription>
+              Detalhamento dos registros
+            </SheetDescription>
+          </SheetHeader>
+          {renderModalContent()}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

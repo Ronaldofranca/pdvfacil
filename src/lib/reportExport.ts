@@ -94,11 +94,6 @@ export function exportPDF(options: {
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const w = window.open(url, "_blank");
-  if (w) {
-    w.onload = () => {
-      setTimeout(() => w.print(), 500);
-    };
-  }
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 

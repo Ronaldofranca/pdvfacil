@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Search, Filter, Phone, PhoneOff, MapPin, Calendar, ShoppingBag, Save, ArrowUpDown } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,10 +30,10 @@ export function RelatorioClientesMaster() {
 
     let result = clientes.filter(c => {
       const matchSearch = 
-        c.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        normalizeSearch(c.nome).includes(normalizeSearch(searchTerm)) ||
         c.telefone?.includes(searchTerm) ||
-        c.cidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.bairro?.toLowerCase().includes(searchTerm.toLowerCase());
+        normalizeSearch(c.cidade ?? "").includes(normalizeSearch(searchTerm)) ||
+        normalizeSearch(c.bairro ?? "").includes(normalizeSearch(searchTerm));
       
       const matchFone = 
         filterMode === "todos" ? true :

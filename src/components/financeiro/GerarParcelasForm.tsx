@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { normalizeSearch } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,9 +71,11 @@ export function GerarParcelasForm({ open, onOpenChange, vendaId, clienteId, valo
   // Product search
   const filteredProdutos = useMemo(() => {
     if (!produtos || !prodSearch.trim()) return [];
-    const q = prodSearch.toLowerCase();
     return produtos
-      .filter((p: any) => p.ativo && (p.nome.toLowerCase().includes(q) || p.codigo?.toLowerCase().includes(q)))
+      .filter((p: any) => p.ativo && (
+        normalizeSearch(p.nome).includes(normalizeSearch(prodSearch)) ||
+        normalizeSearch(p.codigo ?? "").includes(normalizeSearch(prodSearch))
+      ))
       .slice(0, 8);
   }, [produtos, prodSearch]);
 

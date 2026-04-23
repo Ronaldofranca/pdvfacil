@@ -1,12 +1,13 @@
 import { User, Phone, MapPin, Mail, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { maskCPF } from "@/lib/cpfUtils";
 
 import { Navigate, useOutletContext } from "react-router-dom";
+import { UpdatePasswordDialog } from "@/components/auth/UpdatePasswordDialog";
 
 export default function PortalDadosPage() {
   const { config } = useOutletContext<{ config: any }>();
@@ -106,6 +107,16 @@ export default function PortalDadosPage() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Segurança de Acesso</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <UpdatePasswordDialog triggerVariant="default" />
+          <p className="text-xs text-muted-foreground mt-2">Mantenha sua senha atualizada para proteger sua conta e evitar acessos indevidos.</p>
         </CardContent>
       </Card>
 

@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { useNavigate } from "react-router-dom";
 import { ClipboardList, Search, Plus, Eye, Truck, ShoppingCart, CheckCircle, XCircle, CalendarClock, Filter, Globe, Pencil, Printer } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -35,9 +37,14 @@ export default function PedidosPage() {
   const isMobile = useIsMobile();
   const { profile, user } = useAuth();
   const atualizarStatus = useAtualizarStatusPedido();
-
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("todos");
+  
+  const [search, setSearch, clearSearch] = usePersistentState("search", "", "pedidos");
+  const [statusFilter, setStatusFilter, clearStatus] = usePersistentState<string>("status", "todos", "pedidos");
+  
+  const clearFilters = useCallback(() => {
+    clearSearch();
+    clearStatus();
+  }, [clearSearch, clearStatus]);
   const [formOpen, setFormOpen] = useState(false);
   const [editPedidoId, setEditPedidoId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -53,7 +60,7 @@ export default function PedidosPage() {
   const hoje = new Date().toISOString().split("T")[0];
 
   const filtered = pedidos?.filter((p) =>
-    p.clientes?.nome?.toLowerCase().includes(search.toLowerCase()) || p.id.includes(search)
+    normalizeSearch(p.clientes?.nome ?? "").includes(normalizeSearch(search)) || p.id.includes(search)
   );
 
   const handleEdit = (pedido: any) => {
@@ -127,11 +134,20 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      {/* Filtros */}
       <div className="flex gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-[200px] group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar por cliente ou ID..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input className="pl-9 pr-20" placeholder="Buscar por cliente ou ID..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          {search && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 text-xs text-muted-foreground hover:text-foreground"
+              onClick={clearSearch}
+            >
+              Limpar
+            </Button>
+          )}
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]">

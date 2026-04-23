@@ -209,7 +209,7 @@ export function ImageUpload({
 
       {displayImage ? (
         <div className="space-y-4">
-          <div className="relative group">
+          <div className="relative group max-w-[280px] mx-auto">
             <div 
               className="relative overflow-hidden rounded-xl border bg-muted shadow-sm transition-all group-hover:shadow-md"
               style={{ aspectRatio: aspectRatio > 2 ? "21/9" : aspectRatio === 1 ? "1/1" : "16/9" }}
@@ -305,7 +305,7 @@ export function ImageUpload({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full py-10 rounded-xl border-2 border-dashed border-muted-foreground/20 flex flex-col items-center justify-center gap-3 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
+              className="w-full py-4 rounded-xl border-2 border-dashed border-muted-foreground/20 flex flex-col items-center justify-center gap-3 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <ImageIcon className="w-6 h-6 text-primary" />

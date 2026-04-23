@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
           empresa_id: empresaId,
           nome: nome || email.split("@")[0],
           cargo: cargo,
+          role: role,
         },
       });
 
@@ -108,18 +109,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If a specific role was requested (not vendedor default), update it
-    if (role !== "vendedor" && inviteData.user) {
-      const { error: roleError } = await adminClient
-        .from("user_roles")
-        .update({ role })
-        .eq("user_id", inviteData.user.id)
-        .eq("empresa_id", empresaId);
-
-      if (roleError) {
-        console.error("Error updating role:", roleError);
-      }
-    }
+    // Role assignment is now handled automatically by the handle_new_user trigger
+    // which reads the 'role' from user_metadata.
 
     return new Response(
       JSON.stringify({

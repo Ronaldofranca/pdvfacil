@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
+import { normalizeSearch } from "@/lib/utils";
 import {
   MessageSquare, Search, Filter, Phone, AlertTriangle, Clock, Calendar,
-  CreditCard, ChevronDown, ChevronUp, Receipt, Users,
+  CreditCard, ChevronDown, ChevronUp, Receipt, Users, ShoppingBag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,23 +16,26 @@ import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PagamentoForm } from "@/components/financeiro/PagamentoForm";
 import { ReciboParcela } from "@/components/financeiro/ReciboParcela";
-import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DetalheVendaSheet } from "@/components/vendas/DetalheVendaSheet";
+import { useAuth } from "@/contexts/AuthContext";
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
-function ClienteCard({
+function ClienteCobrancaCard({
   cliente,
   onPagar,
   onRecibo,
+  onVerVenda,
   canPay,
   empresaId,
 }: {
   cliente: ClienteCobranca;
   onPagar: (p: ParcelaCobranca) => void;
   onRecibo: (p: ParcelaCobranca) => void;
+  onVerVenda: (vendaId: string) => void;
   canPay: boolean;
   empresaId: string;
 }) {
@@ -176,6 +181,17 @@ function ClienteCard({
                     >
                       <Receipt className="w-3.5 h-3.5" />
                     </Button>
+                    {p.venda_id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1 text-xs h-9 text-primary"
+                        title="Ver Venda"
+                        onClick={(e) => { e.stopPropagation(); onVerVenda(p.venda_id!); }}
+                      >
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
@@ -190,15 +206,16 @@ function ClienteCard({
 export default function CobrancasPage() {
   const { profile } = useAuth();
   const { canRegisterPagamento } = usePermissions();
-  const [filtro, setFiltro] = useState<FiltroCobranca>("todas");
-  const [search, setSearch] = useState("");
+  const [filtro, setFiltro, clearFiltro] = usePersistentState<FiltroCobranca>("filtro", "todas", "cobrancas");
+  const [search, setSearch, clearSearch] = usePersistentState("search", "", "cobrancas");
   const [pagamentoState, setPagamentoState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [reciboState, setReciboState] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [vendaDetailId, setVendaDetailId] = useState<string | null>(null);
 
   const { clientes, isLoading } = useClientesCobranca(filtro);
 
   const filtered = clientes.filter(
-    (c) => !search || c.nome.toLowerCase().includes(search.toLowerCase()) || c.telefone.includes(search)
+    (c) => !search || normalizeSearch(c.nome).includes(normalizeSearch(search)) || c.telefone.includes(search)
   );
 
   const totalSaldo = filtered.reduce((s, c) => s + c.totalSaldo, 0);
@@ -242,14 +259,24 @@ export default function CobrancasPage() {
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-[200px] group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            className="pl-9"
+            className="pl-9 pr-20"
             placeholder="Buscar cliente ou telefone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 text-xs text-muted-foreground hover:text-foreground"
+              onClick={clearSearch}
+            >
+              Limpar
+            </Button>
+          )}
         </div>
         <Tabs value={filtro} onValueChange={(v) => setFiltro(v as FiltroCobranca)} className="w-full sm:w-auto">
           <TabsList className="grid grid-cols-5 w-full sm:w-auto">
@@ -270,11 +297,12 @@ export default function CobrancasPage() {
           <Card className="p-8 text-center text-muted-foreground">Nenhuma parcela encontrada para cobrança</Card>
         ) : (
           filtered.map((c) => (
-            <ClienteCard
+            <ClienteCobrancaCard
               key={c.cliente_id}
               cliente={c}
               onPagar={(p) => setPagamentoState({ open: true, data: p })}
               onRecibo={(p) => setReciboState({ open: true, data: p })}
+              onVerVenda={setVendaDetailId}
               canPay={canRegisterPagamento}
               empresaId={profile?.empresa_id ?? ""}
             />
@@ -291,6 +319,11 @@ export default function CobrancasPage() {
         open={reciboState.open}
         onOpenChange={(v) => setReciboState({ open: v })}
         parcela={reciboState.data}
+      />
+      <DetalheVendaSheet 
+        vendaId={vendaDetailId}
+        open={!!vendaDetailId}
+        onOpenChange={(o) => !o && setVendaDetailId(null)}
       />
     </div>
   );

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { Eye, EyeOff, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDashboardData, useDashboardPeriodo, type DashboardPeriodo } from "@/hooks/useDashboard";
@@ -22,8 +23,8 @@ const PERIODOS: { value: DashboardPeriodo; label: string }[] = [
 ];
 
 export default function DashboardPage() {
-  const [periodo, setPeriodo] = useState<DashboardPeriodo>("mes");
-  const [showValues, setShowValues] = useState(true);
+  const [periodo, setPeriodo] = usePersistentState<DashboardPeriodo>("periodo", "mes", "dashboard");
+  const [showValues, setShowValues] = usePersistentState("show_values", true, "dashboard");
   const { isAdmin } = useAuth();
   const { layout, visualConfig } = useUserPreferences();
 

@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Users, Search, Pencil, Trash2, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star, ShieldCheck, UserCheck } from "lucide-react";
+import { usePersistentState } from "@/hooks/usePersistentState";
+import { Users, Search, Pencil, Trash2, Phone, History, RotateCcw, MessageCircle, Smartphone, Award, Star, ShieldCheck, Shield, UserCheck, ShoppingCart, MapPin, AlertTriangle } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -39,8 +41,8 @@ export default function ClientesPage() {
   const deleteCliente = useDeleteCliente();
   const { data: niveis } = useNiveisRecompensa();
   const { data: scores } = useClienteScores();
-
-  const [search, setSearch] = useState("");
+  
+  const [search, setSearch, clearSearch] = usePersistentState("search", "", "clientes");
   const [formState, setFormState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [historicoState, setHistoricoState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [importOpen, setImportOpen] = useState(false);
@@ -49,12 +51,13 @@ export default function ClientesPage() {
   const [portalState, setPortalState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [mergeOpen, setMergeOpen] = useState(false);
   const [mobileItem, setMobileItem] = useState<any | null>(null);
+  const [visibleCount, setVisibleCount] = useState(20);
 
   const filtered = clientes?.filter((c: any) =>
     !c.is_merged && (
-      c.nome.toLowerCase().includes(search.toLowerCase()) ||
+      normalizeSearch(c.nome).includes(normalizeSearch(search)) ||
       c.telefone?.includes(search) ||
-      c.cidade?.toLowerCase().includes(search.toLowerCase())
+      normalizeSearch(c.cidade ?? "").includes(normalizeSearch(search))
     )
   );
 
@@ -85,9 +88,19 @@ export default function ClientesPage() {
         </div>
       </div>
 
-      <div className="relative">
+      <div className="relative group">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar por nome, telefone ou cidade..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input className="pl-9 pr-20 h-11" placeholder="Buscar por nome, telefone ou cidade..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        {search && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 text-xs text-muted-foreground hover:text-foreground"
+            onClick={clearSearch}
+          >
+            Limpar
+          </Button>
+        )}
       </div>
 
       {/* ── MOBILE: Card list ── */}
@@ -97,74 +110,144 @@ export default function ClientesPage() {
         ) : !filtered?.length ? (
           <p className="text-center text-muted-foreground py-10 text-sm">Nenhum cliente encontrado</p>
         ) : (
-          filtered.map((c) => {
-            const score = scores?.find((sc) => sc.clienteId === c.id);
-            return (
-              <button
-                key={c.id}
-                type="button"
-                className="w-full text-left"
-                onClick={() => setMobileItem(c)}
-                aria-label={`Abrir ações do cliente ${c.nome}`}
-              >
-                <Card className="p-3 active:bg-muted/60 transition-colors">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm text-foreground truncate">{c.nome}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {c.telefone && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Phone className="w-3 h-3" />{c.telefone}
-                          </span>
+          <>
+            {filtered.slice(0, visibleCount).map((c) => {
+              const score = scores?.find((sc) => sc.clienteId === c.id);
+              return (
+                <Card key={c.id} className="p-0 overflow-hidden shadow-sm border border-border/50">
+                  {/* Cabeçalho / Título (área de toque para abrir painel) */}
+                  <div 
+                    className="p-3 cursor-pointer active:bg-muted/60 transition-colors" 
+                    onClick={() => setMobileItem(c)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-base text-foreground truncate">{c.nome}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap text-xs text-muted-foreground">
+                          {c.telefone && (
+                            <span className="flex items-center gap-1 font-medium text-foreground/80">
+                              <Phone className="w-3 h-3" /> {c.telefone}
+                            </span>
+                          )}
+                          {c.cidade && (
+                            <span className="flex items-center gap-1 truncate text-[11px] opacity-80">
+                              <MapPin className="w-3 h-3" /> {c.cidade}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        {score?.classificacao === "Risco" && (
+                          <div className="flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
+                            <AlertTriangle className="w-3 h-3" /> Atraso
+                          </div>
                         )}
-                        {c.cidade && <span className="text-xs text-muted-foreground">{c.cidade}</span>}
+                        {c.ativo === false && (
+                          <div className="text-[10px] uppercase font-bold text-muted-foreground border border-border px-1.5 rounded">Inativo</div>
+                        )}
+                        {(c as any).permitir_fiado && (
+                          <div className="text-[11px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-md border border-primary/20 flex items-center gap-1">
+                            {(() => {
+                              const val = (((c as any).limite_credito_total || 1000) - ((c as any).limite_utilizado || 0));
+                              return val > 0 
+                                ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val)
+                                : <span className="text-destructive">Bloqueado</span>;
+                            })()}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <Badge variant={c.ativo ? "default" : "secondary"} className="text-[10px]">{c.ativo ? "Ativo" : "Inativo"}</Badge>
-                      {score && (
-                        <Badge variant="outline" className={`gap-1 text-[10px] ${score.cor}`}>
-                          <ShieldCheck className="w-2.5 h-2.5" /> {score.classificacao}
-                        </Badge>
-                      )}
-                    </div>
+                  </div>
+
+                  {/* Linha de Ações (Ações Rápidas) */}
+                  <div className="flex items-center border-t border-border/50 divide-x divide-border/50 bg-muted/10">
+                    {c.telefone && (
+                      <>
+                        <Button 
+                          variant="ghost" 
+                          className="flex-1 rounded-none h-11 text-xs font-semibold gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-500/10"
+                          asChild
+                        >
+                          <a href={`tel:${c.telefone.replace(/\D/g, '')}`} onClick={(e) => e.stopPropagation()}>
+                            <Phone className="w-4 h-4" /> Ligar
+                          </a>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          className="flex-1 rounded-none h-11 text-xs font-semibold gap-1.5 text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                          asChild
+                        >
+                          <a href={`https://wa.me/55${c.telefone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                            <MessageCircle className="w-4 h-4" /> Whats
+                          </a>
+                        </Button>
+                      </>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      className="flex-1 rounded-none h-11 text-xs font-semibold gap-1.5 text-primary hover:bg-primary/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPdvState({ open: true, clienteId: c.id });
+                      }}
+                    >
+                      <ShoppingCart className="w-4 h-4" /> Vender
+                    </Button>
                   </div>
                 </Card>
-              </button>
-            );
-          })
+              );
+            })}
+            
+            {filtered.length > visibleCount && (
+              <Button 
+                variant="outline" 
+                className="w-full mt-4 bg-background" 
+                onClick={() => setVisibleCount(v => v + 20)}
+              >
+                Carregar mais...
+              </Button>
+            )}
+          </>
         )}
       </div>
 
       {/* ── DESKTOP: Tabela completa ── */}
-      <Card className="hidden md:block">
-        <Table>
+      <Card className="hidden md:block overflow-x-auto pb-2">
+        <Table className="whitespace-nowrap">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-20">ID</TableHead>
+              <TableHead className="w-10">ID</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Telefone</TableHead>
               <TableHead>Cidade</TableHead>
               <TableHead>Score</TableHead>
               <TableHead>Nível</TableHead>
               <TableHead>Pontos</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Limite Disp.</TableHead>
+              <TableHead className="w-12 text-center">St.</TableHead>
               <TableHead className="w-36" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
             ) : !filtered?.length ? (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado</TableCell></TableRow>
             ) : (
               filtered.map((c) => (
-                <TableRow key={c.id}>
+                <TableRow 
+                  key={c.id} 
+                  className="cursor-pointer hover:bg-muted/50" 
+                  onClick={() => setFormState({ open: true, data: c })}
+                  title="Clique para editar este cliente"
+                >
                   <TableCell className="font-mono text-[10px] text-muted-foreground">#{c.id.split("-")[0]}</TableCell>
                   <TableCell>
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{c.nome}</p>
-                      {c.email && <p className="text-xs text-muted-foreground">{c.email}</p>}
+                    <div className="max-w-[160px] lg:max-w-[220px] xl:max-w-[320px]">
+                      <p className="font-medium truncate" title={c.nome}>{c.nome}</p>
+                      {c.email && <p className="text-xs text-muted-foreground truncate" title={c.email}>{c.email}</p>}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -174,7 +257,11 @@ export default function ClientesPage() {
                       </span>
                     ) : "—"}
                   </TableCell>
-                  <TableCell className="text-sm">{c.cidade || "—"}{c.estado ? ` / ${c.estado}` : ""}</TableCell>
+                  <TableCell>
+                    <div className="max-w-[120px] lg:max-w-[160px] xl:max-w-[200px] truncate text-sm" title={`${c.cidade || "—"}${c.estado ? ` / ${c.estado}` : ""}`}>
+                      {c.cidade || "—"}{c.estado ? ` / ${c.estado}` : ""}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {(() => {
                       const s = scores?.find((sc) => sc.clienteId === c.id);
@@ -195,10 +282,19 @@ export default function ClientesPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={c.ativo ? "default" : "secondary"}>{c.ativo ? "Ativo" : "Inativo"}</Badge>
+                    {c.permitir_fiado ? (
+                      <span className="text-xs font-bold text-primary">
+                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((c.limite_credito_total || 1000) - (c.limite_utilizado || 0))}
+                      </span>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={c.ativo ? "default" : "secondary"} className="min-w-[24px] justify-center p-0.5 px-2" title={c.ativo ? "Ativo" : "Inativo"}>
+                      {c.ativo ? "A" : "I"}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       {c.telefone && (
                         <Button variant="ghost" size="icon" title="WhatsApp" asChild>
                           <a href={`https://wa.me/55${c.telefone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from "react";
+import { normalizeSearch } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,9 +65,9 @@ export function EntradaLoteForm({ open, onOpenChange }: Props) {
       list = list.filter((p) => p.categoria_id === catFilter);
     }
     if (search.trim()) {
-      const s = search.toLowerCase();
       list = list.filter((p) =>
-        p.nome.toLowerCase().includes(s) || p.codigo?.toLowerCase().includes(s)
+        normalizeSearch(p.nome).includes(normalizeSearch(search)) ||
+        normalizeSearch(p.codigo ?? "").includes(normalizeSearch(search))
       );
     }
     return list;

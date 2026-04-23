@@ -196,3 +196,21 @@ export function useItensDevolvidosTotal(vendaId: string | null) {
     }
   });
 }
+
+export function useSaldoGlobalCreditos() {
+  return useQuery({
+    queryKey: ["credito_cliente_saldo_global"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("credito_clientes")
+        .select("valor, tipo");
+      if (error) throw error;
+      
+      const saldo = data?.reduce((acc, curr) => {
+        return curr.tipo === "entrada" ? acc + Number(curr.valor) : acc - Number(curr.valor);
+      }, 0) ?? 0;
+      
+      return saldo;
+    },
+  });
+}

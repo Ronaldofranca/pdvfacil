@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Search, Star, Sparkles, ArrowRight, ChevronRight, MessageCircle, Heart, Zap, Award } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,7 +88,7 @@ export default function CatalogoPublicoPage() {
 
   const filtered = useMemo(() => 
     allProdutos
-      ?.filter((p) => p.nome.toLowerCase().includes(search.toLowerCase()))
+      ?.filter((p) => normalizeSearch(p.nome).includes(normalizeSearch(search)))
       .filter((p) => !catFilter || p.categoria_id === catFilter),
     [allProdutos, search, catFilter]
   );

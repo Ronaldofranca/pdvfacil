@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { usePortalAuth } from "@/contexts/PortalAuthContext";
 
 export function PortalProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading, isCliente } = usePortalAuth();

@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { Home, ShoppingBag, DollarSign, History, User, LogOut, Plus, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { normalizeSearch } from "@/lib/utils";
 import { useFormPersistence } from "@/hooks/useFormPersistence";
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,12 +10,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Loader2, Plus, Trash2, Star, Search as SearchIcon, AlertTriangle } from "lucide-react";
-import { useUpsertCliente, useClientes, type ClienteInput } from "@/hooks/useClientes";
+import { MapPin, Loader2, Plus, Trash2, Star, Search as SearchIcon, AlertTriangle, Crosshair, Shield, KeyRound, Eye, EyeOff } from "lucide-react";
+import { useUpsertCliente, useClientes, type ClienteInput, useContaAcesso, useSaveContaAcesso } from "@/hooks/useClientes";
 import { useClienteTelefones, useSaveClienteTelefones, checkDuplicatePhone } from "@/hooks/useClienteTelefones";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { buscarCep, formatCep, formatTelefone, normalizeTelefone } from "@/lib/cepUtils";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { getCoordinatesForCity, getCityFromCoordinates } from "@/lib/geocoding";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+const clientPinIcon = L.divIcon({
+  className: "custom-leaflet-icon",
+  html: `<div class="w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center bg-primary animate-pulse-subtle"><div class="w-2 h-2 bg-white rounded-full"></div></div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
 
 interface TelefoneLocal {
   id?: string;
@@ -36,6 +48,9 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
   const saveTelefones = useSaveClienteTelefones();
   const { data: todosClientes } = useClientes();
   const { data: existingPhones } = useClienteTelefones(cliente?.id ?? null);
+  const { data: existingContaAcesso } = useContaAcesso(cliente?.id ?? null);
+  const saveContaAcesso = useSaveContaAcesso();
+  
   const [gpsLoading, setGpsLoading] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [searchIndicador, setSearchIndicador] = useState("");
@@ -59,6 +74,9 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
     ativo: true,
     permitir_fiado: true,
     cliente_indicador_id: "",
+    limite_credito_total: 1000,
+    permitir_atraso: true,
+    modo_limite: "automatico",
   };
 
   const { data: form, setData: setForm, setField: set, clear: clearDraft, hasDraft } = useFormPersistence(
@@ -70,6 +88,15 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
   const [telefones, setTelefones] = useState<TelefoneLocal[]>([
     { telefone: "", tipo: "celular", principal: true },
   ]);
+
+  const [contaAcesso, setContaAcesso] = useState({
+    login: "",
+    senha: "",
+    confirmarSenha: "",
+    ativo: true,
+    habilitado: false
+  });
+  const [showPassword, setShowPassword] = useState(false);
 
   // Navigation guard
   const hasChanges = open && (form.nome !== "" || telefones.some(t => t.telefone !== ""));
@@ -113,6 +140,9 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
         ativo: cliente.ativo ?? true,
         permitir_fiado: cliente.permitir_fiado ?? true,
         cliente_indicador_id: cliente.cliente_indicador_id ?? "",
+        limite_credito_total: cliente.limite_credito_total ?? 1000,
+        permitir_atraso: cliente.permitir_atraso ?? true,
+        modo_limite: cliente.modo_limite ?? "automatico",
       });
       // Load phones from the related table
       if (existingPhones && existingPhones.length > 0) {
@@ -137,6 +167,27 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
     setSearchIndicador("");
     setDuplicateWarning(null);
   }, [cliente, open, existingPhones]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (existingContaAcesso) {
+      setContaAcesso({
+        login: existingContaAcesso.login,
+        senha: "",
+        confirmarSenha: "",
+        ativo: existingContaAcesso.ativo,
+        habilitado: true
+      });
+    } else if (!cliente) {
+      setContaAcesso({
+        login: "",
+        senha: "",
+        confirmarSenha: "",
+        ativo: true,
+        habilitado: false
+      });
+    }
+  }, [existingContaAcesso, open, cliente]);
 
   // CEP lookup
   const handleCepBlur = useCallback(async () => {
@@ -219,6 +270,30 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
     );
   };
 
+  const locateAddress = async () => {
+    if (!form.cidade) {
+      toast.error("Digite ao menos a cidade para localizar");
+      return;
+    }
+    setGpsLoading(true);
+    const coords = await getCoordinatesForCity(form.cidade, form.uf);
+    setGpsLoading(false);
+    if (coords) {
+      setForm(f => ({ ...f, latitude: String(coords.latitude), longitude: String(coords.longitude) }));
+      toast.success("Endereço localizado no mapa!");
+    } else {
+      toast.error("Não foi possível localizar este endereço no mapa.");
+    }
+  };
+
+  const syncAddressFromCoords = async (lat: number, lng: number) => {
+    const data = await getCityFromCoordinates(lat, lng);
+    if (data && (!form.cidade || !form.uf)) {
+      setForm(f => ({ ...f, cidade: data.cidade, uf: data.estado }));
+      toast.info(`Cidade detectada: ${data.cidade}`);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -234,6 +309,25 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
           toast.error(`Telefone ${tel.telefone} já pertence a: ${clienteNome}`);
           return;
         }
+      }
+    }
+
+    if (contaAcesso.habilitado) {
+      if (!contaAcesso.login) {
+        toast.error("O Login de Acesso é obrigatório");
+        return;
+      }
+      if (!existingContaAcesso && !contaAcesso.senha) {
+        toast.error("A senha é obrigatória para criar a conta de acesso");
+        return;
+      }
+      if (contaAcesso.senha && contaAcesso.senha !== contaAcesso.confirmarSenha) {
+        toast.error("As senhas não conferem");
+        return;
+      }
+      if (contaAcesso.senha && contaAcesso.senha.length < 6) {
+        toast.error("A senha deve ter no mínimo 6 caracteres");
+        return;
       }
     }
 
@@ -256,6 +350,9 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
       observacoes: form.observacoes,
       ativo: form.ativo,
       cliente_indicador_id: form.cliente_indicador_id || null,
+      limite_credito_total: form.limite_credito_total,
+      permitir_atraso: form.permitir_atraso,
+      modo_limite: form.modo_limite,
     };
 
     upsert.mutate(payload, {
@@ -267,6 +364,16 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
             empresaId: profile.empresa_id,
             telefones: telefones.filter(t => normalizeTelefone(t.telefone).length > 0),
           });
+
+          if (contaAcesso.habilitado) {
+            saveContaAcesso.mutate({
+              clienteId,
+              login: contaAcesso.login,
+              senha: contaAcesso.senha,
+              ativo: contaAcesso.ativo,
+              isNew: !existingContaAcesso
+            });
+          }
         }
         clearDraft();
         try { localStorage.removeItem(telefonesKey); } catch {}
@@ -352,7 +459,7 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
                     <SelectTrigger className="w-[120px]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[100]">
                       {tipoOptions.map(o => (
                         <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                       ))}
@@ -430,20 +537,80 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
             {/* GPS */}
             <div className="col-span-2 space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Localização GPS</Label>
-                <Button type="button" variant="outline" size="sm" onClick={captureGPS} disabled={gpsLoading} className="gap-1.5">
-                  {gpsLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MapPin className="w-3.5 h-3.5" />}
-                  {gpsLoading ? "Capturando..." : "Capturar GPS"}
-                </Button>
+                <Label className="text-base font-semibold">Localização GPS (Ponto do Cliente)</Label>
+                <div className="flex gap-1">
+                  <Button type="button" variant="outline" size="sm" onClick={locateAddress} disabled={gpsLoading} className="h-8 gap-1 font-normal text-xs">
+                    <SearchIcon className="w-3 h-3" /> Buscar Endereço
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={captureGPS} disabled={gpsLoading} className="h-8 gap-1 font-normal text-xs">
+                    <Crosshair className="w-3 h-3" /> Meu GPS
+                  </Button>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="h-[280px] w-full rounded-md border overflow-hidden mt-1 z-0 relative group">
+                <div className="absolute top-2 left-2 z-[400] bg-background/90 backdrop-blur-sm p-2 rounded-md border shadow-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                   Arraste o pino para refinar ou clique no mapa
+                </div>
+                <MapContainer 
+                  center={form.latitude && form.longitude ? [parseFloat(form.latitude), parseFloat(form.longitude)] : [-15.793889, -47.882778]} 
+                  zoom={form.latitude ? 16 : 4} 
+                  className="w-full h-full"
+                  scrollWheelZoom={true}
+                >
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  
+                  {(() => {
+                    function MapClickHandler() {
+                      useMapEvents({
+                        click(e) {
+                          setForm(f => ({ ...f, latitude: String(e.latlng.lat), longitude: String(e.latlng.lng) }));
+                          syncAddressFromCoords(e.latlng.lat, e.latlng.lng);
+                        },
+                      });
+                      return null;
+                    }
+                    return <MapClickHandler />;
+                  })()}
+
+                  {form.latitude && form.longitude && (
+                     <>
+                       <Marker 
+                        position={[parseFloat(form.latitude), parseFloat(form.longitude)]} 
+                        icon={clientPinIcon}
+                        draggable={true}
+                        eventHandlers={{
+                          dragend: (e) => {
+                            const marker = e.target;
+                            const position = marker.getLatLng();
+                            setForm(f => ({ ...f, latitude: String(position.lat), longitude: String(position.lng) }));
+                            syncAddressFromCoords(position.lat, position.lng);
+                          },
+                        }}
+                       />
+                       {(() => {
+                         function ChangeMapView() {
+                           const map = useMap();
+                           useEffect(() => {
+                             map.setView([parseFloat(form.latitude), parseFloat(form.longitude)], map.getZoom());
+                           }, [form.latitude, form.longitude, map]);
+                           return null;
+                         }
+                         return <ChangeMapView />;
+                       })()}
+                     </>
+                  )}
+                </MapContainer>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-1">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Latitude</Label>
-                  <Input value={form.latitude} onChange={(e) => set("latitude", e.target.value)} placeholder="-23.5505" />
+                  <Label className="text-[10px] uppercase text-muted-foreground font-bold">Latitude</Label>
+                  <Input value={form.latitude} onChange={(e) => set("latitude", e.target.value)} className="h-8 text-xs font-mono" />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Longitude</Label>
-                  <Input value={form.longitude} onChange={(e) => set("longitude", e.target.value)} placeholder="-46.6333" />
+                  <Label className="text-[10px] uppercase text-muted-foreground font-bold">Longitude</Label>
+                  <Input value={form.longitude} onChange={(e) => set("longitude", e.target.value)} className="h-8 text-xs font-mono" />
                 </div>
               </div>
             </div>
@@ -459,7 +626,7 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
               {searchIndicador && (
                 <div className="max-h-32 overflow-y-auto border rounded-md">
                   {(todosClientes ?? [])
-                    .filter((c) => c.id !== cliente?.id && (c.nome.toLowerCase().includes(searchIndicador.toLowerCase()) || c.telefone?.includes(searchIndicador)))
+                    .filter((c) => c.id !== cliente?.id && (normalizeSearch(c.nome).includes(normalizeSearch(searchIndicador)) || c.telefone?.includes(searchIndicador)))
                     .slice(0, 5)
                     .map((c) => (
                       <button
@@ -490,9 +657,79 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
               <Label>Observações</Label>
               <Textarea value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} />
             </div>
+
+            {/* Acesso ao Sistema */}
+            <div className="col-span-2 p-4 rounded-xl border bg-card space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-primary" />
+                  <h3 className="font-bold text-sm">Acesso ao Sistema (Portal)</h3>
+                </div>
+                <Switch 
+                  checked={contaAcesso.habilitado} 
+                  onCheckedChange={(v) => setContaAcesso({ ...contaAcesso, habilitado: v })} 
+                />
+              </div>
+
+              {contaAcesso.habilitado && (
+                <div className="grid grid-cols-2 gap-4 mt-2 border-t pt-4">
+                  <div className="col-span-2">
+                    <Label className="text-xs font-semibold">Login de Acesso *</Label>
+                    <Input 
+                      value={contaAcesso.login} 
+                      onChange={(e) => setContaAcesso({ ...contaAcesso, login: e.target.value })} 
+                      placeholder="Ex: telefone, apelido ou código"
+                      className="bg-background"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Este será o usuário único de login (não precisa ser email).</p>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">{existingContaAcesso ? 'Nova Senha' : 'Senha *'}</Label>
+                    <div className="relative">
+                      <Input 
+                        type={showPassword ? "text" : "password"}
+                        value={contaAcesso.senha} 
+                        onChange={(e) => setContaAcesso({ ...contaAcesso, senha: e.target.value })} 
+                        placeholder={existingContaAcesso ? "(vazio para não alterar)" : "Mínimo 6 caracteres"}
+                        className="bg-background pr-9"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">Confirmar Senha {(!existingContaAcesso || contaAcesso.senha) && '*'}</Label>
+                    <div className="relative">
+                      <Input 
+                        type={showPassword ? "text" : "password"}
+                        value={contaAcesso.confirmarSenha} 
+                        onChange={(e) => setContaAcesso({ ...contaAcesso, confirmarSenha: e.target.value })} 
+                        className="bg-background pr-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-span-2 flex items-center gap-2 pt-2">
+                    <Switch 
+                      checked={contaAcesso.ativo} 
+                      onCheckedChange={(v) => setContaAcesso({ ...contaAcesso, ativo: v })} 
+                    />
+                    <Label className="text-xs">Login Ativo (Permitir acesso)</Label>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="col-span-2 flex items-center gap-2">
               <Switch checked={form.ativo} onCheckedChange={(v) => set("ativo", v)} />
-              <Label>Ativo</Label>
+              <Label>Cliente Ativo</Label>
             </div>
             <div className="col-span-2 flex items-center gap-2">
               <Switch checked={form.permitir_fiado ?? true} onCheckedChange={(v) => set("permitir_fiado", v)} />
@@ -501,6 +738,56 @@ export function ClienteForm({ open, onOpenChange, cliente, onSuccess }: Props) {
                 <Badge variant="destructive" className="text-[10px]">Restrito</Badge>
               )}
             </div>
+
+            {form.permitir_fiado && (
+              <div className="col-span-2 p-4 rounded-xl border bg-primary/5 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-4 h-4 text-primary" />
+                  <h3 className="font-bold text-sm">Configurações de Crédito</h3>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Limite de Crédito (R$)</Label>
+                    <Input 
+                      type="number" 
+                      value={form.limite_credito_total} 
+                      onChange={(e) => set("limite_credito_total", parseFloat(e.target.value) || 0)} 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-xs">Modo de Limite</Label>
+                    <Select value={form.modo_limite} onValueChange={(v) => set("modo_limite", v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="automatico">Automático (Score)</SelectItem>
+                        <SelectItem value="manual">Apenas Manual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="col-span-2 flex items-center gap-2 pt-2">
+                    <Switch checked={form.permitir_atraso} onCheckedChange={(v) => set("permitir_atraso", v)} />
+                    <div className="space-y-0.5">
+                      <Label className="text-xs">Permitir novas vendas com parcelas em atraso</Label>
+                      <p className="text-[10px] text-muted-foreground">O sistema respeitará a carência global (ex: 15 dias).</p>
+                    </div>
+                  </div>
+
+                  {isEditing && (
+                    <div className="col-span-2 flex justify-between items-center text-xs p-2 bg-muted rounded-md">
+                      <span className="text-muted-foreground">Limite Utilizado:</span>
+                      <span className="font-bold text-primary">
+                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cliente.limite_utilizado || 0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

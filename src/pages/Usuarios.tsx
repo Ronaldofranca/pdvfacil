@@ -59,6 +59,7 @@ export default function UsuariosPage() {
   const [inviting, setInviting] = useState(false);
   const [directMode, setDirectMode] = useState(false);
   const [invitePassword, setInvitePassword] = useState("");
+  const [showInvitePassword, setShowInvitePassword] = useState(false);
 
   // ── Reset senha cliente ──
   const [resetState, setResetState] = useState<{ open: boolean; cliente?: any }>({ open: false });
@@ -494,12 +495,23 @@ export default function UsuariosPage() {
             {directMode && (
               <div className="space-y-1">
                 <Label>Senha Temporária *</Label>
-                <Input 
-                  value={invitePassword} 
-                  onChange={(e) => setInvitePassword(e.target.value)} 
-                  placeholder="MÃnimo 6 caracteres" 
-                  type="password" 
-                />
+                <div className="relative">
+                  <Input 
+                    value={invitePassword} 
+                    onChange={(e) => setInvitePassword(e.target.value)} 
+                    placeholder="Mínimo 6 caracteres" 
+                    type={showInvitePassword ? "text" : "password"} 
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowInvitePassword(!showInvitePassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showInvitePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             )}
 

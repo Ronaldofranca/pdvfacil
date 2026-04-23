@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { normalizeSearch } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +50,7 @@ export function PedidosReposicaoTab() {
   const empresaNome = empresas?.[0]?.nome ?? "";
 
   const filtered = pedidos?.filter((p) =>
-    p.fornecedor_nome?.toLowerCase().includes(search.toLowerCase()) ||
+    normalizeSearch(p.fornecedor_nome ?? "").includes(normalizeSearch(search)) ||
     String(p.numero).includes(search)
   );
 

@@ -1,38 +1,47 @@
 import { useState } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw, Search, Plus, Filter, ArrowUpRight, ArrowDownLeft, Package, MoreVertical, Eye, FileText, Printer, ShoppingBag } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
-import { useDevolucoes } from "@/hooks/useDevolucoes";
+import { useDevolucoes, useSaldoGlobalCreditos } from "@/hooks/useDevolucoes";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { NovaDevolucaoDialog } from "@/components/devolucoes/NovaDevolucaoDialog";
 import { DetalheDevolucaoDialog } from "@/components/devolucoes/DetalheDevolucaoDialog";
 import { ReciboCredito } from "@/components/devolucoes/ReciboCredito";
+import { DetalheVendaSheet } from "@/components/vendas/DetalheVendaSheet";
 
 export default function DevolucoesPage() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { data: devolucoes, isLoading } = useDevolucoes();
-  const [search, setSearch] = useState("");
+  const [search, setSearch, clearSearch] = usePersistentState("search", "", "devolucoes");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reciboOpen, setReciboOpen] = useState(false);
   const [selectedForReceipt, setSelectedForReceipt] = useState<any>(null);
+  const [vendaDetailId, setVendaDetailId] = useState<string | null>(null);
 
-  const filtered = devolucoes?.filter(d => 
-    (d as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) ||
+  const filtered = devolucoes?.filter(d =>
+    normalizeSearch((d as any).clientes?.nome ?? "").includes(normalizeSearch(search)) ||
     d.venda_id.toLowerCase().includes(search.toLowerCase()) ||
     d.id.toLowerCase().includes(search.toLowerCase())
   );
 
+  const { data: saldoGlobal } = useSaldoGlobalCreditos();
+
   const totalDevolvido = devolucoes?.reduce((s, h) => s + Number(h.valor_total_devolvido), 0) || 0;
+  const totalAbatido = devolucoes?.reduce((s, h) => s + Number(h.valor_abatido_parcelas || 0), 0) || 0;
+  const totalCredito = devolucoes?.reduce((s, h) => s + Number(h.valor_credito_gerado || 0), 0) || 0;
+  const impactoFinanceiro = totalAbatido + totalCredito;
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -69,23 +78,33 @@ export default function DevolucoesPage() {
           </div>
         </Card>
         <Card className="p-4 bg-gradient-to-br from-green-500/5 to-transparent border-green-500/20">
-          <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">Impacto Financeiro</p>
-          <p className="text-2xl font-bold text-green-600">Automático</p>
+          <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">Saldo de Créditos</p>
+          <p className="text-2xl font-bold text-green-600">{fmt(saldoGlobal || 0)}</p>
           <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
-            <ArrowDownLeft className="w-3 h-3" /> Parcelas abatidas e créditos gerados
+            <ArrowDownLeft className="w-3 h-3" /> Total em haver com todos os clientes
           </div>
         </Card>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <div className="relative flex-1">
+        <div className="relative flex-1 group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            className="pl-9 bg-card"
+            className="pl-9 pr-20 bg-card"
             placeholder="Buscar por cliente, venda ou ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 text-xs text-muted-foreground hover:text-foreground"
+              onClick={clearSearch}
+            >
+              Limpar
+            </Button>
+          )}
         </div>
         <Button variant="outline" size="icon" className="shrink-0 bg-card">
           <Filter className="w-4 h-4" />
@@ -172,7 +191,7 @@ export default function DevolucoesPage() {
                         size="icon" 
                         className="h-8 w-8 text-primary hover:bg-primary/5"
                         title="Ver Venda Original"
-                        onClick={() => navigate(`/vendas?viewVenda=${d.venda_id}`)}
+                        onClick={() => setVendaDetailId(d.venda_id)}
                       >
                         <ShoppingBag className="w-4 h-4" />
                       </Button>
@@ -199,6 +218,12 @@ export default function DevolucoesPage() {
         devolucao={selectedForReceipt}
         cliente={selectedForReceipt?.clientes}
         valorCredito={Number(selectedForReceipt?.valor_credito_gerado || 0)}
+      />
+
+      <DetalheVendaSheet 
+        vendaId={vendaDetailId}
+        open={!!vendaDetailId}
+        onOpenChange={(o) => !o && setVendaDetailId(null)}
       />
     </div>
   );

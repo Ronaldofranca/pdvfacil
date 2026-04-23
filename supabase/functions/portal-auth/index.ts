@@ -162,20 +162,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      // 1. Update the role created by the trigger (trigger defaults to 'vendedor')
-      // and ensure it is 'cliente'
-      const { error: roleErr } = await supabase
-        .from("user_roles")
-        .update({ role: "cliente" })
-        .eq("user_id", userId)
-        .eq("empresa_id", clienteData.empresa_id);
-
-      if (roleErr) {
-        // If update fails (e.g. trigger didn't run for some reason), try insert
-        await supabase
-          .from("user_roles")
-          .insert({ user_id: userId, empresa_id: clienteData.empresa_id, role: "cliente" });
-      }
+      // Role assignment is now handled automatically by the handle_new_user trigger
+      // which reads the 'role' from user_metadata.
 
       // 2. Link the client record to the new auth user
       const { error: linkErr } = await supabase

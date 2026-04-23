@@ -113,17 +113,18 @@ type VendasFilters = {
   status?: string;
   startDate?: Date;
   endDate?: Date;
+  limit?: number;
 };
 
 export function useVendas(filters?: VendasFilters) {
   return useQuery({
-    queryKey: ["vendas", filters?.status, filters?.startDate?.toISOString(), filters?.endDate?.toISOString()],
+    queryKey: ["vendas", filters?.status, filters?.startDate?.toISOString(), filters?.endDate?.toISOString(), filters?.limit],
     queryFn: async () => {
       let q = supabase
         .from("vendas")
         .select("*, clientes(nome)")
         .order("data_venda", { ascending: false })
-        .limit(300);
+        .limit(filters?.limit || 300);
 
       if (filters?.status && filters.status !== "todas") {
         q = q.eq("status", filters.status);

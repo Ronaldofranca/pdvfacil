@@ -72,13 +72,15 @@ export function useDashboardData() {
       const { start: hjStart, end: hjEnd } = localDayRange(new Date());
 
       // Vendas do dia (finalizadas)
-      const { data: vendasHoje } = await supabase
+      const { data: vendasHoje, error: vErr } = await supabase
         .from("vendas")
         .select("id, total, subtotal, total_profit, data_venda, vendedor_id, pagamentos, clientes(nome)")
         .gte("data_venda", hjStart)
         .lt("data_venda", hjEnd)
         .eq("status", "finalizada" as any)
         .order("data_venda", { ascending: false });
+
+      if (vErr) console.error("Erro ao buscar vendas de hoje:", vErr);
 
       const totalVendasDia = vendasHoje?.reduce((s, v) => s + Number(v.total), 0) ?? 0;
       const qtdVendasDia = vendasHoje?.length ?? 0;
@@ -104,11 +106,13 @@ export function useDashboardData() {
         .eq("status", "cancelada" as any);
 
       // Recebido hoje = pagamentos de parcelas + vendas à vista (não-crediário)
-      const { data: pgtosHoje } = await supabase
+      const { data: pgtosHoje, error: pgtError } = await supabase
         .from("pagamentos")
-        .select("valor_pago")
+        .select("id, valor_pago, forma_pagamento, data_pagamento, parcelas(numero, clientes(nome))")
         .gte("data_pagamento", hjStart)
         .lt("data_pagamento", hjEnd);
+      
+      if (pgtError) console.error("Erro ao buscar pagamentos de hoje:", pgtError);
       const recebidoParcelas = pgtosHoje?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
 
       // Somar valores à vista das vendas do dia (excluindo crediário)
@@ -136,7 +140,7 @@ export function useDashboardData() {
       const todayStr = format(new Date(), "yyyy-MM-dd");
       const { data: pendentesHoje } = await supabase
         .from("parcelas")
-        .select("id, saldo, status, vencimento")
+        .select("id, saldo, status, vencimento, numero, clientes(nome)")
         .in("status", ["pendente", "parcial"] as any)
         .eq("vencimento", todayStr);
       const totalAReceber = pendentesHoje?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
@@ -158,8 +162,10 @@ export function useDashboardData() {
         totalAReceber, qtdPendentes: pendentesHoje?.length ?? 0,
         estoqueBaixo: estoqueBaixo ?? [],
         estoqueSemEstoque: (estoqueBaixo ?? []).filter((e: any) => Number(e.quantidade) <= 0).length,
-        vendasRecentes: vendasHoje?.slice(0, 8) ?? [],
-        parcelasVencidas: vencidas?.slice(0, 10) ?? [],
+        vendasRecentes: vendasHoje ?? [],
+        parcelasVencidas: vencidas ?? [],
+        parcelasPendentesHoje: pendentesHoje ?? [],
+        pagamentosHojeDetalhados: pgtosHoje ?? [],
         qtdCanceladasHoje, totalCanceladoHoje,
         totalDevolvidoHoje: totalDevolvidoDeVendasHoje,
       };
@@ -320,6 +326,7 @@ export function useDashboardPeriodo(periodo: DashboardPeriodo) {
         topClientes, recebimentosPorForma, vendedorNames,
         qtdCanceladas, totalCancelado,
         totalDevolvidoPeriodo: totalDevolvidoDeVendasPeriodo,
+        vendasDetalhadas: vendas ?? [],
       };
     },
     refetchInterval: 120000,

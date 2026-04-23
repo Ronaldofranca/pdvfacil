@@ -1,21 +1,23 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Zap, UserCircle, LogOut } from "lucide-react";
+import { Zap, UserCircle, LogOut, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isValidCPF, formatCPF, normalizeCPF } from "@/lib/cpfUtils";
 
 export default function PortalLoginPage() {
   const [email, setEmail] = useState("");
+  const [loginConta, setLoginConta] = useState("");
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithCPF, signOut, session, isCliente } = usePortalAuth();
+  const { signIn, signInWithCPF, signInWithConta, signOut, session, isCliente } = usePortalAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -38,9 +40,15 @@ export default function PortalLoginPage() {
       setLoading(false);
       toast({
         title: "Tempo de resposta excedido",
-        description: "A conexÃ£o demorou demais. Verifique sua internet ou fale com o suporte.",
+        description: "Limpando sessão congelada do navegador. Tente logar novamente.",
         variant: "destructive",
       });
+      // Deadlock Escape
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.includes('-auth-token')) localStorage.removeItem(key);
+      });
+      // Force generic state reset
+      setTimeout(() => window.location.reload(), 1000);
     }, 15000);
 
     try {
@@ -106,6 +114,7 @@ export default function PortalLoginPage() {
       toast({ title: "CPF inválido", description: "Digite um CPF válido.", variant: "destructive" });
       return;
     }
+
     if (!password) return;
     setLoading(true);
 
@@ -113,9 +122,13 @@ export default function PortalLoginPage() {
       setLoading(false);
       toast({
         title: "Tempo de resposta excedido",
-        description: "A conexão demorou demais. Tente novamente.",
+        description: "Limpando cache congelado do navegador. Tente logar novamente.",
         variant: "destructive",
       });
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.includes('-auth-token')) localStorage.removeItem(key);
+      });
+      setTimeout(() => window.location.reload(), 1000);
     }, 15000);
 
     try {
@@ -158,7 +171,80 @@ export default function PortalLoginPage() {
         setLoading(false);
         toast({
           title: "Acesso Negado",
-          description: "Esta conta nÃ£o tem permissÃ£o de Cliente.",
+          description: "Esta conta não tem permissão de Cliente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Sucesso!", description: "Bem-vindo ao portal!", variant: "default" });
+      clearTimeout(timeoutId);
+      setLoading(false);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      toast({ title: "Erro no login", description: "Ocorreu um erro inesperado.", variant: "destructive" });
+    }
+  };
+
+  const handleContaLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginConta.trim() || !password) return;
+    setLoading(true);
+
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      toast({
+        title: "Tempo de resposta excedido",
+        description: "Limpando cache congelado do navegador. Tente logar novamente.",
+        variant: "destructive",
+      });
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.includes('-auth-token')) localStorage.removeItem(key);
+      });
+      setTimeout(() => window.location.reload(), 1000);
+    }, 15000);
+
+    try {
+      toast({ title: "Acessando conta", description: "Verificando credenciais..." });
+      const { error } = await signInWithConta(loginConta, password);
+      
+      if (error) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({ title: "Acesso Negado", description: "Usuário ou senha incorretos.", variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "Sessão iniciada", description: "Verificando perfil..." });
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData?.user) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({ title: "Erro de autenticação", description: "Não foi possível recuperar seus dados.", variant: "destructive" });
+        return;
+      }
+
+      const { data: roles, error: rolesErr } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id);
+
+      if (rolesErr) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({ title: "Erro de permissão", description: "Falha ao validar seu nível de acesso.", variant: "destructive" });
+        return;
+      }
+
+      const isCliente = roles?.some((r: any) => r.role === "cliente");
+      if (!isCliente) {
+        await signOut();
+        clearTimeout(timeoutId);
+        setLoading(false);
+        toast({
+          title: "Acesso Negado",
+          description: "Esta conta não tem permissão de Cliente.",
           variant: "destructive",
         });
         return;
@@ -185,11 +271,53 @@ export default function PortalLoginPage() {
           <p className="text-sm text-muted-foreground">Acesse seus pedidos e parcelas</p>
         </div>
 
-        <Tabs defaultValue="email" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="email">Email</TabsTrigger>
+        <Tabs defaultValue="conta" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="conta">Usuário</TabsTrigger>
             <TabsTrigger value="cpf">CPF</TabsTrigger>
+            <TabsTrigger value="email">Email</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="conta">
+            <form className="space-y-4" onSubmit={handleContaLogin}>
+              <div className="space-y-2">
+                <Label htmlFor="portal-conta">Usuário / Login</Label>
+                <Input
+                  id="portal-conta"
+                  type="text"
+                  placeholder="Ex: telefone, nome ou código"
+                  value={loginConta}
+                  onChange={(e) => setLoginConta(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="portal-pw-conta">Senha</Label>
+                <div className="relative">
+                  <Input
+                    id="portal-pw-conta"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button className="w-full" type="submit" disabled={loading}>
+                {loading ? "Entrando..." : "Entrar"}
+              </Button>
+            </form>
+          </TabsContent>
 
           <TabsContent value="email">
             <form className="space-y-4" onSubmit={handleEmailLogin}>
@@ -206,14 +334,25 @@ export default function PortalLoginPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="portal-pw-email">Senha</Label>
-                <Input
-                  id="portal-pw-email"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Input
+                    id="portal-pw-email"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <Button className="w-full" type="submit" disabled={loading}>
                 {loading ? "Entrando..." : "Entrar"}
@@ -237,14 +376,25 @@ export default function PortalLoginPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="portal-pw-cpf">Senha</Label>
-                <Input
-                  id="portal-pw-cpf"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Input
+                    id="portal-pw-cpf"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <Button className="w-full" type="submit" disabled={loading}>
                 {loading ? "Entrando..." : "Entrar"}

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Navigate, useOutletContext } from "react-router-dom";
-import { History, ChevronDown, ChevronUp } from "lucide-react";
+import { History, ChevronDown, ChevronUp, Package, Image as ImageIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -41,7 +41,7 @@ export default function PortalComprasPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("itens_venda")
-        .select("id, nome_produto, quantidade, preco_vendido, subtotal, bonus")
+        .select("id, nome_produto, quantidade, preco_vendido, subtotal, bonus, produtos(imagem_url)")
         .eq("venda_id", expandedId!);
       return data ?? [];
     },
@@ -84,13 +84,25 @@ export default function PortalComprasPage() {
 
               {expandedId === v.id && (
                 <div className="mt-4 space-y-2 border-t pt-3">
-                  {itensMap?.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span>
-                        {item.quantidade}x {item.nome_produto}
-                        {item.bonus && <Badge variant="outline" className="ml-1 text-[9px]">Brinde</Badge>}
-                      </span>
-                      <span>{fmtR(Number(item.subtotal))}</span>
+                  {itensMap?.map((item: any) => (
+                    <div key={item.id} className="flex items-center justify-between text-sm py-1">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center overflow-hidden shrink-0 border">
+                          {item.produtos?.imagem_url ? (
+                            <img src={item.produtos.imagem_url} alt={item.nome_produto} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="w-5 h-5 text-muted-foreground opacity-50" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {item.quantidade}x {item.nome_produto}
+                            {item.bonus && <Badge variant="outline" className="ml-2 text-[9px]">Brinde</Badge>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{fmtR(Number(item.preco_vendido))} un.</p>
+                        </div>
+                      </div>
+                      <span className="font-semibold">{fmtR(Number(item.subtotal))}</span>
                     </div>
                   ))}
                   <div className="flex justify-between text-sm font-bold border-t pt-2">

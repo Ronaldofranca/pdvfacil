@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { normalizeSearch } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,14 +33,14 @@ export function MergeClientesDialog({ open, onOpenChange }: Props) {
 
   const filteredSource = (clientes || []).filter(c => 
     !c.is_merged && c.ativo && (
-      c.nome.toLowerCase().includes(searchSource.toLowerCase()) || 
+      normalizeSearch(c.nome).includes(normalizeSearch(searchSource)) || 
       c.id.includes(searchSource)
     )
   ).slice(0, 5);
 
   const filteredTarget = (clientes || []).filter(c => 
     c.id !== sourceId && !c.is_merged && c.ativo && (
-      c.nome.toLowerCase().includes(searchTarget.toLowerCase()) || 
+      normalizeSearch(c.nome).includes(normalizeSearch(searchTarget)) || 
       c.id.includes(searchTarget)
     )
   ).slice(0, 5);

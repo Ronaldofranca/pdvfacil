@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { Package, Tags, BoxesIcon, Pencil, Trash2, Search } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +25,8 @@ export default function ProdutosPage() {
   const { data: kits, isLoading: loadingKit } = useKits();
   const deleteProduto = useDeleteProduto();
   const deleteKit = useDeleteKit();
-
-  const [search, setSearch] = useState("");
+  
+  const [search, setSearch, clearSearch] = usePersistentState("search", "", "produtos");
   const [produtoForm, setProdutoForm] = useState<{ open: boolean; data?: any }>({ open: false });
   const [kitForm, setKitForm] = useState<{ open: boolean; data?: any }>({ open: false });
   const [catForm, setCatForm] = useState<{ open: boolean; data?: any }>({ open: false });
@@ -32,12 +34,12 @@ export default function ProdutosPage() {
   const [mobileCat, setMobileCat] = useState<any | null>(null);
 
   const filteredProdutos = produtos?.filter((p) =>
-    p.nome.toLowerCase().includes(search.toLowerCase()) ||
-    p.codigo?.toLowerCase().includes(search.toLowerCase())
+    normalizeSearch(p.nome).includes(normalizeSearch(search)) ||
+    normalizeSearch(p.codigo ?? "").includes(normalizeSearch(search))
   );
 
   const filteredKits = kits?.filter((k) =>
-    k.nome.toLowerCase().includes(search.toLowerCase())
+    normalizeSearch(k.nome).includes(normalizeSearch(search))
   );
 
   const fmt = (v: number) =>
@@ -59,9 +61,19 @@ export default function ProdutosPage() {
       </div>
 
       {/* Search */}
-      <div className="relative">
+      <div className="relative group">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar por nome ou código..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input className="pl-9 pr-20 h-11" placeholder="Buscar por nome ou código..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        {search && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 text-xs text-muted-foreground hover:text-foreground"
+            onClick={clearSearch}
+          >
+            Limpar
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="produtos">

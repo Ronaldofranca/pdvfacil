@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Warehouse, Search, Plus, ArrowDownUp, TrendingUp, TrendingDown, AlertTriangle, Wrench, PackagePlus, ClipboardList } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,11 +45,11 @@ export default function EstoquePage() {
   const { data: vendedores } = useVendedores();
 
   const filteredEstoque = estoque?.filter((e) =>
-    (e as any).produtos?.nome?.toLowerCase().includes(search.toLowerCase())
+    normalizeSearch((e as any).produtos?.nome ?? "").includes(normalizeSearch(search))
   );
 
   const filteredMov = movimentos?.filter((m) =>
-    (m as any).produtos?.nome?.toLowerCase().includes(search.toLowerCase())
+    normalizeSearch((m as any).produtos?.nome ?? "").includes(normalizeSearch(search))
   );
 
   return (

@@ -8,6 +8,7 @@ import { AlertTriangle, Info, ArrowRight } from "lucide-react";
 import { useCorrigirPagamento } from "@/hooks/useParcelas";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 interface Props {
   open: boolean;
@@ -22,6 +23,7 @@ export function CorrigirPagamentoDialog({ open, onOpenChange, pagamento, parcela
 
   const [novoValor, setNovoValor] = useState<string>("");
   const [motivo, setMotivo] = useState("");
+  const [novaData, setNovaData] = useState("");
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -29,6 +31,9 @@ export function CorrigirPagamentoDialog({ open, onOpenChange, pagamento, parcela
     if (open && pagamento) {
       setNovoValor(String(pagamento.valor_pago || 0));
       setMotivo("");
+      // Inicializa com a data_pagamento atual do registro
+      const dp = pagamento.data_pagamento ? new Date(pagamento.data_pagamento) : new Date();
+      setNovaData(format(dp, "yyyy-MM-dd'T'HH:mm"));
     }
   }, [open, pagamento]);
 
@@ -53,7 +58,7 @@ export function CorrigirPagamentoDialog({ open, onOpenChange, pagamento, parcela
     novoStatus = isVencida ? "vencida" : "pendente";
   }
 
-  const isInvalid = inputValor < 0 || novoSaldo < 0 || !motivo.trim();
+  const isInvalid = inputValor < 0 || novoSaldo < 0 || !motivo.trim() || !novaData;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +67,7 @@ export function CorrigirPagamentoDialog({ open, onOpenChange, pagamento, parcela
     corrigir.mutate({
       pagamento_id: pagamento.id,
       novo_valor: inputValor,
+      nova_data_pagamento: new Date(novaData).toISOString(),
       motivo: motivo.trim(),
       usuario_id: user.id,
       usuario_nome: profile?.nome || "Usuário",
@@ -105,6 +111,17 @@ export function CorrigirPagamentoDialog({ open, onOpenChange, pagamento, parcela
                 onChange={(e) => setNovoValor(e.target.value)} 
                 className="mt-1 font-bold text-lg"
                 autoFocus
+                required
+              />
+            </div>
+            <div className="pt-2">
+              <Label className="text-primary font-bold">Data do Pagamento:</Label>
+              <Input
+                type="datetime-local"
+                value={novaData}
+                max={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                onChange={(e) => setNovaData(e.target.value)}
+                className="mt-1"
                 required
               />
             </div>

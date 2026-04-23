@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Package, Search, Calendar, ChevronRight, User, Package2, RefreshCw, ArrowRight, CreditCard, AlertTriangle, Trash2, ShoppingCart, Printer } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,7 +64,7 @@ export function NovaDevolucaoDialog({ open, onOpenChange, initialVendaId }: Nova
     if (!searchVenda) return [];
     return vendas?.filter(v => 
       v.id.toLowerCase().includes(searchVenda.toLowerCase()) || 
-      (v as any).clientes?.nome?.toLowerCase().includes(searchVenda.toLowerCase())
+      normalizeSearch((v as any).clientes?.nome ?? "").includes(normalizeSearch(searchVenda))
     ).slice(0, 5);
   }, [vendas, searchVenda]);
 

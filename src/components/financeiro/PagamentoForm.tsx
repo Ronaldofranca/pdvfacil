@@ -42,6 +42,7 @@ export function PagamentoForm({ open, onOpenChange, parcela }: Props) {
   const [valor, setValor] = useState(String(saldo));
   const [forma, setForma] = useState("pix");
   const [obs, setObs] = useState("");
+  const [dataPagamento, setDataPagamento] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -50,7 +51,22 @@ export function PagamentoForm({ open, onOpenChange, parcela }: Props) {
     setValor(String(saldo));
     setForma("pix");
     setObs("");
+    setDataPagamento(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   });
+
+  // Helper: convert datetime-local string to ISO WITH local timezone offset
+  // Avoids date shifting caused by toISOString() converting to UTC (e.g., midnight UTC-3 = previous day UTC)
+  function toLocalIso(localDateStr: string): string {
+    const d = new Date(localDateStr);
+    const offsetMs = d.getTimezoneOffset() * 60 * 1000;
+    const localMs = d.getTime() - offsetMs;
+    const localDate = new Date(localMs);
+    const sign = d.getTimezoneOffset() <= 0 ? "+" : "-";
+    const pad = (n: number) => String(Math.abs(n)).padStart(2, "0");
+    const offsetH = pad(Math.floor(Math.abs(d.getTimezoneOffset()) / 60));
+    const offsetM = pad(Math.abs(d.getTimezoneOffset()) % 60);
+    return localDate.toISOString().slice(0, 19) + `${sign}${offsetH}:${offsetM}`;
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +78,7 @@ export function PagamentoForm({ open, onOpenChange, parcela }: Props) {
       forma_pagamento: forma,
       usuario_id: user.id,
       observacoes: obs,
+      data_pagamento: toLocalIso(dataPagamento),
     };
     registrar.mutate(input, {
       onSuccess: () => {
@@ -111,6 +128,16 @@ export function PagamentoForm({ open, onOpenChange, parcela }: Props) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div>
+            <Label>Data do Pagamento *</Label>
+            <Input 
+              required 
+              type="datetime-local" 
+              value={dataPagamento} 
+              max={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+              onChange={(e) => setDataPagamento(e.target.value)} 
+            />
           </div>
           <div>
             <Label>Observações</Label>

@@ -126,6 +126,7 @@ export interface PagamentoInput {
   forma_pagamento: string;
   usuario_id: string;
   observacoes?: string;
+  data_pagamento?: string;
 }
 
 export function useRegistrarPagamento() {
@@ -141,6 +142,7 @@ export function useRegistrarPagamento() {
           forma_pagamento: input.forma_pagamento,
           usuario_id: input.usuario_id,
           observacoes: input.observacoes ?? "",
+          data_pagamento: input.data_pagamento || new Date().toISOString(),
         })
         .select()
         .single();
@@ -158,6 +160,7 @@ export function useRegistrarPagamento() {
 export interface CorrigirPagamentoInput {
   pagamento_id: string;
   novo_valor: number;
+  nova_data_pagamento?: string;
   motivo: string;
   usuario_id: string;
   usuario_nome: string;
@@ -171,6 +174,7 @@ export function useCorrigirPagamento() {
       const { data, error } = await supabase.rpc("fn_corrigir_pagamento", {
         _pagamento_id: input.pagamento_id,
         _novo_valor: input.novo_valor,
+        _nova_data_pagamento: input.nova_data_pagamento ?? null,
         _motivo: input.motivo,
         _usuario_id: input.usuario_id,
         _usuario_nome: input.usuario_nome,
@@ -199,6 +203,7 @@ export interface PagamentoLoteInput {
   forma_pagamento: string;
   usuario_id: string;
   observacoes?: string;
+  data_pagamento?: string;
 }
 
 /**
@@ -222,6 +227,7 @@ export function useRegistrarPagamentoLote() {
         forma_pagamento: input.forma_pagamento,
         usuario_id: input.usuario_id,
         observacoes: input.observacoes ?? "",
+        data_pagamento: input.data_pagamento || new Date().toISOString(),
       }));
 
       const { error } = await supabase.from("pagamentos").insert(registros);

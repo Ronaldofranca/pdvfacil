@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { parsePagamentos } from "@/hooks/useDashboard";
 import {
   BarChart3, Calendar as CalendarIcon, TrendingUp, Package, CreditCard,
   AlertTriangle, DollarSign, BarChart, Users, MapPin, Truck, FileDown,
-  FileSpreadsheet, Filter, UserCheck, Award, Star, ClipboardList
+  FileSpreadsheet, Filter, UserCheck, Award, Star, ClipboardList, Search
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,19 +14,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { RelatorioClientesMaster } from "@/components/relatorios/RelatorioClientesMaster";
+import { RelatorioClientesCidades } from "@/components/relatorios/RelatorioClientesCidades";
+import { ClienteSearchInput } from "@/components/clientes/ClienteSearchInput";
 import {
   useRelVendasPeriodo, useRelVendasDetalhadas, useRelProdutosVendidos,
   useRelParcelasPagas, useRelParcelasVencidas, useRelTodasParcelas,
   useRelParcelasPorCliente, useRelLucroProduto, useRelCurvaABC,
-  useRelVendedores, useRelClientes, useRelEstoqueAtual,
+  useRelVendedores, useRelTodosProfiles, useRelClientes, useRelEstoqueAtual,
   useRelMovimentacaoEstoque, useRelMetasVendedores, useRelRomaneios,
   useRelPedidos, useRelLucroResumo,
 } from "@/hooks/useRelatorios";
@@ -45,14 +52,27 @@ const ABC_COLORS: Record<string, string> = { A: "hsl(var(--primary))", B: "hsl(v
 
 export default function RelatoriosPage() {
   const now = new Date();
-  const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(now));
-  const [dateTo, setDateTo] = useState<Date>(endOfMonth(now));
-  const [vendedorFilter, setVendedorFilter] = useState("all");
-  const [clienteFilter, setClienteFilter] = useState("all");
+  const default30From = subDays(now, 30);
+  const default30To = now;
+  const [dateFrom, setDateFrom, clearFrom] = usePersistentState<Date | null>("date_from", default30From, "relatorios");
+  const [dateTo, setDateTo, clearTo] = usePersistentState<Date | null>("date_to", default30To, "relatorios");
+  const [vendedorFilter, setVendedorFilter, clearVendedor] = usePersistentState("vendedor", "all", "relatorios");
+  const [clienteFilter, setClienteFilter, clearCliente] = usePersistentState("cliente", "all", "relatorios");
 
-  const inicio = format(dateFrom, "yyyy-MM-dd");
-  const fim = format(dateTo, "yyyy-MM-dd");
-  const periodoLabel = `${format(dateFrom, "dd/MM/yyyy")} a ${format(dateTo, "dd/MM/yyyy")}`;
+  // Datas efetivas: quando null, aplica últimos 30 dias automaticamente
+  const effectiveFrom = dateFrom ?? subDays(new Date(), 30);
+  const effectiveTo = dateTo ?? new Date();
+
+  const clearFilters = useCallback(() => {
+    setDateFrom(null);
+    setDateTo(null);
+    clearVendedor();
+    clearCliente();
+  }, [setDateFrom, setDateTo, clearVendedor, clearCliente]);
+
+  const inicio = format(effectiveFrom, "yyyy-MM-dd");
+  const fim = format(effectiveTo, "yyyy-MM-dd");
+  const periodoLabel = `${format(effectiveFrom, "dd/MM/yyyy")} a ${format(effectiveTo, "dd/MM/yyyy")}`;
 
   const { data: empresas } = useEmpresas();
   const empresaNome = empresas?.[0]?.nome ?? "VendaForce";
@@ -67,7 +87,8 @@ export default function RelatoriosPage() {
   const { data: parcelasPorCliente, isLoading: lPC } = useRelParcelasPorCliente();
   const { data: lucros, isLoading: lLucro } = useRelLucroProduto(inicio, fim);
   const { data: curvaABC, isLoading: lABC } = useRelCurvaABC(inicio, fim);
-  const { data: vendedores } = useRelVendedores();
+  const { data: vendedores } = useRelVendedores();       // para o dropdown (filtrado por roles)
+  const { data: todosProfiles } = useRelTodosProfiles(); // para o mapa de nomes (todos)
   const { data: clientes } = useRelClientes();
   const { data: estoque, isLoading: lEst } = useRelEstoqueAtual();
   const { data: movimentos, isLoading: lMov } = useRelMovimentacaoEstoque(inicio, fim);
@@ -75,12 +96,16 @@ export default function RelatoriosPage() {
   const { data: romaneios, isLoading: lRom } = useRelRomaneios(inicio, fim);
   const { data: pedidosRel, isLoading: lPed } = useRelPedidos(inicio, fim);
   const { data: lucroResumo, isLoading: lLucroRes } = useRelLucroResumo(inicio, fim);
-  // Vendedor name map
+  // Vendedor name map — usa TODOS os profiles para não perder nenhum nome
+  // vendedor_id nas vendas = auth.uid() = profiles.user_id
   const vendedorMap = useMemo(() => {
     const m = new Map<string, string>();
-    vendedores?.forEach((v) => m.set(v.user_id, v.nome));
+    todosProfiles?.forEach((v) => {
+      if (v.user_id) m.set(v.user_id, v.nome); // chave principal: auth.uid()
+      if (v.id) m.set(v.id, v.nome);           // fallback: id do profile
+    });
     return m;
-  }, [vendedores]);
+  }, [todosProfiles]);
 
   // Filtered vendas
   const vendasFiltered = useMemo(() => {
@@ -92,11 +117,12 @@ export default function RelatoriosPage() {
 
   // Vendas por vendedor
   const vendasPorVendedor = useMemo(() => {
-    const map = new Map<string, { nome: string; qtd: number; total: number; desconto: number }>();
+    const map = new Map<string, { id: string; nome: string; qtd: number; total: number; desconto: number }>();
     (vendas ?? []).forEach((v) => {
       const vid = v.vendedor_id;
-      const nome = vendedorMap.get(vid) ?? vid.slice(0, 8);
-      const curr = map.get(vid) ?? { nome, qtd: 0, total: 0, desconto: 0 };
+      // Priorizar o nome que veio do join, senão tentar o mapa global
+      const nome = (v as any).vendedor?.nome ?? vendedorMap.get(vid) ?? vid.slice(0, 8);
+      const curr = map.get(vid) ?? { id: vid, nome, qtd: 0, total: 0, desconto: 0 };
       curr.qtd += 1;
       curr.total += Number(v.total);
       curr.desconto += Number(v.desconto_total);
@@ -118,28 +144,47 @@ export default function RelatoriosPage() {
     return Array.from(map.values()).sort((a, b) => b.total - a.total);
   }, [vendas]);
 
-  // Vendas por produto (from detailed)
+  // Vendas por produto (from detailed) — respeita filtro de cliente e vendedor
   const vendasPorProduto = useMemo(() => {
     const map = new Map<string, { nome: string; qtd: number; total: number; desconto: number }>();
-    (vendasDet ?? []).forEach((v) => {
-      ((v as any).itens_venda ?? []).forEach((it: any) => {
-        const curr = map.get(it.produto_id) ?? { nome: it.nome_produto, qtd: 0, total: 0, desconto: 0 };
-        curr.qtd += Number(it.quantidade);
-        curr.total += Number(it.subtotal);
-        curr.desconto += Number(it.desconto);
-        map.set(it.produto_id, curr);
+    (vendasDet ?? [])
+      .filter((v) => {
+        if (vendedorFilter !== "all" && v.vendedor_id !== vendedorFilter) return false;
+        if (clienteFilter !== "all" && (v as any).clientes?.nome !== clienteFilter) return false;
+        return true;
+      })
+      .forEach((v) => {
+        ((v as any).itens_venda ?? []).forEach((it: any) => {
+          const curr = map.get(it.produto_id) ?? { nome: it.nome_produto, qtd: 0, total: 0, desconto: 0 };
+          curr.qtd += Number(it.quantidade);
+          curr.total += Number(it.subtotal);
+          curr.desconto += Number(it.desconto);
+          map.set(it.produto_id, curr);
+        });
       });
-    });
     return Array.from(map.values()).sort((a, b) => b.total - a.total);
-  }, [vendasDet]);
+  }, [vendasDet, vendedorFilter, clienteFilter]);
 
-  // Totals
+  // Parcelas filtradas por cliente (para os KPI cards)
+  const parcelasFiltradas = useMemo(() => {
+    const base = todasParcelas ?? [];
+    if (clienteFilter === "all") return base;
+    return base.filter((p) => (p as any).clientes?.nome === clienteFilter);
+  }, [todasParcelas, clienteFilter]);
+
+  const vencidasFiltradas = useMemo(() => {
+    const base = vencidas ?? [];
+    if (clienteFilter === "all") return base;
+    return base.filter((p) => (p as any).clientes?.nome === clienteFilter);
+  }, [vencidas, clienteFilter]);
+
+  // Totals — t todos os cálculos respeitam cliente e vendedor filtrados
   const totalVendas = vendasFiltered.reduce((s, v) => s + Number(v.total), 0);
-  const totalPgtosParcelas = pgtos?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
-  // Incluir vendas à vista (non-crediário) no total recebido
+
+  // Recebido à vista: usa vendasFiltered para respeitar filtro de cliente/vendedor
   const totalAVista = useMemo(() => {
     let total = 0;
-    (vendas ?? []).forEach((v) => {
+    vendasFiltered.forEach((v) => {
       const vpgtos = parsePagamentos((v as any).pagamentos);
       for (const pg of vpgtos) {
         if (pg.forma !== "crediario") {
@@ -148,10 +193,22 @@ export default function RelatoriosPage() {
       }
     });
     return total;
-  }, [vendas]);
+  }, [vendasFiltered]);
+
+  // Recebido de parcelas: quando há filtro de cliente, usa valor_pago das próprias parcelas
+  const totalPgtosParcelas = useMemo(() => {
+    if (clienteFilter !== "all") {
+      // Soma o valor já pago nas parcelas deste cliente
+      return parcelasFiltradas.reduce((s, p) => s + Number(p.valor_pago ?? 0), 0);
+    }
+    return pgtos?.reduce((s, p) => s + Number(p.valor_pago), 0) ?? 0;
+  }, [clienteFilter, parcelasFiltradas, pgtos]);
+
   const totalPgtos = totalPgtosParcelas + totalAVista;
-  const totalVencido = vencidas?.reduce((s, p) => s + Number(p.saldo), 0) ?? 0;
-  const totalPendente = (todasParcelas ?? []).filter((p) => p.status === "pendente" || p.status === "parcial").reduce((s, p) => s + Number(p.saldo ?? 0), 0);
+  const totalVencido = vencidasFiltradas.reduce((s, p) => s + Number(p.saldo), 0);
+  const totalPendente = parcelasFiltradas
+    .filter((p) => p.status === "pendente" || p.status === "parcial")
+    .reduce((s, p) => s + Number(p.saldo ?? 0), 0);
 
   // Chart data
   const vendasPorDia = useMemo(() => {
@@ -165,13 +222,22 @@ export default function RelatoriosPage() {
 
   const pgtosPorForma = useMemo(() => {
     const map = new Map<string, number>();
-    // Pagamentos de parcelas
-    pgtos?.forEach((p) => {
-      const forma = (p.forma_pagamento || "outro").replace(/_/g, " ");
-      map.set(forma, (map.get(forma) ?? 0) + Number(p.valor_pago));
-    });
-    // Vendas à vista (non-crediário)
-    (vendas ?? []).forEach((v) => {
+    // Pagamentos de parcelas: se cliente filtrado, usa valor_pago das parcelas; senão usa pgtos
+    if (clienteFilter !== "all") {
+      parcelasFiltradas.forEach((p) => {
+        if (Number(p.valor_pago) > 0) {
+          const forma = ((p as any).forma_pagamento || "crediario").replace(/_/g, " ");
+          map.set(forma, (map.get(forma) ?? 0) + Number(p.valor_pago));
+        }
+      });
+    } else {
+      pgtos?.forEach((p) => {
+        const forma = (p.forma_pagamento || "outro").replace(/_/g, " ");
+        map.set(forma, (map.get(forma) ?? 0) + Number(p.valor_pago));
+      });
+    }
+    // Vendas à vista (non-crediário) — usa vendasFiltered para respeitar filtros
+    vendasFiltered.forEach((v) => {
       const vpgtos = parsePagamentos((v as any).pagamentos);
       for (const pg of vpgtos) {
         if (pg.forma !== "crediario") {
@@ -181,7 +247,7 @@ export default function RelatoriosPage() {
       }
     });
     return Array.from(map.entries()).map(([forma, valor]) => ({ forma, valor }));
-  }, [pgtos, vendas]);
+  }, [pgtos, vendasFiltered, clienteFilter, parcelasFiltradas]);
 
   // Lucro por vendedor (using item-level cost data)
   const lucroPorVendedor = useMemo(() => {
@@ -238,8 +304,8 @@ export default function RelatoriosPage() {
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex gap-2 items-center">
             <Filter className="w-4 h-4 text-muted-foreground" />
-            <DatePicker label="De" date={dateFrom} onSelect={(d) => d && setDateFrom(d)} />
-            <DatePicker label="Até" date={dateTo} onSelect={(d) => d && setDateTo(d)} />
+            <DatePicker label="De" date={dateFrom} onSelect={(d) => setDateFrom(d ?? null)} />
+            <DatePicker label="Até" date={dateTo} onSelect={(d) => setDateTo(d ?? null)} />
           </div>
           <Select value={vendedorFilter} onValueChange={setVendedorFilter}>
             <SelectTrigger className="w-[160px] h-8 text-xs">
@@ -248,21 +314,21 @@ export default function RelatoriosPage() {
             <SelectContent>
               <SelectItem value="all">Todos vendedores</SelectItem>
               {vendedores?.map((v) => (
-                <SelectItem key={v.user_id} value={v.user_id}>{v.nome}</SelectItem>
+                <SelectItem key={v.id} value={v.user_id ?? v.id}>{v.nome}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={clienteFilter} onValueChange={setClienteFilter}>
-            <SelectTrigger className="w-[160px] h-8 text-xs">
-              <SelectValue placeholder="Cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos clientes</SelectItem>
-              {clientes?.map((c) => (
-                <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ClienteSearchInput
+            value={clienteFilter === "all" ? null : clienteFilter}
+            onSelect={(c) => setClienteFilter(c?.nome ?? "all")}
+            clientes={clientes ?? []}
+            allowClear
+            placeholder="Buscar cliente..."
+            className="w-[200px]"
+          />
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-foreground h-8 text-xs">
+            Limpar
+          </Button>
         </div>
       </Card>
 
@@ -272,7 +338,7 @@ export default function RelatoriosPage() {
         <SummaryCard label="Recebido" value={fmtR(totalPgtos)} color="text-primary" />
         <SummaryCard label="Pendente" value={fmtR(totalPendente)} color="text-yellow-600" />
         <SummaryCard label="Vencido" value={fmtR(totalVencido)} color="text-destructive" />
-        <SummaryCard label="Produtos" value={`${prodVendidos?.reduce((s, p) => s + p.qtd, 0) ?? 0}`} sub="unidades vendidas" />
+        <SummaryCard label="Produtos" value={`${vendasPorProduto.reduce((s, p) => s + p.qtd, 0)}`} sub="unidades vendidas" />
       </div>
 
       {/* Tabs */}
@@ -287,11 +353,14 @@ export default function RelatoriosPage() {
           <TabsTrigger value="lucro" className="gap-1 text-xs"><DollarSign className="w-3.5 h-3.5" />Lucro</TabsTrigger>
           <TabsTrigger value="vendedores" className="gap-1 text-xs"><Users className="w-3.5 h-3.5" />Vendedores</TabsTrigger>
           <TabsTrigger value="clientes" className="gap-1 text-xs"><UserCheck className="w-3.5 h-3.5" />Clientes</TabsTrigger>
+          <TabsTrigger value="cidades" className="gap-1 text-xs"><MapPin className="w-3.5 h-3.5" />Cidades</TabsTrigger>
           <TabsTrigger value="romaneio" className="gap-1 text-xs"><Truck className="w-3.5 h-3.5" />Romaneio</TabsTrigger>
           <TabsTrigger value="abc" className="gap-1 text-xs"><BarChart className="w-3.5 h-3.5" />ABC</TabsTrigger>
           <TabsTrigger value="pedidos" className="gap-1 text-xs"><ClipboardList className="w-3.5 h-3.5" />Pedidos</TabsTrigger>
           <TabsTrigger value="ranking" className="gap-1 text-xs"><Award className="w-3.5 h-3.5" />Ranking</TabsTrigger>
         </TabsList>
+
+
 
         {/* ═══ VENDAS ═══ */}
         <TabsContent value="vendas" className="space-y-4">
@@ -535,7 +604,7 @@ export default function RelatoriosPage() {
           </div>
           {pgtosPorForma.length > 0 && (
             <Card className="p-4 flex justify-center">
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie data={pgtosPorForma} dataKey="valor" nameKey="forma" cx="50%" cy="50%" outerRadius={90} label={({ forma, valor }) => `${forma}: ${fmtR(valor)}`}>
                     {pgtosPorForma.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -583,34 +652,13 @@ export default function RelatoriosPage() {
             <TabsContent value="pagas">
               <ParcelasTable data={(todasParcelas ?? []).filter((p) => p.status === "paga")} loading={lTP} />
             </TabsContent>
-            <TabsContent value="por_cliente">
-              <div className="space-y-3">
-                {lPC ? <Card className="p-8 text-center text-muted-foreground">Carregando...</Card> : (parcelasPorCliente ?? []).map((c) => (
-                  <Card key={c.cliente_id} className="p-4 space-y-2">
-                    <div className="flex justify-between items-start flex-wrap gap-2">
-                      <p className="font-semibold">{c.nome}</p>
-                      <div className="flex gap-3 text-xs">
-                        <span>Comprado: <strong>{fmtR(c.total_comprado)}</strong></span>
-                        <span className="text-primary">Pago: <strong>{fmtR(c.total_pago)}</strong></span>
-                        {c.total_pendente > 0 && <span className="text-yellow-600">Pendente: <strong>{fmtR(c.total_pendente)}</strong></span>}
-                        {c.total_vencido > 0 && <span className="text-destructive">Vencido: <strong>{fmtR(c.total_vencido)}</strong></span>}
-                      </div>
-                    </div>
-                    <Button size="sm" variant="outline" className="text-xs" onClick={() => doExportPDF(
-                      `Parcelas - ${c.nome}`,
-                      ["Nº", "Vencimento", "Valor", "Pago", "Saldo", "Status"],
-                      c.parcelas.map((p: any) => [
-                        String(p.numero), format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy"),
-                        fmtR(Number(p.valor_total)), fmtR(Number(p.valor_pago)), fmtR(Number(p.saldo ?? 0)), p.status,
-                      ]),
-                      ["TOTAL", "", fmtR(c.total_comprado), fmtR(c.total_pago), fmtR(c.total_pendente + c.total_vencido), ""]
-                    )}>
-                      <FileDown className="h-3 w-3 mr-1" /> PDF do Cliente
-                    </Button>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
+            <ParcelasPorClienteTab 
+              data={parcelasPorCliente ?? []} 
+              loading={lPC} 
+              vendedorMap={vendedorMap}
+              empresaNome={empresaNome}
+              periodoLabel={periodoLabel}
+            />
           </Tabs>
         </TabsContent>
 
@@ -632,7 +680,7 @@ export default function RelatoriosPage() {
           />
           {pgtosPorForma.length > 0 && (
             <Card className="p-4 flex justify-center">
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie data={pgtosPorForma} dataKey="valor" nameKey="forma" cx="50%" cy="50%" outerRadius={80} label>
                     {pgtosPorForma.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -745,12 +793,16 @@ export default function RelatoriosPage() {
             )}
           />
           <Card><Table><TableHeader><TableRow>
-            <TableHead>Vendedor</TableHead><TableHead className="text-right">Vendas</TableHead>
-            <TableHead className="text-right">Total</TableHead><TableHead className="text-right">Desconto</TableHead>
+            <TableHead>ID Vendedor</TableHead>
+            <TableHead>Nome Vendedor</TableHead>
+            <TableHead className="text-right">Vendas</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+            <TableHead className="text-right">Desconto</TableHead>
           </TableRow></TableHeader><TableBody>
             {vendasPorVendedor.map((v) => (
-              <TableRow key={v.nome}>
-                <TableCell className="font-medium">{v.nome}</TableCell>
+              <TableRow key={v.id}>
+                <TableCell className="font-medium text-muted-foreground">{v.id.slice(0, 8)}</TableCell>
+                <TableCell className="font-semibold">{v.nome}</TableCell>
                 <TableCell className="text-right">{v.qtd}</TableCell>
                 <TableCell className="text-right font-semibold">{fmtR(v.total)}</TableCell>
                 <TableCell className="text-right text-muted-foreground">{fmtR(v.desconto)}</TableCell>
@@ -763,12 +815,13 @@ export default function RelatoriosPage() {
             <Card className="p-4 space-y-3">
               <p className="font-semibold text-sm">Metas do Mês Atual</p>
               {metas.map((m) => {
-                const vendido = vendasPorVendedor.find((v) => vendedorMap.get(m.vendedor_id) === v.nome)?.total ?? 0;
+                const vendedorPerformance = vendasPorVendedor.find((v) => v.id === m.vendedor_id);
+                const vendido = vendedorPerformance?.total ?? 0;
                 const pct = Number(m.meta_valor) > 0 ? (vendido / Number(m.meta_valor)) * 100 : 0;
                 const comissao = vendido * (Number(m.percentual_comissao) / 100);
                 return (
                   <div key={m.id} className="flex items-center justify-between text-sm">
-                    <span>{vendedorMap.get(m.vendedor_id) ?? m.vendedor_id.slice(0, 8)}</span>
+                    <span>{vendedorPerformance?.nome ?? vendedorMap.get(m.vendedor_id) ?? m.vendedor_id.slice(0, 8)}</span>
                     <div className="flex gap-3 text-xs">
                       <span>Meta: {fmtR(Number(m.meta_valor))}</span>
                       <span className={pct >= 100 ? "text-primary font-bold" : ""}>{pct.toFixed(0)}%</span>
@@ -783,6 +836,10 @@ export default function RelatoriosPage() {
 
         <TabsContent value="clientes" className="space-y-4">
           <RelatorioClientesMaster />
+        </TabsContent>
+
+        <TabsContent value="cidades" className="space-y-4">
+          <RelatorioClientesCidades />
         </TabsContent>
 
         {/* ═══ ROMANEIO ═══ */}
@@ -860,17 +917,17 @@ export default function RelatoriosPage() {
 
 // ═══ Sub-components ═══
 
-function DatePicker({ label, date, onSelect }: { label: string; date: Date; onSelect: (d: Date | undefined) => void }) {
+function DatePicker({ label, date, onSelect }: { label: string; date: Date | null; onSelect: (d: Date | undefined) => void }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !date && "text-muted-foreground")}>
           <CalendarIcon className="w-3.5 h-3.5" />
-          {label}: {format(date, "dd/MM/yy")}
+          {date ? `${label}: ${format(date, "dd/MM/yy")}` : `${label}: --/--/--`}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="end">
-        <Calendar mode="single" selected={date} onSelect={onSelect} initialFocus className={cn("p-3 pointer-events-auto")} />
+        <Calendar mode="single" selected={date ?? undefined} onSelect={onSelect} initialFocus className={cn("p-3 pointer-events-auto")} />
       </PopoverContent>
     </Popover>
   );
@@ -1130,5 +1187,179 @@ function RankingIndicacoesTab({ doExportCSV, doExportPDF }: { doExportCSV: (rows
           })}
       </TableBody></Table></Card>
     </>
+  );
+}
+
+function ParcelasPorClienteTab({ data, loading, vendedorMap, empresaNome, periodoLabel }: any) {
+  const [search, setSearch] = useState("");
+  const [activeConfig, setActiveConfig] = useState<any>(null);
+
+  const filtered = useMemo(() => {
+    return data.filter((c: any) => 
+      c.nome.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [data, search]);
+
+  return (
+    <TabsContent value="por_cliente" className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input 
+          placeholder="Buscar cliente..." 
+          className="pl-9"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-3">
+        {loading ? (
+          <Card className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
+            <TrendingUp className="w-5 h-5 animate-pulse" />
+            Carregando parcelas por cliente...
+          </Card>
+        ) : !filtered.length ? (
+          <Card className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
+            <Search className="w-5 h-5 opacity-20" />
+            Nenhum cliente encontrado.
+          </Card>
+        ) : (
+          filtered.map((c: any) => (
+            <Card key={c.cliente_id} className="p-4 space-y-2">
+              <div className="flex justify-between items-start flex-wrap gap-2">
+                <p className="font-semibold">{c.nome}</p>
+                <div className="flex gap-3 text-xs">
+                  <span>Comprado: <strong>{fmtR(c.total_comprado)}</strong></span>
+                  <span className="text-primary">Pago: <strong>{fmtR(c.total_pago)}</strong></span>
+                  {c.total_pendente > 0 && <span className="text-yellow-600">Pendente: <strong>{fmtR(c.total_pendente)}</strong></span>}
+                  {c.total_vencido > 0 && <span className="text-destructive">Vencido: <strong>{fmtR(c.total_vencido)}</strong></span>}
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="text-xs" 
+                onClick={() => setActiveConfig(c)}
+              >
+                <FileDown className="h-3 w-3 mr-1" /> PDF do Cliente
+              </Button>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <ConfiguracaoPdfDialog 
+        cliente={activeConfig} 
+        open={!!activeConfig} 
+        onOpenChange={(o: boolean) => !o && setActiveConfig(null)}
+        vendedorMap={vendedorMap}
+        empresaNome={empresaNome}
+        periodoLabel={periodoLabel}
+      />
+    </TabsContent>
+  );
+}
+
+function ConfiguracaoPdfDialog({ cliente, open, onOpenChange, vendedorMap, empresaNome, periodoLabel }: any) {
+  const [cols, setCols] = useState({
+    numero: true,
+    vendedor: true,
+    vencimento: true,
+    valor: true,
+    pago: true,
+    saldo: true,
+    status: true,
+  });
+
+  const handleExport = () => {
+    if (!cliente) return;
+
+    const headers: string[] = [];
+    if (cols.numero) headers.push("Nº");
+    if (cols.vendedor) headers.push("Vendedor");
+    if (cols.vencimento) headers.push("Vencimento");
+    if (cols.valor) headers.push("Valor");
+    if (cols.pago) headers.push("Pago");
+    if (cols.saldo) headers.push("Saldo");
+    if (cols.status) headers.push("Status");
+
+    const rows = cliente.parcelas.map((p: any) => {
+      const row: string[] = [];
+      if (cols.numero) row.push(String(p.numero));
+      if (cols.vendedor) row.push(vendedorMap.get(p.vendas?.vendedor_id) || "—");
+      if (cols.vencimento) row.push(format(new Date(p.vencimento + "T12:00:00"), "dd/MM/yyyy"));
+      if (cols.valor) row.push(fmtR(Number(p.valor_total)));
+      if (cols.pago) row.push(fmtR(Number(p.valor_pago)));
+      if (cols.saldo) row.push(fmtR(Number(p.saldo ?? 0)));
+      if (cols.status) row.push(p.status);
+      return row;
+    });
+
+    const totals: string[] = [];
+    if (cols.numero) totals.push("TOTAL");
+    if (cols.vendedor) totals.push("");
+    if (cols.vencimento) totals.push("");
+    if (cols.valor) totals.push(fmtR(cliente.total_comprado));
+    if (cols.pago) totals.push(fmtR(cliente.total_pago));
+    if (cols.saldo) totals.push(fmtR(cliente.total_pendente + cliente.total_vencido));
+    if (cols.status) totals.push("");
+
+    exportPDF({
+      title: `Relatório de Parcelas - ${cliente.nome}`,
+      periodo: periodoLabel,
+      empresa: empresaNome,
+      headers,
+      rows,
+      totals
+    });
+    
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Personalizar PDF</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <p className="text-sm text-muted-foreground">Selecione as colunas que deseja incluir no relatório de <strong>{cliente?.nome}</strong>:</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox id="c-num" checked={cols.numero} onCheckedChange={(v) => setCols(prev => ({ ...prev, numero: !!v }))} />
+              <Label htmlFor="c-num">Nº Parcela</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="c-vend" checked={cols.vendedor} onCheckedChange={(v) => setCols(prev => ({ ...prev, vendedor: !!v }))} />
+              <Label htmlFor="c-vend">Vendedor</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="c-venc" checked={cols.vencimento} onCheckedChange={(v) => setCols(prev => ({ ...prev, vencimento: !!v }))} />
+              <Label htmlFor="c-venc">Vencimento</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="c-val" checked={cols.valor} onCheckedChange={(v) => setCols(prev => ({ ...prev, valor: !!v }))} />
+              <Label htmlFor="c-val">Valor</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="c-pag" checked={cols.pago} onCheckedChange={(v) => setCols(prev => ({ ...prev, pago: !!v }))} />
+              <Label htmlFor="c-pag">Valor Pago</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="c-sal" checked={cols.saldo} onCheckedChange={(v) => setCols(prev => ({ ...prev, saldo: !!v }))} />
+              <Label htmlFor="c-sal">Saldo Devedor</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="c-stat" checked={cols.status} onCheckedChange={(v) => setCols(prev => ({ ...prev, status: !!v }))} />
+              <Label htmlFor="c-stat">Status</Label>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleExport}>Gerar PDF</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

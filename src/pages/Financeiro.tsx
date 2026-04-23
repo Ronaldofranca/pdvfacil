@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { useNavigate } from "react-router-dom";
+import { normalizeSearch } from "@/lib/utils";
 import {
   DollarSign,
   Search,
@@ -36,6 +38,7 @@ import { ReciboParcela } from "@/components/financeiro/ReciboParcela";
 import { DateRangeFilter } from "@/components/vendas/DateRangeFilter";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DetalheVendaSheet } from "@/components/vendas/DetalheVendaSheet";
 
 const STATUS_CFG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "warning" | "outline"; icon: any }> = {
   pendente: { label: "Pendente", variant: "secondary", icon: Clock },
@@ -48,19 +51,38 @@ export default function FinanceiroPage() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { canRegisterPagamento } = usePermissions();
-  const [statusFilter, setStatusFilter] = useState("todas");
-  const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [statusFilter, setStatusFilter, clearStatus] = usePersistentState("status", "todas", "financeiro");
+  const [search, setSearch, clearSearch] = usePersistentState("search", "", "financeiro");
+  const [startDate, setStartDate, clearStart] = usePersistentState<Date | undefined>("start_date", undefined, "financeiro");
+  const [endDate, setEndDate, clearEnd] = usePersistentState<Date | undefined>("end_date", undefined, "financeiro");
+
+  // Seleção múltipla — declarada antes de clearFilters para evitar TDZ
+  const [selectedIdsArray, setSelectedIdsArray, clearSelectedIds] = usePersistentState<string[]>("selected_ids", [], "financeiro");
+  const selectedIds = useMemo(() => new Set(selectedIdsArray), [selectedIdsArray]);
+  
+  const setSelectedIds = useCallback((updater: (prev: Set<string>) => Set<string>) => {
+    setSelectedIdsArray((prevArray) => {
+      const prevSet = new Set(prevArray);
+      const nextSet = updater(prevSet);
+      return Array.from(nextSet);
+    });
+  }, [setSelectedIdsArray]);
+
+  const clearFilters = useCallback(() => {
+    clearStatus();
+    clearSearch();
+    clearStart();
+    clearEnd();
+    clearSelectedIds();
+  }, [clearStatus, clearSearch, clearStart, clearEnd, clearSelectedIds]);
 
   const [gerarOpen, setGerarOpen] = useState(false);
   const [pagamentoState, setPagamentoState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [reciboState, setReciboState] = useState<{ open: boolean; data?: any }>({ open: false });
   const [mobileParcela, setMobileParcela] = useState<any | null>(null);
   const [detailState, setDetailState] = useState<{ open: boolean; data?: any }>({ open: false });
+  const [vendaDetailId, setVendaDetailId] = useState<string | null>(null);
 
-  // Seleção múltipla
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loteOpen, setLoteOpen] = useState(false);
 
   const { data: parcelas, isLoading } = useParcelas({
@@ -90,7 +112,7 @@ export default function FinanceiroPage() {
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   const filtered = parcelas?.filter((p) =>
-    (p as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) || !search
+    normalizeSearch((p as any).clientes?.nome ?? "").includes(normalizeSearch(search)) || !search
   );
 
   const isDateInRange = (dateStr: string | null, start: Date | undefined, end: Date | undefined) => {
@@ -102,7 +124,7 @@ export default function FinanceiroPage() {
   };
 
   const matchesSearch = (nome: string | null | undefined) =>
-    !search || (nome?.toLowerCase().includes(search.toLowerCase()) ?? false);
+    !search || normalizeSearch(nome ?? "").includes(normalizeSearch(search));
 
   const totalPendente =
     todasParcelasNoPeriodo?.filter((p) =>
@@ -152,7 +174,7 @@ export default function FinanceiroPage() {
     });
   };
 
-  const clearSelection = () => setSelectedIds(new Set());
+  const clearSelection = () => setSelectedIds(() => new Set());
 
   // Lógica para Selecionar Tudo
   const selectableFiltered = useMemo(() => {
@@ -167,7 +189,7 @@ export default function FinanceiroPage() {
     } else {
       const newIds = new Set(selectedIds);
       selectableFiltered.forEach(p => newIds.add(p.id));
-      setSelectedIds(newIds);
+      setSelectedIds(() => newIds);
     }
   };
 
@@ -243,6 +265,11 @@ export default function FinanceiroPage() {
               <SelectItem value="paga">Pagas</SelectItem>
             </SelectContent>
           </Select>
+          {(statusFilter !== "todas" || search || startDate || endDate) && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-foreground">
+              Limpar filtros
+            </Button>
+          )}
         </div>
       </div>
 
@@ -394,7 +421,7 @@ export default function FinanceiroPage() {
                             <Receipt className="w-3 h-3" />
                           </Button>
                           {(p.venda_id || (p as any).vendas?.id) && (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-primary" onClick={() => navigate(`/vendas?viewVenda=${p.venda_id || (p as any).vendas?.id}`)}>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-primary" onClick={() => setVendaDetailId(p.venda_id || (p as any).vendas?.id)}>
                               <ShoppingBag className="w-3 h-3" />
                             </Button>
                           )}
@@ -598,7 +625,7 @@ export default function FinanceiroPage() {
                   <Button 
                     className="w-full justify-start gap-2" 
                     variant="outline" 
-                    onClick={() => navigate(`/vendas?viewVenda=${detailState.data.venda_id || (detailState.data as any).vendas?.id}`)}
+                    onClick={() => setVendaDetailId(detailState.data.venda_id || (detailState.data as any).vendas?.id)}
                   >
                     <ShoppingBag className="w-4 h-4" /> Ver venda de origem
                   </Button>
@@ -625,6 +652,12 @@ export default function FinanceiroPage() {
         open={reciboState.open}
         onOpenChange={(open) => setReciboState((prev) => ({ ...prev, open }))}
         parcela={reciboState.data}
+      />
+
+      <DetalheVendaSheet 
+        vendaId={vendaDetailId}
+        open={!!vendaDetailId}
+        onOpenChange={(open) => !open && setVendaDetailId(null)}
       />
     </div>
   );

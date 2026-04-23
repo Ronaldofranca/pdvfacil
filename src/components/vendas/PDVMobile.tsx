@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { normalizeSearch } from "@/lib/utils";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
+import { ClienteSearchInput } from "@/components/clientes/ClienteSearchInput";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Gift,
   DollarSign, X, Package, CreditCard, Check, WifiOff,
@@ -434,8 +436,8 @@ export function PDVMobile({
         })
         .filter(
           (p: any) =>
-            p.nome.toLowerCase().includes(searchProd.toLowerCase()) ||
-            p.codigo?.toLowerCase().includes(searchProd.toLowerCase())
+            normalizeSearch(p.nome).includes(normalizeSearch(searchProd)) ||
+            normalizeSearch(p.codigo ?? "").includes(normalizeSearch(searchProd))
         ),
     [produtos, searchProd, filterType]
   );
@@ -452,16 +454,15 @@ export function PDVMobile({
     () =>
       (clientes as any[])?.filter(
         (c: any) =>
-          c.nome?.toLowerCase().includes(searchCliente.toLowerCase()) ||
+          normalizeSearch(c.nome ?? "").includes(normalizeSearch(searchCliente)) ||
           c.telefone?.includes(searchCliente) ||
-          c.cidade?.toLowerCase().includes(searchCliente.toLowerCase())
+          normalizeSearch(c.cidade ?? "").includes(normalizeSearch(searchCliente))
       ),
     [clientes, searchCliente]
   );
 
   const handleClose = () => {
     onOpenChange(false);
-    resetForm();
   };
 
   if (!open) return null;
@@ -500,12 +501,22 @@ export function PDVMobile({
           </div>
         </div>
         {cart.length > 0 ? (
-          <Button variant="ghost" size="sm" className="gap-1 -mr-2 relative h-10" onClick={() => setStep("carrinho")}>
-            <ShoppingCart className="w-5 h-5" />
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
-              {cart.length}
-            </Badge>
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="h-10 text-destructive px-2" onClick={() => {
+              if (confirm("Deseja realmente abandonar esta venda?")) {
+                resetForm();
+                onOpenChange(false);
+              }
+            }}>
+              Abandonar
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1 -mr-2 relative h-10" onClick={() => setStep("carrinho")}>
+              <ShoppingCart className="w-5 h-5" />
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                {cart.length}
+              </Badge>
+            </Button>
+          </div>
         ) : (
           <div className="w-10" />
         )}
@@ -548,24 +559,26 @@ export function PDVMobile({
         {step === "cliente" && (
           <div className="flex flex-col h-full">
             <div className="p-4 sticky top-0 bg-background z-10 border-b">
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    className="pl-11 h-14 text-lg rounded-2xl"
+                  <ClienteSearchInput
+                    value={clienteId || null}
+                    onSelect={(c) => {
+                      setClienteId(c?.id || "");
+                      if (c) setStep("produtos");
+                    }}
+                    clientes={clientes ?? []}
                     placeholder="Buscar cliente..."
-                    value={searchCliente}
-                    onChange={(e) => setSearchCliente(e.target.value)}
-                    autoFocus
+                    className="w-full"
                   />
                 </div>
                 <Button 
                   type="button" 
                   variant="outline" 
-                  className="h-14 w-14 rounded-2xl shrink-0"
+                  className="h-8 w-8 shrink-0"
                   onClick={() => setIsClientFormOpen(true)}
                 >
-                  <Plus className="w-6 h-6" />
+                  <Plus className="w-4 h-4" />
                 </Button>
               </div>
             </div>
@@ -592,42 +605,7 @@ export function PDVMobile({
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </button>
 
-              {/* Client list */}
-              {filteredClientes?.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => {
-                    setClienteId(c.id);
-                    setStep("produtos");
-                  }}
-                  className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 active:bg-accent transition-colors
-                    ${clienteId === c.id ? "border-primary bg-primary/5" : "border-border"}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-lg font-bold text-primary">{c.nome?.charAt(0)?.toUpperCase()}</span>
-                    </div>
-                    <div className="text-left">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-foreground">{c.nome}</p>
-                        {Number((c as any).pontos_indicacao) > 0 && (
-                          <Badge variant="outline" className="text-[10px] gap-0.5 px-1.5 py-0">
-                            <Star className="w-2.5 h-2.5 text-yellow-500" /> {Number((c as any).pontos_indicacao)}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {c.telefone || c.cidade || c.email || ""}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </button>
-              ))}
-              {searchCliente && !filteredClientes?.length && (
-                <p className="text-muted-foreground text-center py-8">Nenhum cliente encontrado</p>
-              )}
+              {/* A listagem de clientes agora é gerida pelo componente ClienteSearchInput */}
             </div>
           </div>
         )}
@@ -687,9 +665,9 @@ export function PDVMobile({
 
             <div className="p-4 sticky top-0 bg-background z-10 border-b">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <Input
-                  className="pl-11 h-14 text-lg rounded-2xl"
+                  className="pl-8 h-8 text-xs"
                   placeholder="Buscar produto..."
                   value={searchProd}
                   onChange={(e) => setSearchProd(e.target.value)}
@@ -697,7 +675,7 @@ export function PDVMobile({
                 />
               </div>
               {/* Filter tabs */}
-              <div className="flex items-center gap-1.5 px-4 pb-3 -mt-1">
+              <div className="flex items-center gap-1.5 mt-3">
                 {(["todos", "produtos", "kits"] as const).map((t) => (
                   <button
                     key={t}

@@ -45,7 +45,7 @@ export function useParcelasCobranca(filtro: FiltroCobranca) {
         .order("vencimento");
 
       if (filtro === "vencidas") {
-        q = q.eq("status", "vencida" as any);
+        q = q.or(`status.eq.vencida,and(status.in.(pendente,parcial),vencimento.lt.${hoje})`);
       } else if (filtro === "vencendo_hoje") {
         q = q.eq("vencimento", hoje).neq("status", "paga" as any);
       } else if (filtro === "vencendo_amanha") {
@@ -107,10 +107,10 @@ export function useLembretesContagem() {
       const amanha = format(addDays(new Date(), 1), "yyyy-MM-dd");
 
       const [vencidasRes, hojeRes, amanhaRes, atrasadosRes] = await Promise.all([
-        supabase.from("parcelas").select("id", { count: "exact", head: true }).eq("status", "vencida" as any),
+        supabase.from("parcelas").select("id", { count: "exact", head: true }).or(`status.eq.vencida,and(status.in.(pendente,parcial),vencimento.lt.${hoje})`),
         supabase.from("parcelas").select("id", { count: "exact", head: true }).eq("vencimento", hoje).neq("status", "paga" as any),
         supabase.from("parcelas").select("id", { count: "exact", head: true }).eq("vencimento", amanha).neq("status", "paga" as any),
-        supabase.from("parcelas").select("cliente_id").eq("status", "vencida" as any),
+        supabase.from("parcelas").select("cliente_id").or(`status.eq.vencida,and(status.in.(pendente,parcial),vencimento.lt.${hoje})`),
       ]);
 
       // Count clients with 2+ overdue parcelas

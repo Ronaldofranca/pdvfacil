@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CalendarClock, Search, Filter, MapPin, Phone, ShoppingCart, Truck, CheckCircle, ExternalLink, AlertTriangle, Eye } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +39,7 @@ export default function AgendaEntregasPage() {
       return true;
     })
     .filter((p) => {
-      if (busca && !p.clientes?.nome?.toLowerCase().includes(busca.toLowerCase())) return false;
+      if (busca && !normalizeSearch(p.clientes?.nome ?? "").includes(normalizeSearch(busca))) return false;
       if (statusFilter === "em_rota") return p.status === "em_rota";
       if (statusFilter === "aguardando") return p.status === "aguardando_entrega";
       return true;

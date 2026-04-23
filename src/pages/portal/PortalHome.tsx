@@ -2,7 +2,7 @@ import { ShoppingBag, DollarSign, AlertTriangle, CheckCircle, Plus, MessageCircl
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { usePortalAuth } from "@/hooks/usePortalAuth";
+import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, Navigate } from "react-router-dom";

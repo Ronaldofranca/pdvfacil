@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { useSearchParams } from "react-router-dom";
+import { normalizeSearch } from "@/lib/utils";
 import { ShoppingCart, Search, Plus, Eye, XCircle, Receipt, CreditCard, RefreshCw, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,8 +28,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Filter } from "lucide-react";
 import { ptBR } from "date-fns/locale";
 import { NovaDevolucaoDialog } from "@/components/devolucoes/NovaDevolucaoDialog";
-import { DetalheDevolucaoDialog } from "@/components/devolucoes/DetalheDevolucaoDialog";
-import { useVendaDevolucoes } from "@/hooks/useDevolucoes";
+import { DetalheVendaSheet } from "@/components/vendas/DetalheVendaSheet";
+import { useRelVendedores } from "@/hooks/useRelatorios";
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   rascunho: { label: "Rascunho", variant: "outline" },
@@ -42,20 +44,44 @@ export default function VendasPage() {
   const { user } = useAuth();
 
   // Filtros — padrão: últimos 3 dias + somente finalizadas
-  const [statusFilter, setStatusFilter] = useState("finalizada");
-  const [startDate, setStartDate] = useState<Date | undefined>(() => startOfDay(subDays(new Date(), 3)));
-  const [endDate, setEndDate] = useState<Date | undefined>(() => endOfDay(new Date()));
+  const [statusFilter, setStatusFilter, clearStatus] = usePersistentState("status", "finalizada", "vendas");
+  const [startDate, setStartDate, clearStart] = usePersistentState<Date | undefined>(
+    "start_date", 
+    undefined, 
+    "vendas"
+  );
+  const [endDate, setEndDate, clearEnd] = usePersistentState<Date | undefined>(
+    "end_date", 
+    undefined, 
+    "vendas"
+  );
+  const [search, setSearch, clearSearch] = usePersistentState("search", "", "vendas");
+  const { data: vendedoresList } = useRelVendedores();
+
+  const vendedorMap = useCallback((id: string) => {
+    if (!vendedoresList) return id.slice(0, 8);
+    const found = vendedoresList.find(v => v.user_id === id || v.id === id);
+    return found ? found.nome : id.slice(0, 8);
+  }, [vendedoresList]);
+
+  const clearFilters = useCallback(() => {
+    clearStatus();
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setSearch(""); 
+  }, [clearStatus, setStartDate, setEndDate, setSearch]);
 
   const { data: vendas, isLoading } = useVendas({
     status: statusFilter,
     startDate,
     endDate,
+    limit: (!startDate && !endDate && !search) ? 10 : 300,
   });
   const cancelar = useCancelarVenda();
 
   const [pdvOpen, setPdvOpen] = useState(false);
   const [editingVenda, setEditingVenda] = useState<{ id: string; items: any[]; observations: string; clienteId: string } | null>(null);
-  const [search, setSearch] = useState("");
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [detailId, setDetailId] = useState<string | null>(searchParams.get("viewVenda"));
   const [reciboVenda, setReciboVenda] = useState<any>(null);
@@ -81,8 +107,6 @@ export default function VendasPage() {
 
   const { data: fetchVendaUnica } = useVenda(detailId);
   const [pagamentoState, setPagamentoState] = useState<{ open: boolean; data?: any }>({ open: false });
-  const { data: itensDetail } = useVendaItens(detailId);
-  const { data: devolucoesVinculadas } = useVendaDevolucoes(detailId);
   const { data: mobileVendaParcelas } = useParcelas(
     { vendaId: mobileActionVendaId ?? undefined },
     { enabled: !!mobileActionVendaId },
@@ -90,9 +114,6 @@ export default function VendasPage() {
 
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [returnVendaId, setReturnVendaId] = useState<string | null>(null);
-  
-  const [viewDevolucaoId, setViewDevolucaoId] = useState<string | null>(null);
-  const [isDevolucaoDetailOpen, setIsDevolucaoDetailOpen] = useState(false);
 
   // Cancellation dialog
   const [cancelDialogVendaId, setCancelDialogVendaId] = useState<string | null>(null);
@@ -116,7 +137,7 @@ export default function VendasPage() {
   const filtered = vendas?.filter((v) => {
     if (!search) return true;
     return (
-      (v as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase()) ||
+      normalizeSearch((v as any).clientes?.nome ?? "").includes(normalizeSearch(search)) ||
       v.id.includes(search)
     );
   });
@@ -236,6 +257,12 @@ export default function VendasPage() {
             <SelectItem value="todas">Todos os status</SelectItem>
           </SelectContent>
         </Select>
+
+        {(statusFilter !== "finalizada" || search || !!startDate || !!endDate) && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-foreground">
+            Limpar filtros
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -244,6 +271,7 @@ export default function VendasPage() {
             <TableRow>
               {!isMobile && <TableHead>ID</TableHead>}
               <TableHead>Cliente</TableHead>
+              <TableHead>Vendedor</TableHead>
               <TableHead>Data</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
@@ -253,13 +281,13 @@ export default function VendasPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={visibleColumnCount} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={visibleColumnCount + 1} className="py-8 text-center text-muted-foreground">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : !filtered?.length ? (
               <TableRow>
-                <TableCell colSpan={visibleColumnCount} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={visibleColumnCount + 1} className="py-8 text-center text-muted-foreground">
                   Nenhuma venda encontrada
                 </TableCell>
               </TableRow>
@@ -293,6 +321,9 @@ export default function VendasPage() {
                         <p className="truncate">{(v as any).clientes?.nome ?? "—"}</p>
                         {isMobile && <p className="text-xs text-muted-foreground">#{saleIdLabel}</p>}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-sm truncate max-w-[120px]">
+                      {vendedorMap(v.vendedor_id)}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(v.data_venda), "dd/MM/yy HH:mm", { locale: ptBR })}
@@ -577,149 +608,11 @@ export default function VendasPage() {
       </Dialog>
 
       {/* Detalhes da venda */}
-      <Sheet open={!!detailId} onOpenChange={handleCloseDetail}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>Detalhes da Venda</SheetTitle>
-          </SheetHeader>
-          {vendaDetail && (
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">ID:</span> <span className="font-mono">{vendaDetail.id.slice(0, 8)}</span></div>
-                <div><span className="text-muted-foreground">Status:</span> <Badge variant={STATUS_MAP[vendaDetail.status]?.variant}>{STATUS_MAP[vendaDetail.status]?.label}</Badge></div>
-                <div><span className="text-muted-foreground">Cliente:</span> {(vendaDetail as any).clientes?.nome ?? "—"}</div>
-                <div><span className="text-muted-foreground">Data:</span> {format(new Date(vendaDetail.data_venda), "dd/MM/yyyy HH:mm", { locale: ptBR })}</div>
-              </div>
-              {vendaDetail.status === "cancelada" && (vendaDetail as any).motivo_cancelamento && (
-                <div className="space-y-1 rounded-lg bg-destructive/10 p-3 text-sm">
-                  <p className="font-semibold text-destructive">Venda Cancelada</p>
-                  <p className="text-muted-foreground">Motivo: {(vendaDetail as any).motivo_cancelamento}</p>
-                  {(vendaDetail as any).cancelado_em && (
-                    <p className="text-xs text-muted-foreground">
-                      Em: {format(new Date((vendaDetail as any).cancelado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                    </p>
-                  )}
-                </div>
-              )}
-              <Separator />
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">Itens</p>
-                {itensDetail?.map((item) => (
-                  <div key={item.id} className="flex justify-between rounded border p-2 text-sm">
-                    <div>
-                      <p className="font-medium">{item.nome_produto}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {Number(item.quantidade)}x {fmt(Number(item.preco_vendido))}
-                        {item.bonus && " (Bônus)"}
-                        {Number(item.desconto) > 0 && ` -${fmt(Number(item.desconto))}`}
-                      </p>
-                    </div>
-                    <span className="font-medium">{fmt(Number(item.subtotal))}</span>
-                  </div>
-                ))}
-              </div>
-              <Separator />
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{fmt(Number(vendaDetail.subtotal))}</span></div>
-                {Number(vendaDetail.desconto_total) > 0 && (
-                  <div className="flex justify-between text-destructive"><span>Descontos</span><span>-{fmt(Number(vendaDetail.desconto_total))}</span></div>
-                )}
-                {(() => {
-                  const totalBonus = itensDetail?.filter(i => i.bonus).reduce((s, i) => s + Number(i.preco_original) * Number(i.quantidade), 0) ?? 0;
-                  return totalBonus > 0 ? (
-                    <div className="flex justify-between text-amber-600 font-medium">
-                      <span>🎁 Bônus concedidos</span>
-                      <span>-{fmt(totalBonus)}</span>
-                    </div>
-                  ) : null;
-                })()}
-                <div className="flex justify-between text-lg font-bold"><span>Total</span><span className="text-primary">{fmt(Number(vendaDetail.total))}</span></div>
-              </div>
-              {vendaDetail.pagamentos && Array.isArray(vendaDetail.pagamentos) && (vendaDetail.pagamentos as any[]).length > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold">Pagamentos</p>
-                    {(vendaDetail.pagamentos as any[]).map((p: any, i: number) => (
-                      <div key={i} className="flex justify-between text-sm">
-                        <span className="capitalize">{p.forma?.replace("_", " ")}</span>
-                        <span>{fmt(p.valor)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-              {vendaDetail.observacoes && (
-                <>
-                  <Separator />
-                  <p className="text-sm text-muted-foreground">{vendaDetail.observacoes}</p>
-                </>
-              )}
-
-              {devolucoesVinculadas && devolucoesVinculadas.length > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <p className="text-sm font-bold flex items-center gap-2 text-amber-600 uppercase tracking-tighter">
-                      <RefreshCw className="w-4 h-4" /> Devoluções Vinculadas
-                    </p>
-                    <div className="space-y-2">
-                       {devolucoesVinculadas.map((d: any) => (
-                         <button
-                           key={d.id}
-                           onClick={() => { setViewDevolucaoId(d.id); setIsDevolucaoDetailOpen(true); }}
-                           className="w-full flex items-center justify-between p-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors text-left"
-                         >
-                           <div className="space-y-0.5">
-                             <p className="text-[10px] font-mono text-muted-foreground uppercase">#{d.id.slice(0, 8)}</p>
-                             <p className="text-xs font-bold">{format(new Date(d.data_devolucao), "dd/MM/yy HH:mm")}</p>
-                           </div>
-                           <div className="text-right">
-                             <p className="text-sm font-bold text-amber-600">{fmt(Number(d.valor_total_devolvido))}</p>
-                             <p className="text-[9px] uppercase font-bold text-muted-foreground">Ver Detalhes</p>
-                           </div>
-                         </button>
-                       ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <Separator />
-              {isAdmin && isEditable(vendaDetail) && (
-                <Button
-                  className="w-full gap-2 bg-primary/10 text-primary hover:bg-primary/20"
-                  variant="outline"
-                  onClick={() => handleEditAdmin(vendaDetail, itensDetail || [])}
-                >
-                  <Edit className="w-4 h-4" /> Editar Venda (Admin)
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                className="w-full gap-1.5"
-                onClick={() => {
-                  setDetailId(null);
-                  setReciboVenda(vendaDetail);
-                }}
-              >
-                <Receipt className="w-4 h-4" /> Gerar Recibo
-              </Button>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
-
-      <NovaDevolucaoDialog 
-        open={returnDialogOpen} 
-        onOpenChange={setReturnDialogOpen}
-        initialVendaId={returnVendaId}
-      />
-
-      <DetalheDevolucaoDialog 
-        id={viewDevolucaoId}
-        open={isDevolucaoDetailOpen}
-        onOpenChange={setIsDevolucaoDetailOpen}
+      <DetalheVendaSheet 
+        vendaId={detailId} 
+        open={!!detailId} 
+        onOpenChange={handleCloseDetail}
+        onEditAdmin={handleEditAdmin}
       />
     </div>
   );

@@ -230,6 +230,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear persistent view states
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("@pdvfacil:state:")) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      console.warn("Erro ao limpar localStorage no logout:", e);
+    }
+
     await supabase.auth.signOut();
     fetchSeqRef.current += 1;
     loadedUserIdRef.current = null;

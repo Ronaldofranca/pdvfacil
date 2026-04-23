@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle, Layers, UserPlus, Edit } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Gift, Percent, DollarSign, X, RotateCcw, Package, Award, AlertTriangle, Layers, UserPlus, Edit, Shield } from "lucide-react";
+import { normalizeSearch } from "@/lib/utils";
 import { usePDVPersistence } from "@/hooks/useFormPersistence";
 import { useNavigationGuard } from "@/hooks/useNavigationGuard";
 import { addItemToCart, markOneUnitAsGift, unmarkOneGift, updateCartItem, changeLineQty, removeCartLine, ensureAllLineIds } from "@/lib/cartUtils";
@@ -22,6 +23,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNiveisRecompensa, getNivelAtual } from "@/hooks/useNiveisRecompensa";
 import { useClienteScoreById } from "@/hooks/useClienteScore";
 import { useCreditoCliente } from "@/hooks/useDevolucoes";
+import { useValidacaoCredito } from "@/hooks/useValidacaoCredito";
 import { CrediarioConfigPanel } from "./CrediarioConfig";
 import { PDVMobile } from "./PDVMobile";
 import { ClienteForm } from "@/components/clientes/ClienteForm";
@@ -145,6 +147,7 @@ export function PDVModal({
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ forma: "dinheiro", valor: 0 }]);
   const [searchProd, setSearchProd] = useState("");
   const [crediarioConfig, setCrediarioConfig] = useState<CrediarioConfig>(defaultCrediario);
+  const [isManualOverride, setIsManualOverride] = useState(false);
   
   // Venda Retroativa
   const [isRetroativa, setIsRetroativa] = useState(false);
@@ -312,6 +315,13 @@ export function PDVModal({
     }
   };
 
+  const { data: validacao } = useValidacaoCredito(clienteId || null, total);
+
+  // Reset manual override when client or total changes
+  useEffect(() => {
+    setIsManualOverride(false);
+  }, [clienteId, total]);
+
   // ─── Finalizar (with idempotency lock) ───
   const finalizingRef = useRef(false);
   const [finalizingStep, setFinalizingStep] = useState("");
@@ -351,10 +361,13 @@ export function PDVModal({
     // Check fiado restriction (Skip for Admin Edit as we are adjusting existing sale)
     if (hasCrediario && !isAdminEdit) {
       if (!clienteId) return toast.error("Selecione um cliente para venda no crediário");
-      const clienteFiado = clientes?.find((c) => c.id === clienteId);
-      if (clienteFiado && (clienteFiado as any).permitir_fiado === false) {
-        return toast.error("Este cliente está restrito para compras fiado. Permitir apenas pagamento à vista.");
+      
+      // Intelligent Credit Validation
+      if (validacao?.isBlocked && !isManualOverride) {
+        toast.error("Venda bloqueada por regras de crédito. Verifique os alertas.");
+        return;
       }
+
       if (crediarioConfig.num_parcelas < 1) return toast.error("Defina pelo menos 1 parcela");
     } else if (!isAdminEdit) {
       if (totalPago < total) return toast.error("Valor pago insuficiente");
@@ -450,9 +463,20 @@ export function PDVModal({
     );
   };
 
+  const resetForm = () => {
+    setCart([]);
+    setClienteId("");
+    setObservacoes("");
+    setPagamentos([{ forma: "dinheiro", valor: 0 }]);
+    setSearchProd("");
+    setIsRetroativa(false);
+    setDataRetroativa("");
+    pdvPersistence.clear();
+  };
+
   const filteredProdutos = produtos
     ?.filter((p) => p.ativo)
-    .filter((p) => p.nome.toLowerCase().includes(searchProd.toLowerCase()) || p.codigo?.toLowerCase().includes(searchProd.toLowerCase()));
+    .filter((p) => normalizeSearch(p.nome).includes(normalizeSearch(searchProd)) || normalizeSearch(p.codigo ?? "").includes(normalizeSearch(searchProd)));
 
   // Mobile: use full-screen PDV
   if (isMobile) {
@@ -555,20 +579,56 @@ export function PDVModal({
               )}
               {/* Score badge */}
               {clienteId && clienteScore && (
-                <div className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg ${
-                  clienteScore.classificacao === "Risco" ? "bg-destructive/10" :
-                  clienteScore.classificacao === "Regular" ? "bg-yellow-500/10" :
-                  clienteScore.classificacao === "Bom" ? "bg-blue-500/10" : "bg-primary/10"
+                <div className={`flex flex-col gap-1.5 p-2 rounded-lg border ${
+                  clienteScore.classificacao === "Risco" ? "bg-destructive/5 border-destructive/20" :
+                  clienteScore.classificacao === "Regular" ? "bg-yellow-500/5 border-yellow-500/20" :
+                  clienteScore.classificacao === "Bom" ? "bg-blue-500/5 border-blue-500/20" : "bg-primary/5 border-primary/20"
                 }`}>
-                  <span>{clienteScore.emoji}</span>
-                  <span className={`font-semibold ${clienteScore.cor}`}>
-                    Cliente {clienteScore.classificacao}
-                  </span>
-                  <span className="text-muted-foreground">({clienteScore.score} pts)</span>
-                  {clienteScore.classificacao === "Risco" && (
-                    <span className="text-destructive flex items-center gap-1 ml-auto">
-                      <AlertTriangle className="w-3 h-3" /> Histórico de atraso
+                  <div className="flex items-center gap-2 text-xs">
+                    <span>{clienteScore.emoji}</span>
+                    <span className={`font-semibold ${clienteScore.cor}`}>
+                      Cliente {clienteScore.classificacao}
                     </span>
+                    <span className="text-muted-foreground">({clienteScore.score} pts)</span>
+                  </div>
+
+                  {/* Alertas de Bloqueio / Limite */}
+                  {validacao?.isBlocked && (
+                    <div className="space-y-1.5 mt-1">
+                      {validacao.reasons.map((reason, i) => (
+                        <div key={i} className="flex items-start gap-1.5 text-[10px] text-destructive font-medium bg-destructive/10 p-1.5 rounded-md border border-destructive/10">
+                          <AlertTriangle className="w-3 h-3 shrink-0" />
+                          <span>{reason}</span>
+                        </div>
+                      ))}
+                      
+                      {!isManualOverride ? (
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          size="sm" 
+                          className="w-full h-7 text-[10px] gap-1.5"
+                          onClick={() => {
+                            setIsManualOverride(true);
+                            toast.warning("Venda liberada manualmente para este cliente.");
+                          }}
+                        >
+                          <Shield className="w-3 h-3" /> Liberar Venda Manualmente
+                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-[10px] text-green-600 font-bold bg-green-500/10 p-1.5 rounded-md border border-green-500/20">
+                          <Shield className="w-3 h-3 shrink-0" />
+                          <span>Venda autorizada para prosseguir (Liberação Manual)</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!validacao?.isBlocked && validacao?.availableLimit !== undefined && (
+                    <div className="flex items-center justify-between text-[10px] font-medium text-muted-foreground pt-1 border-t border-dashed">
+                      <span>Limite Disponível:</span>
+                      <span className="text-primary">{fmt(validacao.availableLimit)}</span>
+                    </div>
                   )}
                 </div>
               )}
@@ -800,7 +860,20 @@ export function PDVModal({
 
         {/* Footer */}
         <div className="flex gap-2 pt-3 border-t">
-          <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button 
+            type="button" 
+            variant="ghost" 
+            className="flex-1 text-destructive hover:bg-destructive/10 hover:text-destructive" 
+            onClick={() => {
+              if (cart.length > 0 && confirm("Deseja realmente abandonar esta venda? Todos os itens serão removidos.")) {
+                resetForm();
+                onOpenChange(false);
+              }
+            }}
+          >
+            Abandonar
+          </Button>
+          <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Fechar</Button>
           <Button
             type="button"
             className="flex-1 gap-1.5"

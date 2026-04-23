@@ -53,7 +53,8 @@ import {
   type NivelRecompensa,
 } from "@/hooks/useNiveisRecompensa";
 import { ReciboConfig } from "@/components/configuracoes/ReciboConfig";
-
+import { SecurityConfig } from "@/components/configuracoes/SecurityConfig";
+import { UpdatePasswordDialog } from "@/components/auth/UpdatePasswordDialog";
 const TABS = [
   { id: "perfil", label: "Perfil", icon: User },
   { id: "empresa", label: "Empresa", icon: Building2 },
@@ -68,6 +69,7 @@ const TABS = [
   { id: "portal", label: "Portal", icon: Globe },
   { id: "notificacoes", label: "Notificações", icon: Bell },
   { id: "backup", label: "Backup", icon: HardDrive },
+  { id: "credito", label: "Crédito Inteligente", icon: Shield },
   { id: "seguranca", label: "Segurança", icon: Shield },
   { id: "interface", label: "Minha Interface", icon: LayoutDashboard },
 ];
@@ -216,18 +218,6 @@ export default function ConfiguracoesPage() {
       .eq("user_id", user!.id);
     if (error) toast.error(error.message);
     else toast.success("Perfil atualizado!");
-  };
-
-  const handleChangePassword = async () => {
-    try {
-      await supabase.auth.resetPasswordForEmail(user!.email!, {
-        redirectTo: `${window.location.origin}/login`,
-      });
-    } catch {
-      // Silently handle - don't reveal if email exists
-    }
-    // Always show the same message regardless of result
-    toast.success("Se o email estiver cadastrado, você receberá instruções para redefinir sua senha.");
   };
 
   const SwitchRow = ({ label, description, checked, onCheckedChange, disabled }: {
@@ -580,7 +570,7 @@ export default function ConfiguracoesPage() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Button onClick={handleUpdateProfile}><Save className="h-4 w-4 mr-1" /> Salvar Perfil</Button>
-                <Button variant="outline" onClick={handleChangePassword}>Alterar Senha</Button>
+                <UpdatePasswordDialog />
               </div>
             </CardContent>
           </Card>
@@ -787,6 +777,71 @@ export default function ConfiguracoesPage() {
                   defaultValue={config?.juros_parcelas ?? 0}
                   onBlur={(e) => saveConfig({ juros_parcelas: parseFloat(e.target.value) || 0 })}
                 />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* SEGURANÇA */}
+        <TabsContent value="seguranca">
+          <SecurityConfig />
+        </TabsContent>
+
+        {/* CRÉDITO INTELIGENTE */}
+        <TabsContent value="credito">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestão de Crédito Inteligente</CardTitle>
+              <CardDescription>Controle de riscos, limites automáticos e carências</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-4">
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-semibold">Bloqueio de Crédito Inteligente</Label>
+                  <p className="text-[10px] text-muted-foreground">Quando ativado, o sistema verificará limites e atrasos durante a venda.</p>
+                </div>
+                <Switch 
+                  checked={config?.verificar_limite_credito ?? true} 
+                  onCheckedChange={(v) => saveConfig({ verificar_limite_credito: v })} 
+                />
+              </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Limite de Crédito Padrão (R$)</Label>
+                  <p className="text-[10px] text-muted-foreground">Valor inicial para novos clientes e clientes sem limite definido.</p>
+                  <Input
+                    type="number" min={0} step={100}
+                    defaultValue={config?.limite_padrao_credito ?? 1000}
+                    onBlur={(e) => saveConfig({ limite_padrao_credito: parseFloat(e.target.value) || 1000 })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Carência para Bloqueio (Dias)</Label>
+                  <p className="text-[10px] text-muted-foreground">Dias após o vencimento permitidos antes de bloquear o crédito.</p>
+                  <Input
+                    type="number" min={0}
+                    defaultValue={config?.carencia_dias_atraso ?? 15}
+                    onBlur={(e) => saveConfig({ carencia_dias_atraso: parseInt(e.target.value) || 15 })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Teto de Aumento Automático (R$)</Label>
+                  <p className="text-[10px] text-muted-foreground">Limite máximo que o sistema pode conceder via expansão automática.</p>
+                  <Input
+                    type="number" min={0} step={100}
+                    defaultValue={config?.teto_aumento_credito_automatico ?? 5000}
+                    onBlur={(e) => saveConfig({ teto_aumento_credito_automatico: parseFloat(e.target.value) || 5000 })}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-muted/30 p-4 border border-dashed text-xs text-muted-foreground font-medium">
+                Regras de crédito ativas — os limites e atrasos são verificados automaticamente conforme sua configuração.
               </div>
             </CardContent>
           </Card>
