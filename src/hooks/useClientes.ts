@@ -42,6 +42,8 @@ export interface ClienteInput {
   observacoes?: string;
   ativo?: boolean;
   permitir_fiado?: boolean;
+  permitir_atraso?: boolean;
+  modo_limite?: string;
   cliente_indicador_id?: string | null;
   limite_credito_total?: number;
 }
