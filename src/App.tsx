@@ -49,6 +49,8 @@ import DevolucoesPage from "./pages/Devolucoes";
 import AgendaEntregasPage from "./pages/AgendaEntregas";
 import NotFound from "./pages/NotFound";
 import CidadesAtendidasPublicaPage from "./pages/CidadesAtendidasPublica";
+import GitHubDataPage from "./pages/GitHubData";
+
 
 // Portal do Cliente
 import PortalLoginPage from "./pages/portal/PortalLogin";
