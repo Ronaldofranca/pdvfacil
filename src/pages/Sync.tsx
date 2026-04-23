@@ -44,7 +44,7 @@ interface SyncLog {
   id: string;
   table_name: string;
   operation: string;
-  status: "success" | "error";
+  status: string;
   error_message: string | null;
   created_at: string;
   idempotency_key: string | null;

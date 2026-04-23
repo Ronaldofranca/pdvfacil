@@ -110,7 +110,7 @@ export function invalidateDashboardQueries(qc: ReturnType<typeof useQueryClient>
 
 // ─── Queries ───
 type VendasFilters = {
-  status?: string;
+  status?: "todas" | "cancelada" | "finalizada" | "pendente" | "rascunho";
   startDate?: Date;
   endDate?: Date;
   limit?: number;

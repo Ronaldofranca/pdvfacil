@@ -19,7 +19,7 @@ import {
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // ─── Role label config ──────────────────────────────────────────────────────
 
@@ -46,7 +46,6 @@ export default function UsuariosPage() {
   const { profile } = useAuth();
   const updateUser = useUpdateUsuario();
   const updateRole = useUpdateUserRole();
-  const { toast } = useToast();
 
   const [tab, setTab] = useState("admins");
   const [search, setSearch] = useState("");
@@ -100,7 +99,7 @@ export default function UsuariosPage() {
   const handleResetClientPassword = async () => {
     if (!resetState.cliente) return;
     if (newPassword.length < 6) {
-      toast({ title: "Senha muito curta", description: "Mínimo 6 caracteres.", variant: "destructive" });
+      toast.error("Mínimo 6 caracteres.");
       return;
     }
     setResetting(true);
@@ -111,7 +110,7 @@ export default function UsuariosPage() {
       });
 
       if (!fnError) {
-        toast({ title: "Senha alterada!", description: `Nova senha definida para ${resetState.cliente.nome}.` });
+        toast.success(`Nova senha definida para ${resetState.cliente.nome}.`);
         setResetState({ open: false });
         setNewPassword("");
       } else {
@@ -121,15 +120,12 @@ export default function UsuariosPage() {
           { redirectTo: `${window.location.origin}/portal/nova-senha` }
         );
         if (emailError) throw emailError;
-        toast({
-          title: "Link enviado!",
-          description: `Email de redefinição enviado para ${resetState.cliente.email}.`,
-        });
+        toast.success(`Email de redefinição enviado para ${resetState.cliente.email}.`);
         setResetState({ open: false });
         setNewPassword("");
       }
     } catch (e: any) {
-      toast({ title: "Erro ao redefinir senha", description: e?.message, variant: "destructive" });
+      toast.error(e?.message);
     }
     setResetting(false);
   };

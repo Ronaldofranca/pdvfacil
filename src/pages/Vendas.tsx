@@ -30,6 +30,7 @@ import { ptBR } from "date-fns/locale";
 import { NovaDevolucaoDialog } from "@/components/devolucoes/NovaDevolucaoDialog";
 import { DetalheVendaSheet } from "@/components/vendas/DetalheVendaSheet";
 import { useRelVendedores } from "@/hooks/useRelatorios";
+import { toast } from "sonner";
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   rascunho: { label: "Rascunho", variant: "outline" },
@@ -72,7 +73,7 @@ export default function VendasPage() {
   }, [clearStatus, setStartDate, setEndDate, setSearch]);
 
   const { data: vendas, isLoading } = useVendas({
-    status: statusFilter,
+    status: statusFilter as "cancelada" | "finalizada" | "pendente" | "rascunho" | "todas",
     startDate,
     endDate,
     limit: (!startDate && !endDate && !search) ? 10 : 300,
