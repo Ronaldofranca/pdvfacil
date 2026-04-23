@@ -77,13 +77,20 @@ export async function exportTable(table: BackupTable): Promise<{ csv: string; co
   return { csv: toCsv(rows), count: rows.length };
 }
 
+function normalizeFileName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
 export function downloadCsv(csv: string, filename: string) {
   const bom = "\uFEFF";
   const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename;
+  a.download = normalizeFileName(filename);
   a.click();
   URL.revokeObjectURL(url);
 }
