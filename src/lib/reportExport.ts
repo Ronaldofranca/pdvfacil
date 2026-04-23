@@ -36,7 +36,8 @@ export function exportPDF(options: {
 }) {
   const { title, periodo, empresa, headers, rows, totals } = options;
 
-  const safeTitle = escapeHtml(normalizeFileName(title));
+  const safeTitle = escapeHtml(title);
+  const normalizedTitle = normalizeFileName(title);
   const safePeriodo = periodo ? escapeHtml(periodo) : "";
   const safeEmpresa = empresa ? escapeHtml(empresa) : "";
 
@@ -53,7 +54,7 @@ export function exportPDF(options: {
 <html>
 <head>
 <meta charset="utf-8">
-<title>${safeTitle}</title>
+<title>${normalizedTitle}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 24px; color: #1a1a2e; font-size: 11px; }
