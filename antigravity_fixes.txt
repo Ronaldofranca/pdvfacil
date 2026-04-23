@@ -1,0 +1,23 @@
+Lista de Correções de Segurança - PDV Fácil / Antigravity
+
+1. Segurança de Tabelas (RLS):
+- Ativar Row Level Security (RLS) na tabela 'representantes'.
+- Adicionar política para permitir visualização apenas por usuários autenticados na tabela 'representantes'.
+- Adicionar política para permitir gerenciamento total apenas por administradores (perfil com cargo 'admin') na tabela 'representantes'.
+- Ativar RLS na tabela 'notificacoes'.
+- Adicionar política para que usuários vejam apenas suas próprias notificações.
+- Ativar RLS na tabela 'devolucoes'.
+- Ativar RLS na tabela 'itens_devolucao'.
+- Adicionar políticas básicas para garantir que apenas usuários autenticados acessem 'devolucoes' e 'itens_devolucao'.
+
+2. Segurança de Funções (Stored Procedures):
+- Configurar 'search_path = public' em todas as funções para evitar ataques de shadowing.
+- Alterar funções críticas para 'SECURITY INVOKER' para evitar escalação de privilégios indevida.
+- Funções afetadas prioritárias:
+  * rpc_registrar_devolucao
+  * fn_corrigir_pagamento
+  * fn_check_notificacoes
+
+3. Boas Práticas:
+- Garantir que nenhuma tabela sensível esteja sem RLS.
+- Evitar o uso de 'SECURITY DEFINER' em funções que não necessitem explicitamente de privilégios de superusuário.
