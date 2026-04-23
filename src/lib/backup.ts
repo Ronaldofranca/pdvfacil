@@ -145,7 +145,7 @@ export async function downloadBackupFile(filePath: string, fileName: string) {
   const url = URL.createObjectURL(data);
   const a = document.createElement("a");
   a.href = url;
-  a.download = fileName;
+  a.download = normalizeFileName(fileName);
   a.click();
   URL.revokeObjectURL(url);
 }
