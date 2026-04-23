@@ -34,7 +34,7 @@ CREATE POLICY "Usuários veem apenas suas próprias notificações"
     ON public.notificacoes FOR SELECT 
     TO authenticated 
     USING (
-        usuario_id = auth.uid() OR user_id = auth.uid()
+        usuario_id = auth.uid()
     );
 
 DROP POLICY IF EXISTS "Usuários podem gerenciar suas próprias notificações" ON public.notificacoes;
@@ -42,10 +42,10 @@ CREATE POLICY "Usuários podem gerenciar suas próprias notificações"
     ON public.notificacoes FOR ALL 
     TO authenticated 
     USING (
-        usuario_id = auth.uid() OR user_id = auth.uid()
+        usuario_id = auth.uid()
     )
     WITH CHECK (
-        usuario_id = auth.uid() OR user_id = auth.uid()
+        usuario_id = auth.uid()
     );
 
 -- Tabela: devolucoes
