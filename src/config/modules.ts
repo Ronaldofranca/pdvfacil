@@ -71,7 +71,9 @@ export const modules: ModuleConfig[] = [
   { key: "backup", label: "Backup", icon: HardDrive, path: "/backup", group: "sistema", description: "Backup de dados" },
   { key: "importacao", label: "Importação", icon: Upload, path: "/importacao", group: "sistema", description: "Importação em massa" },
   { key: "audit", label: "Auditoria", icon: Shield, path: "/audit", group: "sistema", description: "Logs de auditoria" },
+  { key: "github" as any, label: "GitHub", icon: Github, path: "/github", group: "sistema", description: "Puxar dados do GitHub" },
   { key: "configuracoes", label: "Configurações", icon: Settings, path: "/configuracoes", group: "sistema", description: "Configurações do sistema" },
+
 ];
 
 export const moduleGroups = {
