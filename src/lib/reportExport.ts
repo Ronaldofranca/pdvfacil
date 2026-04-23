@@ -558,7 +558,7 @@ export async function exportReceiptFromElement(
     }
 
     console.info("[Receipt] início do compartilhamento", { fileName, size: blob.size });
-    const file = new File([blob], fileName, { type: "application/pdf" });
+    const file = new File([blob], normalizeFileName(fileName), { type: "application/pdf" });
     const titles: Record<string, string> = {
       pagamento: `Recibo de Pagamento #${options?.id}`,
       pedido: `Recibo de Pedido #${options?.id}`,
