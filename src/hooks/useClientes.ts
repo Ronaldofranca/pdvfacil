@@ -43,6 +43,7 @@ export interface ClienteInput {
   ativo?: boolean;
   permitir_fiado?: boolean;
   cliente_indicador_id?: string | null;
+  limite_credito_total?: number;
 }
 
 export function useClientes() {
@@ -115,7 +116,7 @@ export function useCliente(id: string | null) {
     queryKey: ["clientes", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("clientes")
         .select("*")
         .eq("id", id!)
@@ -148,6 +149,7 @@ export function useUpsertCliente() {
         observacoes: c.observacoes ?? "",
         ativo: c.ativo ?? true,
         permitir_fiado: (raw as any).permitir_fiado ?? true,
+        limite_credito_total: raw.limite_credito_total ?? 0,
         updated_at: new Date().toISOString(),
       };
       if ((raw as any).cliente_indicador_id !== undefined) {
@@ -182,7 +184,6 @@ export function useDeleteCliente() {
   });
 }
 
-// ─── Histórico de Compras ───
 export function useHistoricoCompras(clienteId: string | null) {
   return useQuery({
     queryKey: ["historico_compras", clienteId],
