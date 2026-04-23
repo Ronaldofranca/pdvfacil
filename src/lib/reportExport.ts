@@ -610,11 +610,18 @@ export async function exportReceiptFromElement(
   }
 }
 
+function normalizeFileName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename;
+  a.download = normalizeFileName(filename);
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
