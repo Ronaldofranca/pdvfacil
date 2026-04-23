@@ -36,7 +36,7 @@ export function exportPDF(options: {
 }) {
   const { title, periodo, empresa, headers, rows, totals } = options;
 
-  const safeTitle = escapeHtml(title);
+  const safeTitle = escapeHtml(normalizeFileName(title));
   const safePeriodo = periodo ? escapeHtml(periodo) : "";
   const safeEmpresa = empresa ? escapeHtml(empresa) : "";
 
