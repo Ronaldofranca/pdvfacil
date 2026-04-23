@@ -127,6 +127,8 @@ const MainRoutes = () => {
           <Route path="/configuracoes" element={<ProtectedRoute requiredRole="admin"><ConfiguracoesPage /></ProtectedRoute>} />
           <Route path="/conciliacao" element={<ConciliacaoPage />} />
           <Route path="/mais" element={<MaisPage />} />
+          <Route path="/github" element={<GitHubDataPage />} />
+
         </Route>
       )}
       <Route path="*" element={<NotFound />} />
